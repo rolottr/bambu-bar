@@ -52,6 +52,13 @@ final class PrinterStore {
     var notifyPaused: Bool { didSet { defaults.set(notifyPaused, forKey: Keys.notifyPaused); requestNotificationsIfNeeded() } }
     var notifyStarted: Bool { didSet { defaults.set(notifyStarted, forKey: Keys.notifyStarted); requestNotificationsIfNeeded() } }
     var confirmStop: Bool { didSet { defaults.set(confirmStop, forKey: Keys.confirmStop) } }
+    /// Keep the camera streaming for the whole of a print, so it shows at once. Off: only while it's on screen.
+    var cameraStaysOnWhilePrinting: Bool {
+        didSet {
+            defaults.set(cameraStaysOnWhilePrinting, forKey: Keys.cameraStaysOnWhilePrinting)
+            for session in sessions { session.camera.viewersChanged() }
+        }
+    }
 
     struct Toast: Equatable, Identifiable {
         let id = UUID()
@@ -94,6 +101,7 @@ final class PrinterStore {
         static let notifyPaused = "notifyPaused"
         static let notifyStarted = "notifyStarted"
         static let confirmStop = "confirmStop"
+        static let cameraStaysOnWhilePrinting = "cameraStaysOnWhilePrinting"
     }
 
     private init() {
@@ -103,6 +111,7 @@ final class PrinterStore {
         notifyPaused = defaults.object(forKey: Keys.notifyPaused) as? Bool ?? true
         notifyStarted = defaults.object(forKey: Keys.notifyStarted) as? Bool ?? false
         confirmStop = defaults.object(forKey: Keys.confirmStop) as? Bool ?? true
+        cameraStaysOnWhilePrinting = defaults.bool(forKey: Keys.cameraStaysOnWhilePrinting)
         menuBarSerial = defaults.string(forKey: Keys.menuBarPrinter)
         selectedSerial = defaults.string(forKey: Keys.selected)
     }
