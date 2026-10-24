@@ -109,7 +109,11 @@ enum SlicerImport {
             var codes: [String] = []
             for code in [cloud[serial], typed[serial]].compactMap({ $0 }) where !codes.contains(code) { codes.append(code) }
             guard !codes.isEmpty else { return nil }
-            return SlicerPrinter(serial: serial, accessCodes: codes, host: typedIPs[serial] ?? ips[serial], name: nil, source: source)
+            // Store the serial uppercased to match the network announcement and the certificate (both uppercase),
+            // so one printer isn't taken for two. `serial` itself stays as the slicer's own lowercase key for the
+            // code and IP lookups above.
+            return SlicerPrinter(serial: serial.uppercased(), accessCodes: codes,
+                                 host: typedIPs[serial] ?? ips[serial], name: nil, source: source)
         }
     }
 

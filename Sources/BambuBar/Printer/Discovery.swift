@@ -175,7 +175,10 @@ final class PrinterDiscovery {
             headers[key] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
         guard headers["nt"]?.contains("bambulab") == true || headers["st"]?.contains("bambulab") == true,
-              let serial = headers["usn"], !serial.isEmpty else { return nil }
+              let rawSerial = headers["usn"], !rawSerial.isEmpty else { return nil }
+        // Match the case used everywhere a session is stored (PrinterIdentity and setup both uppercase the
+        // serial), so a printer that announces a lowercase serial isn't taken for a second, unconfigured one.
+        let serial = rawSerial.uppercased()
         let host = headers["location"].flatMap { $0.isEmpty ? nil : $0 } ?? sender
         return DiscoveredPrinter(serial: serial, host: host, name: headers["devname.bambu.com"] ?? serial,
                                  modelCode: headers["devmodel.bambu.com"] ?? "", firmware: headers["devversion.bambu.com"],

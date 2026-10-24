@@ -343,11 +343,25 @@ final class PrinterStore {
         } else {
             discovered.append(printer)
         }
-        // Follow a printer when DHCP hands it a new address.
-        if let session = session(printer.serial), session.config.host != printer.host, !isDemo {
-            session.config.host = printer.host
-            saveConfigs()
-            session.restart()
+        if let session = session(printer.serial), !isDemo {
+            var changed = false
+            // Follow a printer when DHCP hands it a new address.
+            if session.config.host != printer.host {
+                session.config.host = printer.host
+                session.restart()
+                changed = true
+            }
+            // Adopt the network-announced name once it arrives, when the stored name is still the bare serial
+            // (the printer was added before it announced itself). A name set by hand is left alone.
+            if session.config.name == printer.serial,
+               let announced = announcedName(for: printer.serial) {
+                session.config.name = announced
+                changed = true
+            }
+            if changed {
+                saveConfigs()
+                writeSnapshot(force: true)
+            }
         }
     }
 
