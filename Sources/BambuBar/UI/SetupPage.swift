@@ -16,6 +16,8 @@ struct SetupPage: View {
     @State private var code = ""
     @State private var selected: String?
     @State private var manual = false
+    /// The typed address is a Klipper printer with Moonraker, not a Bambu Lab printer.
+    @State private var klipper = false
     @State private var openAtLogin = true
     /// The one found printer is picked automatically once; after that only the person changes the selection.
     @State private var autoPicked = false
@@ -75,10 +77,18 @@ struct SetupPage: View {
                 }
                 DisclosureGroup("Enter address manually", isExpanded: $manual) {
                     VStack(spacing: 10) {
+                        Toggle("Klipper printer with Moonraker (Creality K1, Voron…)", isOn: $klipper)
+                            .toggleStyle(.checkbox)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .onChange(of: klipper) { selected = nil; problem = nil }
                         field("IP address", text: $host, prompt: Text(verbatim: "192.168.1.50"))
-                        field("Serial number", text: $serial, prompt: Text("Optional"))
+                        if !klipper {
+                            field("Serial number", text: $serial, prompt: Text("Optional"))
+                        }
                         field("Name", text: $name, prompt: Text("Optional"))
-                        Text("Only the IP address is needed: it's on the printer's screen under Settings → Network. Bambu Bar reads the serial number from the printer.")
+                        (klipper
+                             ? Text("Bambu Bar connects to Moonraker on port 7125; no access code is needed on the local network.")
+                             : Text("Only the IP address is needed: it's on the printer's screen under Settings → Network. Bambu Bar reads the serial number from the printer."))
                             .font(.system(size: 11.5, weight: .regular))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -89,12 +99,14 @@ struct SetupPage: View {
                 .font(.system(size: 12, weight: .medium))
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel("2  Access code")
-                if let codeSource {
-                    foundCode(codeSource)
-                } else {
-                    codeEntry
+            if !usesMoonraker {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel("2  Access code")
+                    if let codeSource {
+                        foundCode(codeSource)
+                    } else {
+                        codeEntry
+                    }
                 }
             }
 
@@ -441,9 +453,12 @@ struct SetupPage: View {
                 ? String(localized: "Bambu Bar hasn't found your printer yet. Type its IP address under \u{201C}Enter address manually\u{201D}.")
                 : String(localized: "Choose your printer above, or enter its address manually.")
         }
-        if code.trimmingCharacters(in: .whitespaces).count < 4 { return String(localized: "Enter the printer's access code.") }
+        if !usesMoonraker && code.trimmingCharacters(in: .whitespaces).count < 4 { return String(localized: "Enter the printer's access code.") }
         return nil
     }
+
+    /// The manual entry is set to a Klipper printer (and no discovered Bambu printer is picked instead).
+    private var usesMoonraker: Bool { klipper && manual }
 
     private func connect() {
         guard canConnect else {
@@ -455,7 +470,9 @@ struct SetupPage: View {
         }
         problem = nil
         let address = host.trimmingCharacters(in: .whitespaces)
-        if !serial.trimmingCharacters(in: .whitespaces).isEmpty {
+        if usesMoonraker {
+            connectMoonraker(at: address)
+        } else if !serial.trimmingCharacters(in: .whitespaces).isEmpty {
             finishConnecting()
         } else if let seen = store.discovered.first(where: { $0.host == address }) {
             if adopt(seen.serial) { finishConnecting() }
@@ -492,6 +509,30 @@ struct SetupPage: View {
             return false
         }
         return true
+    }
+
+    /// Checks Moonraker answers before saving the printer, and names and types it from Klipper's hostname.
+    private func connectMoonraker(at address: String) {
+        identifying = true
+        Task {
+            let probe = PrinterConfig(host: address, serial: "", name: "", modelCode: "", kind: .moonraker).endpoint
+            let result = await MoonrakerClient.hostname(host: probe.host, port: probe.port)
+            identifying = false
+            guard host.trimmingCharacters(in: .whitespaces) == address else { return }
+            switch result {
+            case .success(let hostname):
+                let typedName = name.trimmingCharacters(in: .whitespaces)
+                let config = PrinterConfig(host: address, serial: PrinterConfig.moonrakerID(host: address),
+                                           name: typedName.isEmpty ? (hostname.isEmpty ? address : hostname) : typedName,
+                                           modelCode: MoonrakerClient.modelCode(forHostname: hostname), kind: .moonraker)
+                let firstPrinter = !adding
+                store.connect(to: config, accessCode: "")
+                navigation.addingPrinter = false
+                if firstPrinter && openAtLogin && !LoginItem.shared.isEnabled { LoginItem.shared.setEnabled(true) }
+            case .failure(let reason):
+                problem = reason.message
+            }
+        }
     }
 
     private func finishConnecting() {

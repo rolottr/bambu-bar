@@ -5,6 +5,10 @@ import Foundation
 /// summary of the first full report, then exits. For diagnosing a printer from Terminal without the UI.
 /// Add `--insecure-tls` for the local test broker. Pass `keychain` as the code to use the one Bambu Bar saved, and
 /// `--raw-filament` to print the AMS and external spool fields as the printer sent them.
+///
+/// `--probe-moonraker <host[:port]> [seconds]` does the same for a Klipper printer with Moonraker (port 7125 unless
+/// given): it asks `GET /printer/info` first, then connects like the app does and prints the first status and every
+/// tenth one after it. It only reads: no pause, stop, light or speed command is ever sent.
 @MainActor
 enum Probe {
     static var arguments: (host: String, serial: String, code: String, seconds: Double)? {
@@ -13,6 +17,13 @@ enum Probe {
         let seconds = i + 4 < a.count ? Double(a[i + 4]) ?? 20 : 20
         let code = a[i + 3] == "keychain" ? Keychain.accessCode(for: a[i + 2]) ?? "" : a[i + 3]
         return (a[i + 1], a[i + 2], code, seconds)
+    }
+
+    static var moonrakerArguments: (host: String, seconds: Double)? {
+        let a = CommandLine.arguments
+        guard let i = a.firstIndex(of: "--probe-moonraker"), i + 1 < a.count else { return nil }
+        let seconds = i + 2 < a.count ? Double(a[i + 2]) ?? 20 : 20
+        return (a[i + 1], seconds)
     }
 
     private static var connection: PrinterConnection?
@@ -51,6 +62,44 @@ enum Probe {
             log("done: \(reports) status updates")
             connection.stop()
             exit(reports > 0 ? 0 : 1)
+        }
+    }
+
+    static func runMoonraker(host: String, seconds: Double) {
+        let started = Date()
+        func log(_ text: String) {
+            print(String(format: "[%5.1fs] ", Date().timeIntervalSince(started)) + text)
+            fflush(stdout)
+        }
+        var config = PrinterConfig(host: host, serial: "", name: host, modelCode: "", kind: .moonraker)
+        let endpoint = config.endpoint
+        let connection = PrinterConnection()
+        self.connection = connection
+        var reports = 0
+        connection.onPhase = { phase in log("phase: \(phase)") }
+        connection.onAck = { command, ok, reason in log("ack: \(command) \(ok ? "ok" : "failed") \(reason ?? "")") }
+        connection.onStatus = { status, _ in
+            reports += 1
+            if reports == 1 || reports % 10 == 0 {
+                log("status #\(reports): \(summary(status))")
+            }
+        }
+        log("asking \(endpoint.host):\(endpoint.port) for /printer/info")
+        Task { @MainActor in
+            switch await MoonrakerClient.hostname(host: endpoint.host, port: endpoint.port) {
+            case .success(let name):
+                // The model decides what else is read (a Creality K1's own status), as when the printer is added.
+                config.modelCode = MoonrakerClient.modelCode(forHostname: name)
+                log("Moonraker answered, Klipper host \"\(name)\", model \(config.modelName)")
+            case .failure(let error): log("info failed: \(error.message)")
+            }
+            log("connecting to \(endpoint.host):\(endpoint.port)")
+            connection.start(config, accessCode: "", insecure: false)
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                log("done: \(reports) status updates")
+                connection.stop()
+                exit(reports > 0 ? 0 : 1)
+            }
         }
     }
 

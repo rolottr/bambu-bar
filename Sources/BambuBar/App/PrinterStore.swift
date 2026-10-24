@@ -152,7 +152,9 @@ final class PrinterStore {
 
         for config in loadConfigs() {
             let session = add(config)
-            if let code = Keychain.accessCode(for: config.serial) {
+            if !config.needsAccessCode {
+                session.start(accessCode: "", insecure: insecureTLS)
+            } else if let code = Keychain.accessCode(for: config.serial) {
                 session.start(accessCode: code, insecure: insecureTLS)
             }
         }
@@ -250,7 +252,7 @@ final class PrinterStore {
     /// Saves a printer (new, or a new address/code for a known one) and connects to it.
     func connect(to config: PrinterConfig, accessCode: String, alternatives: [String] = []) {
         let code = accessCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !isDemo { Keychain.setAccessCode(code, for: config.serial) }
+        if !isDemo && config.needsAccessCode { Keychain.setAccessCode(code, for: config.serial) }
         let session: PrinterSession
         if let existing = self.session(config.serial) {
             existing.config = config

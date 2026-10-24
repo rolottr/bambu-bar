@@ -1,23 +1,51 @@
 import AppKit
 import Foundation
 
+/// How Bambu Bar talks to a printer.
+enum PrinterKind: String, Codable, Sendable {
+    /// Bambu Lab's LAN MQTT, with the access code.
+    case bambu
+    /// A Klipper printer through Moonraker's WebSocket API (Creality K1 with Moonraker installed, Voron…).
+    case moonraker
+}
+
 /// Where to find the printer. The access code lives in the Keychain, not here.
 struct PrinterConfig: Codable, Equatable {
     var host: String
+    /// For Bambu printers their serial; for Moonraker printers an id made from the address ("klipper-192.168.1.60").
     var serial: String
     var name: String
     /// SSDP model code ("N7" for the P2S).
     var modelCode: String
+    /// Nil in configs saved before Moonraker support, which are all Bambu printers.
+    var kind: PrinterKind? = nil
 
-    var modelName: String { PrinterModel.name(for: modelCode, serial: serial) }
-    var model: PrinterModel? { PrinterModel.find(code: modelCode, serial: serial) }
+    var printerKind: PrinterKind { kind ?? .bambu }
+    var needsAccessCode: Bool { printerKind == .bambu }
 
-    /// Printers listen on 8883; `host:port` reaches a mock printer (scripts/fleet).
+    var modelName: String {
+        if printerKind == .moonraker { return model?.name ?? String(localized: "Klipper printer") }
+        return PrinterModel.name(for: modelCode, serial: serial)
+    }
+    /// "Bambu Lab P2S", "Creality K1 Max", "Klipper printer".
+    var fullModelName: String {
+        if let model { return model.fullName }
+        return printerKind == .bambu ? "Bambu Lab \(modelName)" : modelName
+    }
+    var model: PrinterModel? {
+        // Moonraker ids aren't Bambu serials; don't let their prefix pick a Bambu model.
+        PrinterModel.find(code: modelCode, serial: printerKind == .bambu ? serial : "")
+    }
+
+    /// Bambu printers listen on 8883, Moonraker on 7125; `host:port` reaches another port (a mock printer, scripts/fleet).
     var endpoint: (host: String, port: UInt16) {
         let parts = host.split(separator: ":")
-        guard parts.count == 2, let port = UInt16(parts[1]) else { return (host, 8883) }
+        guard parts.count == 2, let port = UInt16(parts[1]) else { return (host, printerKind == .moonraker ? 7125 : 8883) }
         return (String(parts[0]), port)
     }
+
+    /// The session id for a Moonraker printer at `host`.
+    static func moonrakerID(host: String) -> String { "klipper-\(host.lowercased())" }
 }
 
 /// Keeps one MQTT session to the printer alive: connects, re-requests a full report, merges the deltas
@@ -50,6 +78,7 @@ final class PrinterConnection {
     private var accessCode = ""
     private var insecure = false
     private var client: MQTTClient?
+    private var moonraker: MoonrakerClient?
     private var document = ReportDocument()
     private var lastStatus: PrinterStatus?
     private var lastMessage = Date.distantPast
@@ -96,17 +125,21 @@ final class PrinterConnection {
 
     /// Asks for a full report now (after wake, or when the person clicks refresh).
     func refresh() {
-        if phase == .online { requestFullReport() } else if config != nil { reconnectSoon(after: 0) }
+        if phase == .online, let moonraker { moonraker.subscribe() }
+        else if phase == .online { requestFullReport() } else if config != nil { reconnectSoon(after: 0) }
     }
 
     // MARK: - Commands
 
-    func pause() { sendPrint(["command": "pause"]) }
-    func resume() { sendPrint(["command": "resume"]) }
-    func stopPrint() { sendPrint(["command": "stop"]) }
-    func setSpeed(_ level: SpeedLevel) { sendPrint(["command": "print_speed", "param": "\(level.rawValue)"]) }
+    func pause() { if let moonraker { moonraker.pause() } else { sendPrint(["command": "pause"]) } }
+    func resume() { if let moonraker { moonraker.resume() } else { sendPrint(["command": "resume"]) } }
+    func stopPrint() { if let moonraker { moonraker.cancel() } else { sendPrint(["command": "stop"]) } }
+    func setSpeed(_ level: SpeedLevel) {
+        if let moonraker { moonraker.setSpeed(percent: level.percent) } else { sendPrint(["command": "print_speed", "param": "\(level.rawValue)"]) }
+    }
 
     func setChamberLight(_ on: Bool) {
+        if let moonraker { moonraker.setLight(on); return }
         send(["system": ["command": "ledctrl", "led_node": "chamber_light", "led_mode": on ? "on" : "off",
                          "led_on_time": 500, "led_off_time": 500, "loop_times": 0, "interval_time": 0]], key: "system")
     }
@@ -134,6 +167,10 @@ final class PrinterConnection {
         // The watchdog measures silence from here, so it doesn't cut off an attempt that's still connecting.
         lastMessage = Date()
         let endpoint = config.endpoint
+        if config.printerKind == .moonraker {
+            openMoonraker(host: endpoint.host, port: endpoint.port)
+            return
+        }
         let client = MQTTClient(.init(host: endpoint.host, port: endpoint.port, password: accessCode, serial: config.serial,
                                       insecure: insecure))
         client.onEvent = { [weak self, weak client] event in
@@ -150,6 +187,44 @@ final class PrinterConnection {
         client?.onEvent = nil
         client?.disconnect()
         client = nil
+        moonraker?.onEvent = nil
+        moonraker?.disconnect()
+        moonraker = nil
+    }
+
+    private func openMoonraker(host: String, port: UInt16) {
+        // A Creality K1 prepares a print (self-test, levelling, heating) before Klipper hears of it.
+        let moonraker = MoonrakerClient(host: host, port: port, crealityHost: config?.model?.maker == "Creality" ? host : nil)
+        moonraker.onEvent = { [weak self, weak moonraker] event in
+            MainActor.assumeIsolated {
+                guard let self, let moonraker, moonraker === self.moonraker else { return }
+                self.handle(event)
+            }
+        }
+        self.moonraker = moonraker
+        moonraker.connect()
+    }
+
+    private func handle(_ event: MoonrakerClient.Event) {
+        switch event {
+        case .alive:
+            lastMessage = Date()
+            onHeartbeat?()
+        case .status(let status):
+            lastMessage = Date()
+            onHeartbeat?()
+            if phase != .online {
+                attempt = 0
+                phase = .online
+            }
+            publish(status, document: ReportDocument())
+        case .commandFailed(let command, let reason):
+            onAck?(command, false, reason)
+        case .disconnected(let reason):
+            moonraker = nil
+            phase = .offline(reason)
+            scheduleReconnect()
+        }
     }
 
     private func handle(_ event: MQTTClient.Event) {
@@ -202,7 +277,11 @@ final class PrinterConnection {
     }
 
     private func publishStatus() {
-        var status = ReportParser.status(from: document, hms: HMSCatalog.shared)
+        publish(ReportParser.status(from: document, hms: HMSCatalog.shared), document: document)
+    }
+
+    private func publish(_ reported: PrinterStatus, document: ReportDocument) {
+        var status = reported
         if let last = lastStatus {
             // Keep the timestamp the remaining time was measured at, so the ETA doesn't drift between reports.
             var same = status
@@ -230,6 +309,14 @@ final class PrinterConnection {
         guard config != nil else { return }
         let silence = Date().timeIntervalSince(lastMessage)
         switch phase {
+        case .online where moonraker != nil:
+            // Moonraker sends nothing while nothing changes; a ping tells a quiet printer from a gone one.
+            if silence > 75 {
+                phase = .offline(String(localized: "The printer stopped answering."))
+                reconnectSoon(after: 0)
+            } else if silence > 20 {
+                moonraker?.ping()
+            }
         case .online:
             if silence > 95 {
                 phase = .offline(String(localized: "The printer stopped sending updates."))
@@ -238,7 +325,7 @@ final class PrinterConnection {
                 requestFullReport()
             }
         case .connecting:
-            if client != nil, silence > 25 { reconnectSoon(after: 0) }
+            if client != nil || moonraker != nil, silence > 25 { reconnectSoon(after: 0) }
         default:
             break
         }

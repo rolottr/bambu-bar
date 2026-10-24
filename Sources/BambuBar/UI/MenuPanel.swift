@@ -352,7 +352,9 @@ struct JobHero: View {
         } else {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Ready to print").font(.system(size: compact ? 15 : 22, weight: .semibold))
-                Text("Send a job from Bambu Studio or the printer and it shows up here.")
+                (store.config?.printerKind == .moonraker
+                 ? Text("Start a print from your slicer or the printer and it shows up here.")
+                 : Text("Send a job from Bambu Studio or the printer and it shows up here."))
                     .font(.system(size: compact ? 11.5 : 13))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

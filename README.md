@@ -68,6 +68,15 @@ Builds on the [Releases](https://github.com/rolottr/bambu-bar/releases) page are
 
 Reading status works in any mode. Pause, resume, stop and speed changes are accepted only when the printer is in **LAN Only** mode with **Developer Mode** on (printer screen → Settings → Network). That's Bambu Lab's rule for third-party apps; without it the printer refuses the command and Bambu Bar says so (the buttons show a lock). The chamber light works either way.
 
+### Klipper / Moonraker printers (experimental)
+
+Besides Bambu Lab printers, Bambu Bar can watch a Klipper printer through [Moonraker](https://github.com/Arksine/moonraker), such as a Creality K1 or K1 Max, a Voron or any other printer that runs it. The printer needs Moonraker answering on port 7125 (on a Creality K1 it comes with the Creality Helper Script).
+
+To add one: **Add Printer** → **Enter address manually**, tick **Klipper printer with Moonraker**, type the printer's IP address and click **Connect**. There is no access code. Bambu Bar checks that Moonraker answers at that address before it saves the printer.
+
+- **Works:** progress, time left and layers, nozzle, bed and chamber temperatures, the light, pause, resume and stop, print speed, and the widget.
+- **Doesn't:** AMS and HMS errors (Klipper has neither), the camera, and finding printers on its own (discovery only knows Bambu Lab printers, so type the address). Moonraker is used without an API key, so use it only on a network you trust.
+
 ## Desktop widgets
 
 <p align="center">
@@ -145,6 +154,7 @@ The [GitHub Actions workflow](.github/workflows/build.yml) builds and uploads an
   `"build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --connect 127.0.0.1 22E00EMULATOR0 12345678 --insecure-tls`
 - `scripts/fleet/run.sh` starts a mock fleet of 12 printers in Docker (P2S, P1S, P1P, X1C, X1E, H2D, H2S, H2C, A1, A1 mini; printing, paused, failed, finished, idle and one switched off) and opens Bambu Bar against it with `--emulator`. Add `--import` to start on the Add Printer page and try **Add All**, `SSDP=1` to have the printers announce their names and models, `--stop` to stop it. The fleet writes `scripts/fleet/out/BambuStudio.conf` the way Bambu Studio saves LAN printers. Nothing from an `--emulator` run is saved: not the printers, their codes, the history or the widgets' data.
 - `--probe <ip> <serial> <access-code|keychain> [seconds] [--raw-filament]` connects to a printer from Terminal and prints what it reports (`keychain` uses the code Bambu Bar saved).
+- `--probe-moonraker <ip[:port]> [seconds]` does the same for a Klipper printer with Moonraker: it asks `/printer/info`, connects and prints what it reports. It only reads.
 - `scripts/showcase.sh <dir>` screenshots the panel, window and widgets in each demo state; `scripts/make-readme-animations.sh` renders the animations above, offscreen, from the demo printer.
 - `scripts/make-hms.py` regenerates the bundled error texts.
 - `scripts/make-filaments.py Resources/filaments.json` regenerates the filament presets and Bambu Lab colour names from Bambu Studio.

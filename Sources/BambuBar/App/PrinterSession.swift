@@ -35,7 +35,9 @@ final class PrinterSession: Identifiable {
         id = config.serial
         self.config = config
         connection.onPhase = { [weak self] phase in self?.phaseChanged(phase) }
-        connection.onStatus = { [weak self] status, doc in self?.received(status, canceled: ReportParser.wasCanceled(doc)) }
+        connection.onStatus = { [weak self] status, doc in
+            self?.received(status, canceled: status.canceled || ReportParser.wasCanceled(doc))
+        }
         connection.onAck = { [weak self] command, ok, reason in
             guard let self else { return }
             if !ok { self.pendingLight = nil; self.pendingSpeed = nil }
@@ -82,7 +84,9 @@ final class PrinterSession: Identifiable {
 
     /// Reconnects with the stored code, e.g. after the printer moved to a new IP address.
     func restart() {
-        guard demo == nil, let code = Keychain.accessCode(for: config.serial) else { return }
+        guard demo == nil else { return }
+        guard config.needsAccessCode else { connection.start(config, accessCode: "", insecure: insecure); return }
+        guard let code = Keychain.accessCode(for: config.serial) else { return }
         connection.start(config, accessCode: code, insecure: insecure)
     }
 

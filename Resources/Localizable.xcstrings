@@ -8857,6 +8857,112 @@
         }
       }
     },
+    "Bambu Bar connects to Moonraker on port 7125; no access code is needed on the local network.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar se připojí k Moonrakeru na portu 7125; v místní síti není potřeba přístupový kód."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar verbindet sich über Port 7125 mit Moonraker; im lokalen Netzwerk ist kein Zugangscode nötig."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar se conecta a Moonraker por el puerto 7125; en la red local no hace falta código de acceso."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar se connecte à Moonraker sur le port 7125 ; aucun code d’accès n’est nécessaire sur le réseau local."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Bambu Bar a 7125-ös porton csatlakozik a Moonrakerhez; helyi hálózaton nincs szükség hozzáférési kódra."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar si connette a Moonraker sulla porta 7125; sulla rete locale non serve alcun codice di accesso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Barはポート7125でMoonrakerに接続します。ローカルネットワークではアクセスコードは不要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar는 7125번 포트로 Moonraker에 연결합니다. 로컬 네트워크에서는 액세스 코드가 필요하지 않습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar maakt verbinding met Moonraker via poort 7125; in het lokale netwerk is geen toegangscode nodig."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar łączy się z Moonrakerem na porcie 7125; w sieci lokalnej kod dostępu nie jest potrzebny."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Bambu Bar se conecta ao Moonraker pela porta 7125; na rede local não é preciso código de acesso."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar подключается к Moonraker через порт 7125; в локальной сети код доступа не нужен."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar ansluter till Moonraker på port 7125; ingen åtkomstkod behövs i det lokala nätverket."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar, Moonraker'a 7125 numaralı bağlantı noktasından bağlanır; yerel ağda erişim koduna gerek yoktur."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar підключається до Moonraker через порт 7125; у локальній мережі код доступу не потрібен."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 通过 7125 端口连接 Moonraker；在局域网内无需访问码。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 會透過 7125 連接埠連線到 Moonraker；在區域網路中不需要存取碼。"
+          }
+        }
+      }
+    },
     "Bambu Bar disconnects and removes the access code from your keychain. Print history stays.": {
       "localizations": {
         "cs": {
@@ -26448,6 +26554,536 @@
         }
       }
     },
+    "Klipper disconnected.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper se odpojil."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper hat die Verbindung getrennt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper se ha desconectado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper s’est déconnecté."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Klipper leválasztódott."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper si è disconnesso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipperが切断されました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 연결이 끊어졌습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper heeft de verbinding verbroken."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper został odłączony."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Klipper foi desconectado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper отключился."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper har kopplats från."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper bağlantısı kesildi."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper відключився."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 已断开连接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 已中斷連線。"
+          }
+        }
+      }
+    },
+    "Klipper isn't ready: %@": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper není připravený: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper ist nicht bereit: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper no está listo: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper n’est pas prêt : %@"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Klipper nem áll készen: %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper non è pronto: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipperの準備ができていません：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper가 준비되지 않았습니다: %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper is niet gereed: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper nie jest gotowy: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Klipper não está pronto: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper не готов: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper är inte redo: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper hazır değil: %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper не готовий: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 尚未就绪：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 尚未就緒：%@"
+          }
+        }
+      }
+    },
+    "Klipper printer": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiskárna s Klipperem"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper-Drucker"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impresora con Klipper"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imprimante Klipper"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipperes nyomtató"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stampante Klipper"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipperプリンター"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 프린터"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper-printer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drukarka z Klipperem"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impressora Klipper"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Принтер с Klipper"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper-skrivare"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper yazıcı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Принтер із Klipper"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 打印机"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 印表機"
+          }
+        }
+      }
+    },
+    "Klipper printer with Moonraker (Creality K1, Voron…)": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiskárna s Klipperem a Moonrakerem (Creality K1, Voron…)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper-Drucker mit Moonraker (Creality K1, Voron …)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impresora con Klipper y Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imprimante Klipper avec Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipperes nyomtató Moonrakerrel (Creality K1, Voron…)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stampante Klipper con Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker対応のKlipperプリンター（Creality K1、Voronなど）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker를 사용하는 Klipper 프린터(Creality K1, Voron…)"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper-printer met Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drukarka z Klipperem i Moonrakerem (Creality K1, Voron…)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impressora Klipper com Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Принтер с Klipper и Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper-skrivare med Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker'lı Klipper yazıcı (Creality K1, Voron…)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Принтер із Klipper і Moonraker (Creality K1, Voron…)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Moonraker 的 Klipper 打印机（Creality K1、Voron…）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Moonraker 的 Klipper 印表機（Creality K1、Voron…）"
+          }
+        }
+      }
+    },
+    "Klipper shut down.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper se vypnul."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper wurde heruntergefahren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper se ha apagado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper s’est arrêté."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Klipper leállt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper si è arrestato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipperがシャットダウンしました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper가 종료되었습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper is afgesloten."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper został wyłączony."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Klipper foi desligado."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper завершил работу."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper har stängts av."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper kapandı."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper завершив роботу."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 已关闭。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klipper 已關閉。"
+          }
+        }
+      }
+    },
     "LAN Only": {
       "localizations": {
         "cs": {
@@ -29754,6 +30390,112 @@
         }
       }
     },
+    "Moonraker answered, but Klipper isn't ready: %@": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker odpověděl, ale Klipper není připravený: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker hat geantwortet, aber Klipper ist nicht bereit: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker respondió, pero Klipper no está listo: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker a répondu, mais Klipper n’est pas prêt : %@"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Moonraker válaszolt, de a Klipper nem áll készen: %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker ha risposto, ma Klipper non è pronto: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonrakerは応答しましたが、Klipperの準備ができていません：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker는 응답했지만 Klipper가 준비되지 않았습니다: %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker reageerde, maar Klipper is niet gereed: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker odpowiedział, ale Klipper nie jest gotowy: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Moonraker respondeu, mas o Klipper não está pronto: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker ответил, но Klipper не готов: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker svarade, men Klipper är inte redo: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker yanıt verdi ama Klipper hazır değil: %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker відповів, але Klipper не готовий: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker 已响应，但 Klipper 尚未就绪：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonraker 已回應，但 Klipper 尚未就緒：%@"
+          }
+        }
+      }
+    },
     "Motor noise showoff": {
       "comment": "Printer stage",
       "localizations": {
@@ -31555,6 +32297,118 @@
           "stringUnit": {
             "state": "translated",
             "value": "未量測"
+          }
+        }
+      }
+    },
+    "Nothing answered as Moonraker at that address (port %lld): %@": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na této adrese neodpověděl žádný Moonraker (port %lld): %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unter dieser Adresse hat kein Moonraker geantwortet (Port %lld): %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Nothing answered as Moonraker at that address (port %1$lld): %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada respondió como Moonraker en esa dirección (puerto %lld): %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien n’a répondu comme Moonraker à cette adresse (port %lld) : %@"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ezen a címen nem válaszolt Moonraker (%lld-as port): %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun Moonraker ha risposto a quell'indirizzo (porta %lld): %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのアドレス（ポート%lld）ではMoonrakerとして応答がありませんでした：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해당 주소(포트 %lld)에서 Moonraker로 응답하는 기기가 없습니다: %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Op dat adres reageerde geen Moonraker (poort %lld): %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pod tym adresem nic nie odpowiedziało jako Moonraker (port %lld): %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada respondeu como Moonraker nesse endereço (porta %lld): %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По этому адресу Moonraker не ответил (порт %lld): %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen svarade som Moonraker på den adressen (port %lld): %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu adreste Moonraker olarak yanıt veren bir şey yok (bağlantı noktası %lld): %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "За цією адресою Moonraker не відповів (порт %lld): %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该地址（端口 %lld）上没有任何设备以 Moonraker 的身份响应：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "該位址（連接埠 %lld）沒有任何裝置以 Moonraker 的身份回應：%@"
           }
         }
       }
@@ -46445,6 +47299,112 @@
         }
       }
     },
+    "Start a print from your slicer or the printer and it shows up here.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spusťte tisk ze sliceru nebo z tiskárny a zobrazí se tady."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte einen Druck im Slicer oder am Drucker, dann erscheint er hier."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia una impresión desde tu laminador o desde la impresora y aparecerá aquí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lancez une impression depuis votre trancheur ou l’imprimante et elle s’affichera ici."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indíts nyomtatást a szeletelőből vagy a nyomtatóról, és itt megjelenik."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia una stampa dallo slicer o dalla stampante e comparirà qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スライサーかプリンターで印刷を開始すると、ここに表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "슬라이서나 프린터에서 출력을 시작하면 여기에 표시됩니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start een print vanuit je slicer of de printer en hij verschijnt hier."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchom wydruk w slicerze lub na drukarce, a pojawi się tutaj."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicie uma impressão pelo fatiador ou pela impressora e ela aparecerá aqui."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустите печать из слайсера или на принтере, и она появится здесь."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starta en utskrift från din slicer eller skrivaren så visas den här."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dilimleyiciden veya yazıcıdan bir baskı başlatın, burada görünür."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запустіть друк зі слайсера або на принтері, і він з’явиться тут."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从切片软件或打印机开始打印，它就会显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從切片軟體或印表機開始列印，就會顯示在這裡。"
+          }
+        }
+      }
+    },
     "Starting soon": {
       "localizations": {
         "cs": {
@@ -48254,6 +49214,112 @@
         }
       }
     },
+    "That address didn't answer as Moonraker.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tato adresa neodpověděla jako Moonraker."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unter dieser Adresse antwortete kein Moonraker."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esa dirección no respondió como Moonraker."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse n’a pas répondu comme Moonraker."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ez a cím nem Moonrakerként válaszolt."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quell'indirizzo non ha risposto come Moonraker."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのアドレスはMoonrakerとして応答しませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해당 주소가 Moonraker로 응답하지 않았습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dat adres reageerde niet als Moonraker."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten adres nie odpowiedział jak Moonraker."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esse endereço não respondeu como Moonraker."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По этому адресу ответил не Moonraker."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den adressen svarade inte som Moonraker."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu adres Moonraker olarak yanıt vermedi."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "За цією адресою відповів не Moonraker."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该地址没有以 Moonraker 的身份响应。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "該位址的回應不像 Moonraker。"
+          }
+        }
+      }
+    },
     "That address didn't answer as a Bambu Lab printer: %@": {
       "localizations": {
         "cs": {
@@ -48356,6 +49422,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "該位址的回應不像 Bambu Lab 印表機：%@"
+          }
+        }
+      }
+    },
+    "That isn't a valid address.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To není platná adresa."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist keine gültige Adresse."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esa dirección no es válida."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse n’est pas valide."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ez nem érvényes cím."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quell'indirizzo non è valido."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのアドレスは無効です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "올바른 주소가 아닙니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dat is geen geldig adres."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To nie jest prawidłowy adres."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esse endereço não é válido."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это недопустимый адрес."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det där är inte en giltig adress."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu geçerli bir adres değil."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Це недійсна адреса."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这不是有效的地址。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這不是有效的位址。"
           }
         }
       }
@@ -49417,6 +50589,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "印表機沒有回應。"
+          }
+        }
+      }
+    },
+    "The printer has no light Bambu Bar can switch.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiskárna nemá žádné světlo, které by Bambu Bar mohl přepínat."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Drucker hat kein Licht, das Bambu Bar schalten kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La impresora no tiene ninguna luz que Bambu Bar pueda encender o apagar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’imprimante n’a aucune lumière que Bambu Bar puisse allumer ou éteindre."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A nyomtatónak nincs olyan világítása, amelyet a Bambu Bar kapcsolni tudna."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La stampante non ha nessuna luce che Bambu Bar possa accendere o spegnere."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプリンターにはBambu Barで切り替えられるライトがありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 프린터에는 Bambu Bar로 켜고 끌 수 있는 조명이 없습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De printer heeft geen licht dat Bambu Bar kan schakelen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drukarka nie ma oświetlenia, którym Bambu Bar mógłby sterować."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A impressora não tem nenhuma luz que o Bambu Bar possa ligar ou desligar."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У принтера нет подсветки, которую может переключать Bambu Bar."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrivaren har ingen belysning som Bambu Bar kan slå av eller på."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazıcıda Bambu Bar'ın açıp kapatabileceği bir ışık yok."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У принтера немає підсвічування, яке може перемикати Bambu Bar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台打印机没有 Bambu Bar 可以开关的灯。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這台印表機沒有 Bambu Bar 可以開關的燈。"
           }
         }
       }

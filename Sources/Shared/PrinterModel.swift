@@ -37,8 +37,13 @@ struct PrinterModel: Equatable, Sendable {
     var hasLidar: Bool
     /// Takes the laser and cutting modules (H2 family).
     var hasLaserModule: Bool
+    /// Who makes it; Klipper printers reached through Moonraker aren't Bambu Lab's.
+    var maker = "Bambu Lab"
 
     static func == (a: PrinterModel, b: PrinterModel) -> Bool { a.code == b.code }
+
+    /// "Bambu Lab P2S", "Creality K1 Max".
+    var fullName: String { "\(maker) \(name)" }
 
     var buildVolumeText: String { "\(buildVolume.x) × \(buildVolume.y) × \(buildVolume.z) mm" }
 
@@ -93,6 +98,11 @@ struct PrinterModel: Equatable, Sendable {
         .init(code: "O1S", name: "H2S", shape: .wide, serialPrefix: "093", isEnclosed: true, hasChamberSensor: true,
               chamberHeaterMax: 65, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: true, usesAMSLite: false,
               nozzleCount: 1, nozzleMax: 350, bedMax: 120, buildVolume: (340, 320, 340), hasLidar: false, hasLaserModule: true),
+        // Klipper printers, through Moonraker. No serial prefix: their ids aren't Bambu serials.
+        .init(code: "K1MAX", name: "K1 Max", shape: .enclosed, serialPrefix: "", isEnclosed: true, hasChamberSensor: true,
+              chamberHeaterMax: nil, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: false, usesAMSLite: false,
+              nozzleCount: 1, nozzleMax: 300, bedMax: 100, buildVolume: (300, 300, 300), hasLidar: true, hasLaserModule: false,
+              maker: "Creality"),
     ]
 
     /// Other ids the same models report (older firmware, Pro and V2 variants).

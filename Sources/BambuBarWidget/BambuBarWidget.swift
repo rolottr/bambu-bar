@@ -38,7 +38,7 @@ struct PrinterEntity: AppEntity {
     var model: String
 
     var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(name)", subtitle: "Bambu Lab \(model)")
+        DisplayRepresentation(title: "\(name)", subtitle: "\(PrinterModel.named(model)?.fullName ?? model)")
     }
 }
 

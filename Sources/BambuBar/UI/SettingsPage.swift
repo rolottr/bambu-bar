@@ -56,8 +56,10 @@ struct SettingsPage: View {
                                 .controlSize(.small)
                         }
                     }
-                    row("Model") { Text("Bambu Lab \(config.modelName)").foregroundStyle(.secondary) }
-                    row("Serial number") { Text(config.serial).foregroundStyle(.secondary).textSelection(.enabled) }
+                    row("Model") { Text(config.fullModelName).foregroundStyle(.secondary) }
+                    if config.needsAccessCode {
+                        row("Serial number") { Text(config.serial).foregroundStyle(.secondary).textSelection(.enabled) }
+                    }
                     row("Status") {
                         HStack(spacing: 6) {
                             Circle().fill(store.isOnline ? Palette.accent : Palette.paused).frame(width: 7, height: 7)
@@ -68,9 +70,11 @@ struct SettingsPage: View {
                         row("IP address") {
                             TextField("IP address", text: $host).textFieldStyle(.roundedBorder).frame(width: 220)
                         }
-                        row("Access code") {
-                            SecureField("Access code", text: $code).textFieldStyle(.roundedBorder).frame(width: 220)
-                                .onSubmit(applyConnection)
+                        if config.needsAccessCode {
+                            row("Access code") {
+                                SecureField("Access code", text: $code).textFieldStyle(.roundedBorder).frame(width: 220)
+                                    .onSubmit(applyConnection)
+                            }
                         }
                         HStack {
                             Spacer()
@@ -78,7 +82,7 @@ struct SettingsPage: View {
                             Button("Reconnect", action: applyConnection)
                                 .buttonStyle(.borderedProminent)
                                 .tint(Palette.accentDeep)
-                                .disabled(host.isEmpty || code.count < 4)
+                                .disabled(host.isEmpty || (config.needsAccessCode && code.count < 4))
                         }
                     } else {
                         row("IP address") {
@@ -222,7 +226,7 @@ struct SettingsPage: View {
                             .help("Shown in the menu bar")
                     }
                 }
-                Text("Bambu Lab \(session.config.modelName) · \(session.config.host)")
+                Text("\(session.config.fullModelName) · \(session.config.host)")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
@@ -239,7 +243,7 @@ struct SettingsPage: View {
     }
 
     private func applyConnection() {
-        guard var config = store.config, !host.isEmpty, code.count >= 4 else { return }
+        guard var config = store.config, !host.isEmpty, !config.needsAccessCode || code.count >= 4 else { return }
         config.host = host.trimmingCharacters(in: .whitespaces)
         store.connect(to: config, accessCode: code)
         editingConnection = false

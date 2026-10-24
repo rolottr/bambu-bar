@@ -81,6 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Probe.run(host: probe.host, serial: probe.serial, code: probe.code, seconds: probe.seconds)
             return
         }
+        if let probe = Probe.moonrakerArguments {
+            Probe.runMoonraker(host: probe.host, seconds: probe.seconds)
+            return
+        }
         PrinterStore.shared.start()
         UpdateChecker.shared.startAutomaticChecks()
         WidgetUpdate.refreshIfUpdated()

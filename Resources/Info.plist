@@ -47,6 +47,12 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 rolottr. MIT License.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Moonraker serves plain HTTP and WebSocket on the local network. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Bambu Bar finds your Bambu Lab printer on your network and reads its status directly from it, without any cloud service.</string>
 	<key>NSPrincipalClass</key>
