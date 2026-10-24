@@ -25,6 +25,10 @@ struct OverviewPage: View {
                     }
                 }
                 ForEach(status.issues) { IssueBanner(issue: $0) }
+                // The demo printers have no camera; keep it out of their screenshots too.
+                if let session = store.current, !session.isDemo {
+                    CameraCard(session: session)
+                }
                 metrics(status)
                 if !status.ams.isEmpty || status.externalSpool?.isLoaded == true {
                     VStack(alignment: .leading, spacing: 8) {
