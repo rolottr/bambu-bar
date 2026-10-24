@@ -67,6 +67,9 @@ struct AppCommands: Commands {
             Button(store.chamberLightOn ? "Turn Chamber Light Off" : "Turn Chamber Light On") { store.toggleLight() }
                 .keyboardShortcut("l")
                 .disabled(!store.isOnline || store.status?.chamberLightOn == nil)
+            Button("Show Camera") { if let session = store.current { CameraWindow.show(session) } }
+                .keyboardShortcut("k")
+                .disabled(store.current?.isDemo ?? true)
         }
     }
 }
@@ -79,6 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let background = LaunchContext.wasLaunchedAtLogin() || LaunchContext.requestsBackground
         if let probe = Probe.arguments {
             Probe.run(host: probe.host, serial: probe.serial, code: probe.code, seconds: probe.seconds)
+            return
+        }
+        if let probe = Probe.cameraArguments {
+            Probe.runCamera(host: probe.host, serial: probe.serial, code: probe.code, seconds: probe.seconds,
+                            transport: probe.transport)
             return
         }
         PrinterStore.shared.start()
