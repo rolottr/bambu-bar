@@ -64,6 +64,8 @@ final class PrinterStore {
     private let defaults = UserDefaults.standard
     private let discovery = PrinterDiscovery()
     private let notifier = Notifier()
+    /// When each issue (id.serial) last notified, so a recurring one notifies at most every six hours.
+    private var issueNoticeTimes: [String: Date] = [:]
     private var lastWidgetReload = Date.distantPast
     private var lastSnapshotWrite = Date.distantPast
     private var lastSavedKey = ""
@@ -571,8 +573,13 @@ final class PrinterStore {
         }
         if notify, let old {
             let fresh = new.issues.filter { issue in issue.severity <= .serious && !old.issues.contains { $0.id == issue.id } }
-            if let issue = fresh.first, notifyFailed || notifyPaused {
-                notifier.post(title: "\(session.config.name): \(issue.severity.title)", body: issue.message, id: "\(issue.id).\(serial)")
+            // An issue the printer keeps raising and clearing (an HMS a second client triggers, say) would
+            // otherwise notify every time it comes back.
+            let key = { (issue: PrinterIssue) in "\(issue.id).\(serial)" }
+            if let issue = fresh.first(where: { Date().timeIntervalSince(issueNoticeTimes[key($0)] ?? .distantPast) > 6 * 3600 }),
+               notifyFailed || notifyPaused {
+                issueNoticeTimes[key(issue)] = Date()
+                notifier.post(title: "\(session.config.name): \(issue.severity.title)", body: issue.message, id: key(issue))
             }
         }
     }
