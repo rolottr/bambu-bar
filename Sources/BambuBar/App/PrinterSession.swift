@@ -166,9 +166,43 @@ final class PrinterSession: Identifiable {
         onPhase?(self, phase)
     }
 
+    // MARK: - Dismissed issues
+
+    /// Issues the person has dismissed, with when the printer last reported each. A dismissal lasts while the
+    /// printer keeps reporting the issue and ends once it has been gone for `dismissalExpiry`, so a fault that
+    /// clears and comes back later shows again, while one that flickers between reports stays hidden.
+    @ObservationIgnored private lazy var dismissed: [String: Date] = {
+        let raw = UserDefaults.standard.dictionary(forKey: dismissedKey) as? [String: Date] ?? [:]
+        return raw.filter { Date().timeIntervalSince($0.value) < Self.dismissalExpiry }
+    }()
+    private static let dismissalExpiry: TimeInterval = 6 * 3600
+    private var dismissedKey: String { "dismissedIssues.\(id)" }
+
+    func dismiss(_ issue: PrinterIssue) {
+        dismissed[issue.id] = Date()
+        UserDefaults.standard.set(dismissed, forKey: dismissedKey)
+        status?.issues.removeAll { $0.id == issue.id }
+    }
+
+    /// Drops dismissed issues from a report and notes that the printer still has them.
+    private func hideDismissed(_ status: inout PrinterStatus) {
+        guard !dismissed.isEmpty else { return }
+        let now = Date()
+        for issue in status.issues where dismissed[issue.id] != nil { dismissed[issue.id] = now }
+        dismissed = dismissed.filter { now.timeIntervalSince($0.value) < Self.dismissalExpiry }
+        status.issues.removeAll { dismissed[$0.id] != nil }
+        // Saving every report would be a write per second while printing; once a minute is plenty.
+        if now.timeIntervalSince(lastDismissalSave) > 60 {
+            UserDefaults.standard.set(dismissed, forKey: dismissedKey)
+            lastDismissalSave = now
+        }
+    }
+    @ObservationIgnored private var lastDismissalSave = Date.distantPast
+
     private func received(_ reported: PrinterStatus, canceled: Bool) {
         var new = reported
         new.fit(to: config.model)
+        hideDismissed(&new)
         let old = status
         status = new
         lastHeard = Date()
