@@ -100,13 +100,14 @@ struct PrinterModel: Equatable, Sendable {
         "BL-P003": "C13", "A12": "N1", "A04": "N1", "A11": "N2S", "O2D": "O1E", "O1C2": "O1C",
     ]
 
-    /// By model id, then by serial prefix.
+    /// By serial prefix when it's one Bambu Lab uses, then by model id. The serial wins because setups before 1.2
+    /// saved "N7" for printers typed in by hand, which named an A1 a P2S everywhere.
     static func find(code: String, serial: String = "") -> PrinterModel? {
+        let prefix = serial.prefix(3).uppercased()
+        if !prefix.isEmpty, let match = all.first(where: { $0.serialPrefix == prefix }) { return match }
         let upper = code.uppercased()
         let id = aliases[upper] ?? upper
-        if let match = all.first(where: { $0.code == id }) { return match }
-        let prefix = serial.prefix(3).uppercased()
-        return prefix.isEmpty ? nil : all.first { $0.serialPrefix == prefix }
+        return all.first { $0.code == id }
     }
 
     /// By display name ("P2S", "A1 mini") or model id; what the widget gets in its snapshot.
