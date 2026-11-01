@@ -24,7 +24,7 @@ struct OverviewPage: View {
                         lockedNote
                     }
                 }
-                ForEach(status.issues) { IssueBanner(issue: $0) }
+                ForEach(status.issues) { issue in IssueBanner(issue: issue) { store.current?.dismiss(issue) } }
                 metrics(status)
                 if !status.ams.isEmpty || status.externalSpool?.isLoaded == true {
                     VStack(alignment: .leading, spacing: 8) {
