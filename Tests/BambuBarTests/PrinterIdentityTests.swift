@@ -72,6 +72,29 @@ final class PrinterIdentityTests: XCTestCase {
         XCTAssertEqual(PrinterConfig.deduplicated([loaded]).first?.cameraEnabled, true)
     }
 
+    // MARK: - Models (PR #5)
+
+    /// Setups before 1.2 saved "N7" (P2S) for a printer typed in by hand; the serial tells the truth.
+    func testSerialPrefixWinsOverAStaleModelCode() {
+        XCTAssertEqual(PrinterModel.find(code: "N7", serial: "039F00000000008")?.name, "A1")
+        XCTAssertEqual(PrinterConfig(host: "", serial: "039F00000000008", name: "", modelCode: "N7").modelName, "A1")
+        XCTAssertEqual(PrinterModel.find(code: "N7", serial: "01PF00000000002")?.name, "P1S")
+    }
+
+    func testModelCodeStillDecidesForUnknownSerials() {
+        XCTAssertEqual(PrinterModel.find(code: "N2S", serial: "ZZZ00EMULATOR0")?.name, "A1")
+        XCTAssertEqual(PrinterModel.find(code: "C13")?.name, "X1E")
+        XCTAssertEqual(PrinterModel.find(code: "BL-P003")?.name, "X1E", "aliases still work")
+        XCTAssertNil(PrinterModel.find(code: "", serial: "ZZZ00EMULATOR0"))
+    }
+
+    func testEveryModelIsFoundByItsOwnSerialAndCode() {
+        for model in PrinterModel.all where !model.serialPrefix.isEmpty {
+            XCTAssertEqual(PrinterModel.find(code: model.code, serial: model.serialPrefix + "000000000001"), model)
+            XCTAssertEqual(PrinterModel.find(code: "", serial: model.serialPrefix + "000000000001"), model)
+        }
+    }
+
     // MARK: - Names
 
     func testPlaceholderName() {
