@@ -49,6 +49,10 @@ struct MenuPanel: View {
                 if let issue = status.mostSevereIssue, issue.severity <= .common {
                     IssueBanner(issue: issue)
                 }
+                // Only with the camera on, in Settings and for this printer (never for the demo printers).
+                if let session = store.current, session.showsCamera {
+                    CameraPreview(session: session)
+                }
                 temperatures(status)
                 if !status.ams.isEmpty || status.externalSpool?.isLoaded == true {
                     FilamentStrip(status: status, maxHeight: 360)

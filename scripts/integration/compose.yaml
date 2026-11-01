@@ -1,0 +1,33 @@
+# The simulators scripts/integration-test.sh runs Bambu Bar's integration tests against. Ports are published
+# on loopback only.
+#   fleet   scripts/fleet: 12 printers over TLS MQTT (one switched off), their Bambu Studio settings in ./out,
+#           SSDP announcements to this Mac on SSDP_PORT. SERIAL_CASE=mixed: lowercase and uppercase serials,
+#           a stale code under one spelling and the working one under the other.
+#   camera  scripts/camera: RTSPS on 322, the JPEG stream on 6000, its scenario chosen on 18080.
+name: bambubar-integration
+services:
+  fleet:
+    build:
+      context: ..
+      dockerfile: fleet/Dockerfile
+    environment:
+      PUBLISHED_HOST: 127.0.0.1
+      SSDP_TARGET: host.docker.internal
+      # Not 2021 (Bambu Bar in daily use) nor 2121 (scripts/fleet/run.sh): the tests listen here alone.
+      SSDP_PORT: "2122"
+      SERIAL_CASE: mixed
+    ports:
+      - "127.0.0.1:18801-18812:18801-18812"
+    volumes:
+      - ./out:/out
+  camera:
+    build:
+      context: ..
+      dockerfile: camera/Dockerfile
+    environment:
+      ACCESS_CODE: "12345678"
+      CAMERA_SERIAL: 01P00C000000001
+    ports:
+      - "127.0.0.1:322:322"
+      - "127.0.0.1:6000:6000"
+      - "127.0.0.1:18080:8080"
