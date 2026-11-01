@@ -1,5 +1,9 @@
 import AppKit
+import CoreMedia
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
+import VideoToolbox
 
 /// `--probe <host> <serial> <access-code> [seconds]`: connects like the app does, prints what happens and a
 /// summary of the first full report, then exits. For diagnosing a printer from Terminal without the UI.
@@ -52,6 +56,101 @@ enum Probe {
             connection.stop()
             exit(reports > 0 ? 0 : 1)
         }
+    }
+
+    // MARK: - Camera
+
+    /// `--probe-camera <host> <serial> <access-code> [seconds] [--jpeg|--rtsp] [--model <name>]`: opens the camera
+    /// like the app does, logs the handshake (certificate, RTSP replies, SDP) and the frames, decodes the first one
+    /// and saves it as a PNG in the temporary folder. Without `--jpeg`/`--rtsp`, the model decides (a P2S if unknown).
+    static var cameraArguments: (host: String, serial: String, code: String, seconds: Double, transport: CameraTransport)? {
+        let a = CommandLine.arguments
+        guard let i = a.firstIndex(of: "--probe-camera"), i + 3 < a.count else { return nil }
+        let seconds = i + 4 < a.count ? Double(a[i + 4]) ?? 15 : 15
+        // `--model` takes a name ("P1S") or a model code ("C12"); without it the serial says.
+        let name = a.firstIndex(of: "--model").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil }
+        let model = PrinterModel.named(name) ?? PrinterModel.find(code: "", serial: a[i + 2])
+        var transport = CameraTransport.forModel(model?.name ?? "P2S")
+        if a.contains("--jpeg") { transport = .jpeg }
+        if a.contains("--rtsp") { transport = .rtsps }
+        return (a[i + 1], a[i + 2], a[i + 3], seconds, transport)
+    }
+
+    private static var camera: CameraClient?
+
+    static func runCamera(host: String, serial: String, code: String, seconds: Double, transport: CameraTransport) {
+        let started = Date()
+        func log(_ text: String) {
+            print(String(format: "[%5.1fs] ", Date().timeIntervalSince(started)) + text)
+            fflush(stdout)
+        }
+        let client = makeCameraClient(CameraConfig(host: host, serial: serial, accessCode: code, transport: transport,
+                                                   insecure: CommandLine.arguments.contains("--insecure-tls")))
+        camera = client
+        var frames = 0, keyframes = 0, bytes = 0, saved = false
+        client.log = { line in DispatchQueue.main.async { log(line) } }
+        client.onEvent = { event in
+            switch event {
+            case .started(let description, _):
+                log("stream: \(description)")
+            case .video(let sample, let keyframe):
+                frames += 1
+                bytes += CMSampleBufferGetTotalSampleSize(sample)
+                if keyframe { keyframes += 1 }
+                if keyframe, !saved, let image = decode(sample) {
+                    saved = true
+                    save(image, log: log)
+                }
+            case .image(let image):
+                frames += 1
+                if !saved {
+                    saved = true
+                    save(image, log: log)
+                }
+            case .failed(let failure):
+                log("failed: \(failure.message)")
+                exit(1)
+            }
+        }
+        log("opening \(transport == .rtsps ? "RTSPS on port 322" : "the JPEG stream on port 6000") at \(host)")
+        client.start()
+        Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
+            MainActor.assumeIsolated {
+                // JPEG frames arrive decoded, so only the video stream has keyframes and a byte count.
+                log(transport == .jpeg ? "\(frames) frames so far" : "\(frames) frames, \(keyframes) keyframes, \(bytes / 1024) KB so far")
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            let elapsed = Date().timeIntervalSince(started)
+            log(String(format: "done: %d frames (%.1f fps)", frames, Double(frames) / elapsed))
+            client.stop()
+            exit(frames > 0 ? 0 : 1)
+        }
+    }
+
+    /// Decodes one keyframe with VideoToolbox, which proves the format description and the NAL units are right.
+    private static func decode(_ sample: CMSampleBuffer) -> CGImage? {
+        guard let format = CMSampleBufferGetFormatDescription(sample) else { return nil }
+        var session: VTDecompressionSession?
+        guard VTDecompressionSessionCreate(allocator: nil, formatDescription: format, decoderSpecification: nil,
+                                           imageBufferAttributes: nil, outputCallback: nil,
+                                           decompressionSessionOut: &session) == noErr, let session else { return nil }
+        defer { VTDecompressionSessionInvalidate(session) }
+        var result: CGImage?
+        let status = VTDecompressionSessionDecodeFrame(session, sampleBuffer: sample, flags: [], infoFlagsOut: nil) { status, _, buffer, _, _ in
+            guard status == noErr, let buffer else { return }
+            VTCreateCGImageFromCVPixelBuffer(buffer, options: nil, imageOut: &result)
+        }
+        VTDecompressionSessionWaitForAsynchronousFrames(session)
+        if status != noErr { print("decode failed: \(status)") }
+        return result
+    }
+
+    private static func save(_ image: CGImage, log: (String) -> Void) {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("bambubar-camera.png")
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else { return }
+        CGImageDestinationAddImage(destination, image, nil)
+        if CGImageDestinationFinalize(destination) { log("decoded a \(image.width)×\(image.height) frame: \(url.path)") }
     }
 
     private static func summary(_ s: PrinterStatus) -> String {

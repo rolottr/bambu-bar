@@ -55,6 +55,13 @@ final class PrinterStore {
     var notifyStarted: Bool { didSet { defaults.set(notifyStarted, forKey: Keys.notifyStarted); requestNotificationsIfNeeded() } }
     var confirmStop: Bool { didSet { defaults.set(confirmStop, forKey: Keys.confirmStop) } }
     var showPrinterActions: Bool { didSet { defaults.set(showPrinterActions, forKey: Keys.showPrinterActions) } }
+    /// Keep the camera streaming for the whole of a print, so it shows at once. Off: only while it's on screen.
+    var cameraStaysOnWhilePrinting: Bool {
+        didSet {
+            defaults.set(cameraStaysOnWhilePrinting, forKey: Keys.cameraStaysOnWhilePrinting)
+            for session in sessions { session.camera.viewersChanged() }
+        }
+    }
 
     struct Toast: Equatable, Identifiable {
         let id = UUID()
@@ -99,6 +106,7 @@ final class PrinterStore {
         static let notifyStarted = "notifyStarted"
         static let confirmStop = "confirmStop"
         static let showPrinterActions = "showPrinterActions"
+        static let cameraStaysOnWhilePrinting = "cameraStaysOnWhilePrinting"
     }
 
     private init() {
@@ -109,6 +117,7 @@ final class PrinterStore {
         notifyStarted = defaults.object(forKey: Keys.notifyStarted) as? Bool ?? false
         confirmStop = defaults.object(forKey: Keys.confirmStop) as? Bool ?? true
         showPrinterActions = defaults.object(forKey: Keys.showPrinterActions) as? Bool ?? true
+        cameraStaysOnWhilePrinting = defaults.bool(forKey: Keys.cameraStaysOnWhilePrinting)
         menuBarSerial = defaults.string(forKey: Keys.menuBarPrinter)
         selectedSerial = defaults.string(forKey: Keys.selected)
     }
@@ -351,11 +360,25 @@ final class PrinterStore {
         } else {
             discovered.append(printer)
         }
-        // Follow a printer when DHCP hands it a new address.
-        if let session = session(printer.serial), session.config.host != printer.host, !isDemo {
-            session.config.host = printer.host
-            saveConfigs()
-            session.restart()
+        if let session = session(printer.serial), !isDemo {
+            var changed = false
+            // Follow a printer when DHCP hands it a new address.
+            if session.config.host != printer.host {
+                session.config.host = printer.host
+                session.restart()
+                changed = true
+            }
+            // Adopt the network-announced name once it arrives, when the stored name is still the bare serial
+            // (the printer was added before it announced itself). A name set by hand is left alone.
+            if session.config.name == printer.serial,
+               let announced = announcedName(for: printer.serial) {
+                session.config.name = announced
+                changed = true
+            }
+            if changed {
+                saveConfigs()
+                writeSnapshot(force: true)
+            }
         }
     }
 
