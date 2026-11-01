@@ -92,6 +92,20 @@ struct PrintersPage: View {
                             }
                         }
                     }
+                    SettingsToggle("Camera", isOn: Binding(
+                        get: { config.cameraEnabled == true },
+                        set: { store.setCameraEnabled($0, for: config.serial) }))
+                    Text(cameraNote(for: config))
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if config.cameraEnabled == true && !store.cameraEnabled {
+                        HStack {
+                            Text("The camera is off for every printer in Settings.")
+                                .font(.system(size: 11.5)).foregroundStyle(Palette.paused)
+                            Spacer()
+                            Button("Open Settings") { MainWindow.show(.settings) }.controlSize(.small)
+                        }
+                    }
                     Divider()
                     HStack {
                         Text("Bambu Bar follows the printer if its IP address changes.")
@@ -117,6 +131,13 @@ struct PrintersPage: View {
         } message: {
             Text("Bambu Bar disconnects and removes the access code from your keychain. Print history stays.")
         }
+    }
+
+    private func cameraNote(for config: PrinterConfig) -> LocalizedStringKey {
+        if CameraTransport.forModel(config.modelName) == .rtsps {
+            return "Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen)."
+        }
+        return "Shows the printer's live view."
     }
 
     private func printerRow(_ session: PrinterSession) -> some View {

@@ -17,7 +17,7 @@ struct OverviewPage: View {
             .padding(.bottom, 4)
             if let status = store.status, store.isOnline {
                 JobHero(status: status, compact: false)
-                if status.state.isActive {
+                if store.showPrinterActions && status.state.isActive {
                     PrintControls(status: status)
                         .frame(maxWidth: 520)
                     if status.controlsLocked {
@@ -25,6 +25,10 @@ struct OverviewPage: View {
                     }
                 }
                 ForEach(status.issues) { IssueBanner(issue: $0) }
+                // Only with the camera on, in Settings and for this printer (never for the demo printers).
+                if let session = store.current, session.showsCamera {
+                    CameraCard(session: session)
+                }
                 metrics(status)
                 if !status.ams.isEmpty || status.externalSpool?.isLoaded == true {
                     VStack(alignment: .leading, spacing: 8) {

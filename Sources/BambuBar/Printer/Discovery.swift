@@ -33,11 +33,18 @@ final class PrinterDiscovery {
     private var networkUp = false
     private var blocked = false
     private var retry: DispatchSourceTimer?
+    private let extraPorts: [UInt16]
+
+    /// `extraPorts`: where else to listen, besides the ports printers use (the mock fleet's, by default only
+    /// with `--emulator`).
+    init(extraPorts: [UInt16] = PrinterDiscovery.mockPorts) {
+        self.extraPorts = extraPorts
+    }
 
     func start() {
         guard !running else { return }
         running = true
-        for port: UInt16 in [2021, 1990] + Self.mockPorts {
+        for port: UInt16 in [2021, 1990] + extraPorts {
             guard let fd = Self.openSocket(port: port) else { continue }
             sockets.append(fd)
             let source = fd
@@ -58,7 +65,7 @@ final class PrinterDiscovery {
 
     /// The mock fleet announces itself on a port of its own (scripts/fleet), so the copy of Bambu Bar in daily
     /// use, also bound to 2021, doesn't take its unicast packets.
-    private static var mockPorts: [UInt16] {
+    static var mockPorts: [UInt16] {
         guard CommandLine.arguments.contains("--emulator") else { return [] }
         return [2121]
     }
@@ -175,7 +182,10 @@ final class PrinterDiscovery {
             headers[key] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
         guard headers["nt"]?.contains("bambulab") == true || headers["st"]?.contains("bambulab") == true,
-              let serial = headers["usn"], !serial.isEmpty else { return nil }
+              let rawSerial = headers["usn"], !rawSerial.isEmpty else { return nil }
+        // Match the case used everywhere a session is stored (PrinterIdentity and setup both uppercase the
+        // serial), so a printer that announces a lowercase serial isn't taken for a second, unconfigured one.
+        let serial = rawSerial.uppercased()
         let host = headers["location"].flatMap { $0.isEmpty ? nil : $0 } ?? sender
         return DiscoveredPrinter(serial: serial, host: host, name: headers["devname.bambu.com"] ?? serial,
                                  modelCode: headers["devmodel.bambu.com"] ?? "", firmware: headers["devversion.bambu.com"],
