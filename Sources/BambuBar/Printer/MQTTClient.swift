@@ -147,6 +147,10 @@ final class MQTTClient {
         // P2S firmware never answers a TLS 1.3 ClientHello.
         sec_protocol_options_set_min_tls_protocol_version(sec, .TLSv12)
         sec_protocol_options_set_max_tls_protocol_version(sec, .TLSv12)
+        // A resumed session skips the certificate, and with it `verify`: the only check that the peer is the
+        // printer with the expected serial (and, for PrinterIdentity, the only way to read that serial). Every
+        // connection gets a full handshake instead; on a LAN it costs next to nothing.
+        sec_protocol_options_set_tls_resumption_enabled(sec, false)
         sec_protocol_options_set_verify_block(sec, { _, trust, complete in
             complete(verify(sec_trust_copy_ref(trust).takeRetainedValue()))
         }, queue)
