@@ -57,6 +57,13 @@ final class PrinterStore {
     var notifyStarted: Bool { didSet { defaults.set(notifyStarted, forKey: Keys.notifyStarted); requestNotificationsIfNeeded() } }
     var confirmStop: Bool { didSet { defaults.set(confirmStop, forKey: Keys.confirmStop) } }
     var showPrinterActions: Bool { didSet { defaults.set(showPrinterActions, forKey: Keys.showPrinterActions) } }
+    /// The camera, for every printer (Settings → Camera); each printer has its own switch too. Off by default.
+    var cameraEnabled: Bool {
+        didSet {
+            defaults.set(cameraEnabled, forKey: Keys.cameraEnabled)
+            cameraSettingsChanged()
+        }
+    }
     /// Keep the camera streaming for the whole of a print, so it shows at once. Off: only while it's on screen.
     var cameraStaysOnWhilePrinting: Bool {
         didSet {
@@ -109,6 +116,7 @@ final class PrinterStore {
         static let confirmStop = "confirmStop"
         static let showPrinterActions = "showPrinterActions"
         static let cameraStaysOnWhilePrinting = "cameraStaysOnWhilePrinting"
+        static let cameraEnabled = "cameraEnabled"
     }
 
     private init() {
@@ -120,6 +128,7 @@ final class PrinterStore {
         confirmStop = defaults.object(forKey: Keys.confirmStop) as? Bool ?? true
         showPrinterActions = defaults.object(forKey: Keys.showPrinterActions) as? Bool ?? true
         cameraStaysOnWhilePrinting = defaults.bool(forKey: Keys.cameraStaysOnWhilePrinting)
+        cameraEnabled = defaults.bool(forKey: Keys.cameraEnabled)
         menuBarSerial = defaults.string(forKey: Keys.menuBarPrinter)
         selectedSerial = defaults.string(forKey: Keys.selected)
     }
@@ -342,6 +351,22 @@ final class PrinterStore {
         session.config.name = trimmed.isEmpty ? serial : trimmed
         saveConfigs()
         writeSnapshot(force: true)
+    }
+
+    /// Turns one printer's camera on or off (Printers page).
+    func setCameraEnabled(_ on: Bool, for serial: String) {
+        guard let session = session(serial), session.config.cameraEnabled != on else { return }
+        session.config.cameraEnabled = on
+        saveConfigs()
+        cameraSettingsChanged()
+    }
+
+    /// A camera switch changed: a camera now off stops streaming and its window closes.
+    private func cameraSettingsChanged() {
+        for session in sessions {
+            if !session.showsCamera { CameraWindow.close(session.id) }
+            session.camera.update()
+        }
     }
 
     func forget(_ serial: String) {

@@ -347,6 +347,11 @@ enum CameraWindow {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// Closes the printer's camera window, if it's open (its camera was turned off).
+    static func close(_ serial: String) {
+        windows[serial]?.close()
+    }
+
     /// Drops the window's view so its surface detaches and the stream can stop.
     private static func closed(_ window: NSWindow?, serial: String) {
         window?.contentViewController = nil

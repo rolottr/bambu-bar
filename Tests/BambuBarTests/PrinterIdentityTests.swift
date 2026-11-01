@@ -55,6 +55,23 @@ final class PrinterIdentityTests: XCTestCase {
         XCTAssertEqual(PrinterConfig.deduplicated([config("22ef00000000001")]).map(\.serial), ["22EF00000000001"])
     }
 
+    // MARK: - Camera switch
+
+    func testPrinterSavedByAnEarlierVersionHasItsCameraOff() throws {
+        let json = #"[{"host":"10.0.0.1","serial":"22EF00000000001","name":"Workshop","modelCode":"N7"}]"#
+        let configs = try JSONDecoder().decode([PrinterConfig].self, from: Data(json.utf8))
+        XCTAssertNil(configs.first?.cameraEnabled)
+        XCTAssertNotEqual(configs.first?.cameraEnabled, true, "off unless turned on")
+    }
+
+    func testCameraSwitchIsSaved() throws {
+        var config = config("22EF00000000001")
+        config.cameraEnabled = true
+        let loaded = try JSONDecoder().decode(PrinterConfig.self, from: JSONEncoder().encode(config))
+        XCTAssertEqual(loaded.cameraEnabled, true)
+        XCTAssertEqual(PrinterConfig.deduplicated([loaded]).first?.cameraEnabled, true)
+    }
+
     // MARK: - Names
 
     func testPlaceholderName() {

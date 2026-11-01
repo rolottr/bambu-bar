@@ -141,6 +141,7 @@ final class CameraFeed {
     private func availability() -> String? {
         guard let session else { return "No printer." }
         if session.isDemo { return "The demo printer has no camera." }
+        guard session.showsCamera else { return "The camera is off." }
         if PrinterStore.emulatorSettings != nil { return "The mock fleet's printers have no camera." }
         guard session.isOnline else { return "The camera starts when the printer is connected." }
         if session.cameraTransport == .rtsps && session.status?.liveViewEnabled == false {

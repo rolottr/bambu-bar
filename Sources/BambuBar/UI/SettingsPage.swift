@@ -97,10 +97,16 @@ struct SettingsPage: View {
             }
 
             SettingsGroup("Camera", symbol: "video.fill") {
-                SettingsToggle("Keep the camera connected during prints", isOn: $store.cameraStaysOnWhilePrinting)
-                Text("The picture shows at once when you open it, but the stream runs for the whole print and uses one of the printer's few camera connections, so Bambu Handy or Bambu Studio may not get the camera meanwhile.")
+                SettingsToggle("Show the printer camera", isOn: $store.cameraEnabled)
+                Text("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if store.cameraEnabled {
+                    SettingsToggle("Keep the camera connected during prints", isOn: $store.cameraStaysOnWhilePrinting)
+                    Text("The picture shows at once when you open it, but the stream runs for the whole print and uses one of the printer's few camera connections, so Bambu Handy or Bambu Studio may not get the camera meanwhile.")
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             if UpdateChecker.isAvailable {

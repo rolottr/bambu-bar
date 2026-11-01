@@ -7,6 +7,9 @@ struct PrinterConfig: Codable, Equatable {
     var name: String
     /// SSDP model code ("N7" for the P2S).
     var modelCode: String
+    /// The camera is on for this printer (Printers page). Off, or never set (printers saved by earlier
+    /// versions), it's hidden; the switch in Settings has to be on too.
+    var cameraEnabled: Bool? = nil
 
     var modelName: String { PrinterModel.name(for: modelCode, serial: serial) }
     var model: PrinterModel? { PrinterModel.find(code: modelCode, serial: serial) }

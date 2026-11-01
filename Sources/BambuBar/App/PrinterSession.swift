@@ -106,6 +106,9 @@ final class PrinterSession: Identifiable {
     var allowsInsecureTLS: Bool { insecure }
     var cameraTransport: CameraTransport { CameraTransport.forModel(config.modelName) }
     var cameraAccessCode: String? { activeCode ?? accessCode }
+    /// The camera appears (and may stream) only with both switches on: Settings → Camera, and this printer's on
+    /// the Printers page. Off, nothing about it shows: not on the Printer page, in the panel or in the menus.
+    var showsCamera: Bool { !isDemo && PrinterStore.shared.cameraEnabled && config.cameraEnabled == true }
 
     var linkSummary: String {
         switch phase {

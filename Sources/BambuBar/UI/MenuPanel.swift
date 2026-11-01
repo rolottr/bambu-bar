@@ -49,8 +49,8 @@ struct MenuPanel: View {
                 if let issue = status.mostSevereIssue, issue.severity <= .common {
                     IssueBanner(issue: issue)
                 }
-                // The demo printers have no camera; keep it out of their screenshots too.
-                if let session = store.current, !session.isDemo {
+                // Only with the camera on, in Settings and for this printer (never for the demo printers).
+                if let session = store.current, session.showsCamera {
                     CameraPreview(session: session)
                 }
                 temperatures(status)

@@ -75,9 +75,11 @@ struct AppCommands: Commands {
             Button(store.chamberLightOn ? "Turn Chamber Light Off" : "Turn Chamber Light On") { store.toggleLight() }
                 .keyboardShortcut("l")
                 .disabled(!store.isOnline || store.status?.chamberLightOn == nil)
-            Button("Show Camera") { if let session = store.current { CameraWindow.show(session) } }
-                .keyboardShortcut("k")
-                .disabled(store.current?.isDemo ?? true)
+            // Only with the camera on, in Settings and for this printer.
+            if let session = store.current, session.showsCamera {
+                Button("Show Camera") { CameraWindow.show(session) }
+                    .keyboardShortcut("k")
+            }
         }
     }
 }
