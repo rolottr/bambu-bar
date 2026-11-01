@@ -53,7 +53,7 @@ struct MenuPanel: View {
                 if !status.ams.isEmpty || status.externalSpool?.isLoaded == true {
                     FilamentStrip(status: status, maxHeight: 360)
                 }
-                if status.state.isActive {
+                if store.showPrinterActions && status.state.isActive {
                     PrintControls(status: status)
                 }
             } else {

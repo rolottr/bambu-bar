@@ -55,6 +55,15 @@ struct SettingsPage: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            SettingsGroup("Controls", symbol: "slider.horizontal.3") {
+                SettingsToggle("Show printer actions", isOn: $store.showPrinterActions)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(Text("Show printer actions"))
+                Text("Show pause, resume, stop and print speed controls in the menu bar panel and main window, and print actions in the Printer menu.")
+                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             SettingsGroup("Language", symbol: "globe") {
                 SettingsRow("Language") {
                     Picker("", selection: $language) {

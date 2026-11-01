@@ -62,13 +62,15 @@ struct AppCommands: Commands {
             Button("Add Printer…") { MainWindow.addPrinter() }
             Button("Refresh") { store.refresh() }
                 .keyboardShortcut("r")
-            Divider()
-            Button("Pause") { store.pause() }
-                .disabled(store.status?.state != .printing && store.status?.state != .preparing)
-            Button("Resume") { store.resume() }
-                .disabled(store.status?.state != .paused)
-            Button("Stop…") { store.stopPrint() }
-                .disabled(!(store.status?.state.isActive ?? false))
+            if store.showPrinterActions {
+                Divider()
+                Button("Pause") { store.pause() }
+                    .disabled(store.status?.state != .printing && store.status?.state != .preparing)
+                Button("Resume") { store.resume() }
+                    .disabled(store.status?.state != .paused)
+                Button("Stop…") { store.stopPrint() }
+                    .disabled(!(store.status?.state.isActive ?? false))
+            }
             Divider()
             Button(store.chamberLightOn ? "Turn Chamber Light Off" : "Turn Chamber Light On") { store.toggleLight() }
                 .keyboardShortcut("l")
