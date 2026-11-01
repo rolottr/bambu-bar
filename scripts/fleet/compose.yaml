@@ -9,6 +9,7 @@ services:
       PUBLISHED_HOST: 127.0.0.1
       SSDP_TARGET: ${SSDP_TARGET:-}
       SPEED: ${SPEED:-1}
+      SERIAL_CASE: ${SERIAL_CASE:-upper}
     ports:
       - "127.0.0.1:18801-18812:18801-18812"
     volumes:

@@ -12,6 +12,14 @@ It also writes OUT/BambuStudio.conf the way Bambu Studio saves LAN printers (acc
 set (host.docker.internal) it sends each printer's SSDP NOTIFY there too, on SSDP_PORT, so they show up as
 discovered in a Bambu Bar started with `--emulator`.
 
+SERIAL_CASE reproduces printers whose serial turns up in another case than the uppercase one on their
+certificate, as Bambu Studio sometimes saves it (each was taken for two printers, one of them offline):
+  upper  (default) every serial uppercase, as before.
+  lower  the settings file keys and the SSDP announcements use the lowercase serial.
+  mixed  the settings file has a stale code under the uppercase serial (`access_code`) and the working one
+         under the lowercase serial (`user_access_code`, `user_access_dev_ip`); announcements alternate between
+         the two spellings. scripts/integration-test.sh runs the fleet this way.
+
 Run it with scripts/fleet/run.sh, or: docker compose -f scripts/fleet/compose.yaml up --build"""
 import copy, json, os, random, socket, subprocess, threading, time, uuid
 
@@ -25,6 +33,9 @@ PUBLISHED_HOST = os.environ.get("PUBLISHED_HOST", "127.0.0.1")
 SSDP_TARGET = os.environ.get("SSDP_TARGET", "")
 # Not 2021: Bambu Bar in daily use listens there too and would take the packets; `--emulator` runs listen on 2121.
 SSDP_PORT = int(os.environ.get("SSDP_PORT", "2121"))
+SERIAL_CASE = os.environ.get("SERIAL_CASE", "upper")
+if SERIAL_CASE not in ("upper", "lower", "mixed"):
+    raise SystemExit(f"SERIAL_CASE must be upper, lower or mixed, not {SERIAL_CASE!r}")
 SPEED = float(os.environ.get("SPEED", "1"))  # >1 prints faster
 CERTS = "/tmp/fleet-certs"
 
@@ -140,6 +151,7 @@ class Printer:
         self.index = index
         self.serial = f"{prefix}F{index + 1:011d}"
         self.access_code = f"FLT{index + 1:05d}"
+        self.stale_code = f"OLD{index + 1:05d}"
         self.port = BASE_PORT + index
         self.offline = state == "OFFLINE"
         self.client = client
@@ -354,10 +366,13 @@ class Printer:
         elif random.random() < 0.2:
             self.delta({"wifi_signal": f"-{random.randint(45, 70)}dBm"})
 
-    def ssdp(self):
+    def ssdp(self, count=0):
+        """The announcement; with SERIAL_CASE its serial is lowercase (lower) or every other one is (mixed)."""
+        lower = SERIAL_CASE == "lower" or (SERIAL_CASE == "mixed" and count % 2 == 1)
+        usn = self.serial.lower() if lower else self.serial
         return ("NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1990\r\nServer: UPnP/1.0\r\n"
                 f"Location: {PUBLISHED_HOST}:{self.port}\r\nNT: urn:bambulab-com:device:3dprinter:1\r\n"
-                f"USN: {self.serial}\r\nCache-Control: max-age=1800\r\nDevModel.bambu.com: {self.code}\r\n"
+                f"USN: {usn}\r\nCache-Control: max-age=1800\r\nDevModel.bambu.com: {self.code}\r\n"
                 f"DevName.bambu.com: {self.name}\r\nDevConnect.bambu.com: lan\r\nDevBind.bambu.com: free\r\n"
                 "Devseclink.bambu.com: secure\r\nDevVersion.bambu.com: 01.03.00.00\r\nDevCap.bambu.com: 1\r\n\r\n")
 
@@ -412,12 +427,18 @@ def start_broker(printers):
 def write_settings(printers):
     """OUT/BambuStudio.conf as Bambu Studio saves LAN printers."""
     key = str(uuid.uuid4())
+    typed = (lambda serial: serial) if SERIAL_CASE == "upper" else str.lower
     conf = {
         "app": {"slicer_uuid": key},
         "access_code": {},
-        "user_access_code": {p.serial: p.access_code for p in printers},
-        "user_access_dev_ip": {p.serial: encode_ip(f"{PUBLISHED_HOST}:{p.port}", key) for p in printers},
+        "user_access_code": {typed(p.serial): p.access_code for p in printers},
+        "user_access_dev_ip": {typed(p.serial): encode_ip(f"{PUBLISHED_HOST}:{p.port}", key) for p in printers},
     }
+    if SERIAL_CASE == "mixed":
+        # The cloud's copy, out of date, under the serial's other spelling: tried first, refused, then the
+        # working code must still be there to fall back on.
+        conf["access_code"] = {p.serial: p.stale_code for p in printers}
+        conf["ip_address"] = {p.serial: f"{PUBLISHED_HOST}:{p.port}" for p in printers}
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, "BambuStudio.conf")
     with open(path, "w") as f:
@@ -468,7 +489,7 @@ def main():
                 p.tick()
             if ssdp and tick % 2 == 1 and not p.offline:
                 try:
-                    ssdp.sendto(p.ssdp().encode(), (SSDP_TARGET, SSDP_PORT))
+                    ssdp.sendto(p.ssdp(tick // 2).encode(), (SSDP_TARGET, SSDP_PORT))
                 except OSError:
                     pass
 

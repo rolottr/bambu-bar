@@ -4,6 +4,8 @@
 #   scripts/fleet/run.sh            fleet + app with the printers already added
 #   scripts/fleet/run.sh --import   fleet + app on the Add Printer page, to try "Add All"
 #   SSDP=1 scripts/fleet/run.sh     the printers also announce themselves, with names and models
+#   SERIAL_CASE=mixed scripts/fleet/run.sh
+#                                   serials in another case in the settings file and announcements (fleet.py)
 #   scripts/fleet/run.sh --stop     stops the fleet
 set -euo pipefail
 

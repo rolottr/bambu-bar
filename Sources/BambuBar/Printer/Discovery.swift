@@ -33,11 +33,18 @@ final class PrinterDiscovery {
     private var networkUp = false
     private var blocked = false
     private var retry: DispatchSourceTimer?
+    private let extraPorts: [UInt16]
+
+    /// `extraPorts`: where else to listen, besides the ports printers use (the mock fleet's, by default only
+    /// with `--emulator`).
+    init(extraPorts: [UInt16] = PrinterDiscovery.mockPorts) {
+        self.extraPorts = extraPorts
+    }
 
     func start() {
         guard !running else { return }
         running = true
-        for port: UInt16 in [2021, 1990] + Self.mockPorts {
+        for port: UInt16 in [2021, 1990] + extraPorts {
             guard let fd = Self.openSocket(port: port) else { continue }
             sockets.append(fd)
             let source = fd
@@ -58,7 +65,7 @@ final class PrinterDiscovery {
 
     /// The mock fleet announces itself on a port of its own (scripts/fleet), so the copy of Bambu Bar in daily
     /// use, also bound to 2021, doesn't take its unicast packets.
-    private static var mockPorts: [UInt16] {
+    static var mockPorts: [UInt16] {
         guard CommandLine.arguments.contains("--emulator") else { return [] }
         return [2121]
     }

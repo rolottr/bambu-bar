@@ -137,6 +137,29 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_HARDENED_RUNTIME: NO
+  # Integration tests (scripts/integration-test.sh) against the Docker simulators in scripts/integration: the mock
+  # fleet (TLS MQTT, SSDP, a Bambu Studio settings file) and a mock camera (RTSPS and the JPEG stream). They
+  # compile the real networking code, without the app, and skip themselves unless the simulators are running.
+  BambuBarIntegrationTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/BambuBarIntegrationTests
+      - path: Sources/Shared
+      - path: Sources/BambuBar/Printer/BambuTrust.swift
+      - path: Sources/BambuBar/Printer/MQTTClient.swift
+      - path: Sources/BambuBar/Printer/CameraClient.swift
+      - path: Sources/BambuBar/Printer/RTSPCameraClient.swift
+      - path: Sources/BambuBar/Printer/JPEGCameraClient.swift
+      - path: Sources/BambuBar/Printer/CameraProtocol.swift
+      - path: Sources/BambuBar/Printer/VideoDepacketizer.swift
+      - path: Sources/BambuBar/Printer/SlicerImport.swift
+      - path: Sources/BambuBar/Printer/Discovery.swift
+      - path: Sources/BambuBar/Printer/PrinterConfig.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_HARDENED_RUNTIME: NO
 schemes:
   BambuBar:
     build:
@@ -170,3 +193,11 @@ schemes:
       config: Debug
       targets:
         - BambuBarTests
+  BambuBarIntegrationTests:
+    build:
+      targets:
+        BambuBarIntegrationTests: [test]
+    test:
+      config: Debug
+      targets:
+        - BambuBarIntegrationTests
