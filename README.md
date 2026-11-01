@@ -89,7 +89,8 @@ The widget shows what the app last saw, so keep Bambu Bar running (Open at Login
 | Printer | Status |
 | --- | --- |
 | **P2S** | Development printer; verified with firmware **01.03.00.00** and an AMS 2 Pro. |
-| **X1, P1, A1, H2 families** | Same LAN protocol and certificate authorities; implemented, not verified on hardware. |
+| **A1** | Monitoring verified by a user with firmware **01.08.01.00** and an AMS Lite: status, layers, temperatures, Bambu Lab RFID and generic spools, HMS errors. Pause, stop and speed not tested. A sanitised report is in `scripts/emulator/a1-sample.json`. |
+| **X1, P1, A1 mini, H2 families** | Same LAN protocol and certificate authorities; implemented, not verified on hardware. |
 
 The printer can be in cloud mode or LAN Only mode; controls need LAN Only with Developer Mode (see above). The camera is not shown.
 

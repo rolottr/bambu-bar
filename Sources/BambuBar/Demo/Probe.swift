@@ -4,7 +4,8 @@ import Foundation
 /// `--probe <host> <serial> <access-code> [seconds]`: connects like the app does, prints what happens and a
 /// summary of the first full report, then exits. For diagnosing a printer from Terminal without the UI.
 /// Add `--insecure-tls` for the local test broker. Pass `keychain` as the code to use the one Bambu Bar saved, and
-/// `--raw-filament` to print the AMS and external spool fields as the printer sent them.
+/// `--raw-filament` to print the AMS and external spool fields as the printer sent them, `--raw-all` for the whole
+/// first full report.
 @MainActor
 enum Probe {
     static var arguments: (host: String, serial: String, code: String, seconds: Double)? {
@@ -35,6 +36,10 @@ enum Probe {
             reports += 1
             if reports == 1 || reports % 10 == 0 {
                 log("status #\(reports): \(summary(status))")
+            }
+            if reports == 1, CommandLine.arguments.contains("--raw-all"),
+               let data = try? JSONSerialization.data(withJSONObject: doc.print, options: [.prettyPrinted, .sortedKeys]) {
+                log("raw report:\n" + String(decoding: data, as: UTF8.self))
             }
             if reports == 1, CommandLine.arguments.contains("--raw-filament") {
                 var raw: [String: Any] = [:]
