@@ -14,7 +14,7 @@ final class RTSPCameraClient: CameraClient {
     private let queue = DispatchQueue(label: "dev.rolottr.BambuBar.camera.rtsp")
     private let url: String
     private var socket: CameraSocket?
-    private var buffer: [UInt8] = []
+    private var reader = RTSPStreamReader()
     private var sequence = 0
     /// Requests awaiting a response, by CSeq.
     private var requests: [Int: (method: String, uri: String, headers: [String])] = [:]
@@ -97,36 +97,22 @@ final class RTSPCameraClient: CameraClient {
     // MARK: - Parsing
 
     private func received(_ data: Data) {
-        buffer.append(contentsOf: data)
-        var offset = 0
-        parse: while offset < buffer.count, !finished {
-            if buffer[offset] == 0x24 {  // '$': an interleaved RTP or RTCP packet
-                guard buffer.count - offset >= 4 else { break }
-                let channel = buffer[offset + 1]
-                let length = Int(buffer[offset + 2]) << 8 | Int(buffer[offset + 3])
-                guard buffer.count - offset >= 4 + length else { break }
-                if channel == videoChannel, length >= 12 {
-                    handleRTP(Array(buffer[(offset + 4)..<(offset + 4 + length)]))
-                }
-                offset += 4 + length
-            } else if buffer[offset] >= 0x41 && buffer[offset] <= 0x5A {  // 'A'…'Z': "RTSP/1.0 200 OK" or a request
-                guard let headerEnd = buffer[offset...].firstRange(of: [13, 10, 13, 10])?.lowerBound else {
-                    if buffer.count - offset > 64 * 1024 { finish(.malformed("RTSP header too long")) }
-                    break parse
-                }
-                let head = String(decoding: buffer[offset..<headerEnd], as: UTF8.self)
-                let message = RTSPMessage(head)
-                let bodyStart = headerEnd + 4
-                let length = Int(message.header("Content-Length") ?? "0") ?? 0
-                guard buffer.count - bodyStart >= length else { break }
-                let body = String(decoding: buffer[bodyStart..<(bodyStart + length)], as: UTF8.self)
-                offset = bodyStart + length
-                if message.isResponse { handleResponse(message, body: body) }
-            } else {
-                offset += 1  // resynchronise on the next '$' or message
+        let items: [RTSPStreamReader.Item]
+        do {
+            items = try reader.append(data)
+        } catch {
+            // A length that makes no sense: the camera's stream can't be followed any more.
+            return finish(.malformed("\(error)"))
+        }
+        for item in items {
+            guard !finished else { return }
+            switch item {
+            case .packet(let channel, let packet):
+                if channel == videoChannel, packet.count >= 12 { handleRTP(packet) }
+            case .message(let message, let body):
+                if message.isResponse { handleResponse(message, body: String(decoding: body, as: UTF8.self)) }
             }
         }
-        if offset > 0 { buffer.removeFirst(min(offset, buffer.count)) }
     }
 
     private func handleResponse(_ response: RTSPMessage, body: String) {

@@ -40,6 +40,25 @@ final class SDPTests: XCTestCase {
         XCTAssertNil(SDP.video(in: "v=0\nm=audio 0 RTP/AVP 97\na=rtpmap:97 PCMU/8000\n"))
     }
 
+    func testAnotherCodecIsNotTakenForH264() {
+        XCTAssertNil(SDP.video(in: "v=0\nm=video 0 RTP/AVP 96\na=rtpmap:96 VP8/90000\n"))
+        XCTAssertNil(SDP.video(in: "v=0\nm=video 0 RTP/AVP 26 96\na=rtpmap:26 JPEG/90000\na=rtpmap:96 VP9/90000\n"))
+    }
+
+    func testThePlayableTrackIsPickedOverAnotherCodec() throws {
+        let sdp = "v=0\nm=video 0 RTP/AVP 96 97\na=rtpmap:96 VP8/90000\na=rtpmap:97 H264/90000\n"
+        let video = try XCTUnwrap(SDP.video(in: sdp))
+        XCTAssertEqual(video.codec, .h264)
+        XCTAssertEqual(video.payloadType, 97)
+    }
+
+    /// Some cameras send no rtpmap at all; their video is H.264.
+    func testNoRtpmapAtAllMeansH264() throws {
+        let video = try XCTUnwrap(SDP.video(in: "v=0\nm=video 0 RTP/AVP 96\na=control:track1\n"))
+        XCTAssertEqual(video.codec, .h264)
+        XCTAssertEqual(video.payloadType, 96)
+    }
+
     func testResolve() {
         let base = "rtsps://192.168.0.5:322/streaming/live/1"
         XCTAssertEqual(SDP.resolve("track1", base: base), base + "/track1")

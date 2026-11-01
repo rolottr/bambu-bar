@@ -114,6 +114,56 @@ final class VideoDepacketizerTests: XCTestCase {
         XCTAssertEqual(push(d, idr, at: 4000, marker: true).count, 1)
     }
 
+    /// A unit's first fragment at one timestamp and its last at the next belong to different frames: nothing
+    /// of the two is played, and the next whole keyframe is, unaltered.
+    func testAnUnfinishedFragmentDoesNotCrossIntoTheNextFrame() {
+        let d = VideoDepacketizer(codec: .h264, parameterSets: [Fixtures.h264SPS, Fixtures.h264PPS])
+        let idr = Fixtures.h264IDR
+        let indicator = (idr[0] & 0xE0) | 28
+        XCTAssertTrue(push(d, [indicator, 0x85] + idr[1..<5], at: 1000).isEmpty)
+        XCTAssertTrue(push(d, [indicator, 0x45] + idr[5...], at: 4000, marker: true).isEmpty,
+                      "the end of a unit from another frame isn't a keyframe")
+        let frames = push(d, idr, at: 7000, marker: true)
+        XCTAssertEqual(frames.count, 1)
+        XCTAssertEqual(contents(frames[0].sample), avcc(idr))
+    }
+
+    /// The frame's marker arrives while a unit is still incomplete (its last fragment was lost without a gap in
+    /// sequence numbers, or never sent): the frame is dropped instead of played without that unit.
+    func testAFrameEndingMidFragmentIsDropped() {
+        let d = VideoDepacketizer(codec: .h264, parameterSets: [Fixtures.h264SPS, Fixtures.h264PPS])
+        let idr = Fixtures.h264IDR
+        let indicator = (idr[0] & 0xE0) | 28
+        XCTAssertTrue(push(d, Fixtures.h264P, at: 1000).isEmpty)
+        XCTAssertTrue(push(d, [indicator, 0x85] + idr[1..<5], at: 1000, marker: true).isEmpty)
+        XCTAssertEqual(push(d, idr, at: 4000, marker: true).count, 1)
+    }
+
+    /// A middle or last fragment with no first one: its start is gone, so is the frame.
+    func testAFragmentWithoutItsStartSpoilsTheFrame() {
+        let d = VideoDepacketizer(codec: .h264, parameterSets: [Fixtures.h264SPS, Fixtures.h264PPS])
+        let idr = Fixtures.h264IDR
+        let indicator = (idr[0] & 0xE0) | 28
+        XCTAssertTrue(push(d, idr, at: 1000).isEmpty)
+        XCTAssertTrue(push(d, [indicator, 0x45] + idr[5...], at: 1000, marker: true).isEmpty)
+    }
+
+    func testH265UnfinishedFragmentDoesNotCrossIntoTheNextFrame() {
+        let d = VideoDepacketizer(codec: .h265, parameterSets: [Fixtures.h265VPS, Fixtures.h265SPS, Fixtures.h265PPS])
+        let idr = Fixtures.h265IDR
+        let type = (idr[0] >> 1) & 0x3F
+        let header: [UInt8] = [(idr[0] & 0x81) | (49 << 1), idr[1]]
+        XCTAssertTrue(push(d, header + [0x80 | type] + idr[2..<7], at: 1000).isEmpty)
+        XCTAssertTrue(push(d, header + [0x40 | type] + idr[7...], at: 4000, marker: true).isEmpty)
+        XCTAssertEqual(push(d, idr, at: 7000, marker: true).count, 1)
+    }
+
+    func testSequenceNumbersWrapAround() {
+        let d = VideoDepacketizer(codec: .h264, parameterSets: [Fixtures.h264SPS, Fixtures.h264PPS])
+        XCTAssertEqual(d.push(Fixtures.h264IDR, sequence: .max, timestamp: 1000, marker: true).count, 1)
+        XCTAssertEqual(d.push(Fixtures.h264P, sequence: 0, timestamp: 4000, marker: true).count, 1)
+    }
+
     func testH265FragmentationUnits() throws {
         let d = VideoDepacketizer(codec: .h265, parameterSets: [Fixtures.h265VPS, Fixtures.h265SPS, Fixtures.h265PPS])
         let idr = Fixtures.h265IDR

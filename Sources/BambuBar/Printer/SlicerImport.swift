@@ -3,6 +3,7 @@ import Foundation
 /// A printer some slicer already knows the access code for.
 struct SlicerPrinter: Equatable, Identifiable {
     var id: String { serial }
+    /// Uppercase, as the printer announces it and its certificate names it, whatever case the slicer saved.
     var serial: String
     /// Best first. Bambu Studio keeps the code it got from the cloud (`access_code`) and the one typed in
     /// for LAN mode (`user_access_code`); either may be stale, so both are kept to try in turn.
@@ -89,11 +90,31 @@ enum SlicerImport {
         for (folder, title) in knownApps {
             let url = supportFolder.appendingPathComponent(folder).appendingPathComponent("\(folder).conf")
             let source = suffix.map { String(localized: "\(title) on \($0)", comment: "Slicer app, then a user name or a disk") } ?? title
-            for printer in read(url, source: source) where !found.contains(where: { $0.serial == printer.serial }) {
-                found.append(printer)
-            }
+            found += read(url, source: source)
         }
-        return found
+        return merge(found)
+    }
+
+    /// One entry per printer, in the order first seen. When several slicers (or files) know the same printer,
+    /// their codes are all kept, in order, so a stale code in one doesn't hide a working one in another; the
+    /// address and source come from the first that has them.
+    static func merge(_ printers: [SlicerPrinter]) -> [SlicerPrinter] {
+        var merged: [SlicerPrinter] = []
+        var index: [String: Int] = [:]
+        for printer in printers {
+            let serial = printer.serial.uppercased()
+            guard let i = index[serial] else {
+                index[serial] = merged.count
+                var first = printer
+                first.serial = serial
+                merged.append(first)
+                continue
+            }
+            for code in printer.accessCodes where !merged[i].accessCodes.contains(code) { merged[i].accessCodes.append(code) }
+            if merged[i].host == nil { merged[i].host = printer.host }
+            if merged[i].name == nil { merged[i].name = printer.name }
+        }
+        return merged
     }
 
     /// Reads a settings file, or a folder holding one (Bambu Studio's own folder, Application Support, a home
@@ -133,26 +154,34 @@ enum SlicerImport {
         if let end = text.lastIndex(of: "}") { text = String(text[...end]) }
         guard let json = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else { return [] }
 
-        func section(_ name: String) -> [String: String] {
+        // Each section maps serial → value. Slicers don't always agree with themselves on the serial's case (an
+        // uppercase key in one section, lowercase in another, sometimes both in one), so keys are uppercased
+        // before anything is matched up: one printer, whatever the spelling. Values under two spellings of the
+        // same serial are all kept, the uppercase spelling's first.
+        func section(_ name: String) -> [String: [String]] {
             guard let dict = json[name] as? [String: Any] else { return [:] }
-            return dict.compactMapValues { value -> String? in
-                let s = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                return s.isEmpty ? nil : s
+            var result: [String: [String]] = [:]
+            func rank(_ key: String) -> (Int, String) { (key == key.uppercased() ? 0 : 1, key) }
+            for key in dict.keys.sorted(by: { rank($0) < rank($1) }) {
+                let value = (dict[key] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                guard !value.isEmpty else { continue }
+                let serial = key.trimmingCharacters(in: .whitespaces).uppercased()
+                guard !serial.isEmpty, result[serial]?.contains(value) != true else { continue }
+                result[serial, default: []].append(value)
             }
+            return result
         }
         let cloud = section("access_code"), typed = section("user_access_code")
         let uuid = (json["app"] as? [String: Any])?["slicer_uuid"] as? String ?? ""
-        let ips = section("ip_address"), typedIPs = section("user_access_dev_ip").compactMapValues { decodeIP($0, key: uuid) }
+        let ips = section("ip_address")
+        let typedIPs = section("user_access_dev_ip").mapValues { $0.compactMap { decodeIP($0, key: uuid) } }
         let serials = Set(cloud.keys).union(typed.keys)
         return serials.sorted().compactMap { serial in
             var codes: [String] = []
-            for code in [cloud[serial], typed[serial]].compactMap({ $0 }) where !codes.contains(code) { codes.append(code) }
+            for code in (cloud[serial] ?? []) + (typed[serial] ?? []) where !codes.contains(code) { codes.append(code) }
             guard !codes.isEmpty else { return nil }
-            // Store the serial uppercased to match the network announcement and the certificate (both uppercase),
-            // so one printer isn't taken for two. `serial` itself stays as the slicer's own lowercase key for the
-            // code and IP lookups above.
-            return SlicerPrinter(serial: serial.uppercased(), accessCodes: codes,
-                                 host: typedIPs[serial] ?? ips[serial], name: nil, source: source)
+            let host = typedIPs[serial]?.first ?? ips[serial]?.first
+            return SlicerPrinter(serial: serial, accessCodes: codes, host: host, name: nil, source: source)
         }
     }
 

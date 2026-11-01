@@ -71,9 +71,13 @@ final class VideoDepacketizer {
             guard p.count > 2 else { return }
             let header = p[1]
             if header & 0x80 != 0 {
+                if fragment != nil { damaged = true }  // the previous unit never got its end
                 fragment = [(p[0] & 0xE0) | (header & 0x1F)] + p[2...]
             } else if fragment != nil {
                 fragment! += p[2...]
+            } else {
+                damaged = true  // its start was lost
+                return
             }
             if header & 0x40 != 0, let nal = fragment {
                 fragment = nil
@@ -96,9 +100,13 @@ final class VideoDepacketizer {
             guard p.count > 3 else { return }
             let header = p[2]
             if header & 0x80 != 0 {
+                if fragment != nil { damaged = true }  // the previous unit never got its end
                 fragment = [(p[0] & 0x81) | ((header & 0x3F) << 1), p[1]] + p[3...]
             } else if fragment != nil {
                 fragment! += p[3...]
+            } else {
+                damaged = true  // its start was lost
+                return
             }
             if header & 0x40 != 0, let nal = fragment {
                 fragment = nil
@@ -160,13 +168,18 @@ final class VideoDepacketizer {
 
     // MARK: - Frames
 
+    /// Ends the frame being assembled. A unit still being reassembled from fragments belongs to this frame
+    /// (frames are told apart by their RTP timestamp), so it can't continue into the next one: the frame is
+    /// incomplete and dropped, and the fragment with it.
     private func flush() -> Frame? {
+        let incomplete = fragment != nil
         defer {
             nals = []
             isKeyframe = false
             damaged = false
+            fragment = nil
         }
-        guard !nals.isEmpty, !damaged else { return nil }
+        guard !nals.isEmpty, !damaged, !incomplete else { return nil }
         if isKeyframe {
             updateFormat()
             sawKeyframe = format != nil

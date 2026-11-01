@@ -120,15 +120,19 @@ targets:
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
-  # Unit tests for the camera's protocol parsing (scripts/test.sh). They compile the few pure files they cover
-  # instead of loading the app, so nothing launches or connects while they run.
+  # Unit tests (scripts/test.sh): camera protocol parsing, video depacketizing, slicer import, discovery and saved
+  # printers. They compile the few files they cover instead of loading the app, so nothing launches or connects.
   BambuBarTests:
     type: bundle.unit-test
     platform: macOS
     sources:
       - path: Tests/BambuBarTests
+      - path: Sources/Shared
       - path: Sources/BambuBar/Printer/CameraProtocol.swift
       - path: Sources/BambuBar/Printer/VideoDepacketizer.swift
+      - path: Sources/BambuBar/Printer/SlicerImport.swift
+      - path: Sources/BambuBar/Printer/Discovery.swift
+      - path: Sources/BambuBar/Printer/PrinterConfig.swift
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

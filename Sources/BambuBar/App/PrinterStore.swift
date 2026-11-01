@@ -36,6 +36,8 @@ final class PrinterStore {
     /// file imported from another Mac this session).
     private(set) var slicerPrinters: [SlicerPrinter] = []
     private var importedPrinters: [SlicerPrinter] = []
+    /// From the last scan of this Mac's slicers.
+    private var scannedPrinters: [SlicerPrinter] = []
     /// Sandboxed (App Store) and not yet given the slicer's folder: setup asks for it.
     private(set) var slicerAccessNeeded = SlicerImport.needsAccess
     /// A short-lived message after a command ("The printer refused…").
@@ -192,7 +194,17 @@ final class PrinterStore {
 
     private func loadConfigs() -> [PrinterConfig] {
         if let data = defaults.data(forKey: Keys.printers),
-           let configs = try? JSONDecoder().decode([PrinterConfig].self, from: data) {
+           let saved = try? JSONDecoder().decode([PrinterConfig].self, from: data) {
+            let configs = PrinterConfig.deduplicated(saved)
+            guard configs != saved else { return configs }
+            // A serial saved in another case keeps its access code under its new spelling.
+            for config in saved where config.serial != config.serial.uppercased() {
+                let upper = config.serial.uppercased()
+                if Keychain.accessCode(for: upper) == nil, let code = Keychain.accessCode(for: config.serial) {
+                    Keychain.setAccessCode(code, for: upper)
+                }
+            }
+            if let data = try? JSONEncoder().encode(configs) { defaults.set(data, forKey: Keys.printers) }
             return configs
         }
         // Versions before multi-printer support saved one printer under another key.
@@ -295,11 +307,11 @@ final class PrinterStore {
     /// they've been seen, else after their model and serial ("P2S 495").
     func addAll(_ printers: [SlicerPrinter]) {
         var added: [PrinterSession] = []
-        for printer in printers.sorted(by: { name(for: $0).localizedStandardCompare(name(for: $1)) == .orderedAscending })
+        for printer in SlicerImport.merge(printers).sorted(by: { name(for: $0).localizedStandardCompare(name(for: $1)) == .orderedAscending })
         where session(printer.serial) == nil {
             guard let host = host(for: printer), let code = printer.accessCodes.first else { continue }
             let seen = discovered.first { $0.serial == printer.serial }
-            let config = PrinterConfig(host: host, serial: printer.serial.uppercased(), name: name(for: printer),
+            let config = PrinterConfig(host: host, serial: printer.serial, name: name(for: printer),
                                        modelCode: seen?.modelCode ?? "")
             if !isDemo { Keychain.setAccessCode(code, for: config.serial) }
             let session = add(config)
@@ -315,8 +327,7 @@ final class PrinterStore {
     private func name(for printer: SlicerPrinter) -> String {
         let seen = discovered.first { $0.serial == printer.serial }
         if let name = seen?.name, !name.isEmpty, name != printer.serial { return name }
-        let model = PrinterModel.find(code: seen?.modelCode ?? "", serial: printer.serial)
-        return "\(model?.name ?? String(localized: "Printer")) \(printer.serial.suffix(3))"
+        return PrinterConfig.placeholderName(serial: printer.serial, modelCode: seen?.modelCode ?? "")
     }
 
     /// The name the printer announces on the network (set in Bambu Handy or Bambu Studio), when it has been seen.
@@ -368,10 +379,11 @@ final class PrinterStore {
                 session.restart()
                 changed = true
             }
-            // Adopt the network-announced name once it arrives, when the stored name is still the bare serial
-            // (the printer was added before it announced itself). A name set by hand is left alone.
-            if session.config.name == printer.serial,
-               let announced = announcedName(for: printer.serial) {
+            // Adopt the network-announced name once it arrives, when the stored one is still a name Bambu Bar made
+            // up (the serial, or "P2S 495": the printer was added before it announced itself). A name set by
+            // hand is left alone.
+            if session.config.hasGeneratedName,
+               let announced = announcedName(for: printer.serial), announced != session.config.name {
                 session.config.name = announced
                 changed = true
             }
@@ -405,9 +417,8 @@ final class PrinterStore {
             let scanned = SlicerImport.scan()
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                var all = self.importedPrinters
-                for printer in scanned where !all.contains(where: { $0.serial == printer.serial }) { all.append(printer) }
-                if all != self.slicerPrinters { self.slicerPrinters = all }
+                self.scannedPrinters = scanned
+                self.mergeSlicerPrinters()
                 self.slicerAccessNeeded = SlicerImport.needsAccess
             }
         }
@@ -422,14 +433,19 @@ final class PrinterStore {
             SlicerImport.rememberAccess(to: url)
             slicerAccessNeeded = SlicerImport.needsAccess
         }
+        // The file just picked replaces what an earlier one said about the same printers.
         for printer in found {
             importedPrinters.removeAll { $0.serial == printer.serial }
             importedPrinters.insert(printer, at: 0)
         }
-        var all = importedPrinters
-        for printer in slicerPrinters where !all.contains(where: { $0.serial == printer.serial }) { all.append(printer) }
-        slicerPrinters = all
+        mergeSlicerPrinters()
         return found.count
+    }
+
+    /// Picked files first, then this Mac's slicers; a printer known to both keeps the codes of both to try.
+    private func mergeSlicerPrinters() {
+        let all = SlicerImport.merge(importedPrinters + scannedPrinters)
+        if all != slicerPrinters { slicerPrinters = all }
     }
 
     func slicerPrinter(serial: String) -> SlicerPrinter? {

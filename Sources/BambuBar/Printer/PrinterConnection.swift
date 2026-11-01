@@ -1,25 +1,6 @@
 import AppKit
 import Foundation
 
-/// Where to find the printer. The access code lives in the Keychain, not here.
-struct PrinterConfig: Codable, Equatable {
-    var host: String
-    var serial: String
-    var name: String
-    /// SSDP model code ("N7" for the P2S).
-    var modelCode: String
-
-    var modelName: String { PrinterModel.name(for: modelCode, serial: serial) }
-    var model: PrinterModel? { PrinterModel.find(code: modelCode, serial: serial) }
-
-    /// Printers listen on 8883; `host:port` reaches a mock printer (scripts/fleet).
-    var endpoint: (host: String, port: UInt16) {
-        let parts = host.split(separator: ":")
-        guard parts.count == 2, let port = UInt16(parts[1]) else { return (host, 8883) }
-        return (String(parts[0]), port)
-    }
-}
-
 /// Keeps one MQTT session to the printer alive: connects, re-requests a full report, merges the deltas
 /// into a status, and reconnects with back-off when the printer drops off the network or the Mac sleeps.
 @MainActor
