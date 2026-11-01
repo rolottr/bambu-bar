@@ -14,6 +14,9 @@ final class CameraSurfaceView: NSView {
     private let imageLayer = CALayer()
     private var needsKeyframe = true
     private var occlusionObserver: NSObjectProtocol?
+    /// The enclosing scroll view's scrolling and resizing, which can take the picture out of sight and back.
+    private var scrollObservers: [NSObjectProtocol] = []
+    private var visibilityCheckPending = false
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -40,6 +43,8 @@ final class CameraSurfaceView: NSView {
         videoLayer.frame = bounds
         imageLayer.frame = bounds
         CATransaction.commit()
+        // A new size or place (first layout, the window resized, the panel grew) can bring it into sight.
+        scheduleVisibilityCheck()
     }
 
     var cornerRadius: CGFloat {
@@ -47,10 +52,33 @@ final class CameraSurfaceView: NSView {
         set { layer?.cornerRadius = newValue; layer?.cornerCurve = .continuous }
     }
 
-    /// In a visible window and not hidden.
+    /// In a visible window, not hidden, and not scrolled out of sight: a picture nobody can see isn't streamed.
     var isOnScreen: Bool {
         guard let window, window.isVisible, window.occlusionState.contains(.visible) else { return false }
-        return !isHiddenOrHasHiddenAncestor
+        return !isHiddenOrHasHiddenAncestor && isWithinVisibleArea
+    }
+
+    /// Some of it lies inside every scroll view around it. (`visibleRect` doesn't tell: SwiftUI's scroll views
+    /// don't clip it there.)
+    private var isWithinVisibleArea: Bool {
+        var rect = convert(bounds, to: nil)
+        var ancestor = superview
+        while let view = ancestor, !rect.isEmpty {
+            if let clip = view as? NSClipView { rect = rect.intersection(clip.convert(clip.bounds, to: nil)) }
+            ancestor = view.superview
+        }
+        return !rect.isEmpty
+    }
+
+    /// Scrolling sends many notifications; the feed hears about them once per turn of the run loop.
+    private func scheduleVisibilityCheck() {
+        guard !visibilityCheckPending else { return }
+        visibilityCheckPending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.visibilityCheckPending = false
+            self.feed?.viewersChanged()
+        }
     }
 
     func show(_ sample: CMSampleBuffer, keyframe: Bool) {
@@ -89,13 +117,25 @@ final class CameraSurfaceView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+        let center = NotificationCenter.default
+        if let occlusionObserver { center.removeObserver(occlusionObserver) }
         occlusionObserver = nil
+        scrollObservers.forEach(center.removeObserver)
+        scrollObservers = []
         if let window {
-            occlusionObserver = NotificationCenter.default.addObserver(
+            occlusionObserver = center.addObserver(
                 forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main
             ) { [weak self] _ in
                 MainActor.assumeIsolated { self?.feed?.viewersChanged() }
+            }
+            if let clip = enclosingScrollView?.contentView {
+                clip.postsBoundsChangedNotifications = true
+                clip.postsFrameChangedNotifications = true
+                for name in [NSView.boundsDidChangeNotification, NSView.frameDidChangeNotification] {
+                    scrollObservers.append(center.addObserver(forName: name, object: clip, queue: .main) { [weak self] _ in
+                        MainActor.assumeIsolated { self?.scheduleVisibilityCheck() }
+                    })
+                }
             }
         }
         feed?.viewersChanged()
@@ -113,6 +153,7 @@ final class CameraSurfaceView: NSView {
 
     deinit {
         if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+        scrollObservers.forEach(NotificationCenter.default.removeObserver)
     }
 }
 
