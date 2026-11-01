@@ -47,7 +47,7 @@ struct MenuPanel: View {
             } else if let status = store.status, store.isOnline {
                 JobHero(status: status, compact: true)
                 if let issue = status.mostSevereIssue, issue.severity <= .common {
-                    IssueBanner(issue: issue)
+                    IssueBanner(issue: issue) { store.current?.dismiss(issue) }
                 }
                 // Only with the camera on, in Settings and for this printer (never for the demo printers).
                 if let session = store.current, session.showsCamera {
@@ -662,6 +662,8 @@ struct SetupPrompt: View {
 
 struct IssueBanner: View {
     var issue: PrinterIssue
+    /// Hides the issue until the printer stops reporting it; nil shows no dismiss button.
+    var onDismiss: (() -> Void)? = nil
 
     var body: some View {
         let color = issue.severity <= .fatal ? Palette.failed : issue.severity == .serious ? Palette.paused : Palette.preparing
@@ -681,6 +683,14 @@ struct IssueBanner: View {
                 }
             }
             Spacer(minLength: 0)
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .help("Dismiss until the printer clears it")
+            }
         }
         .panel(radius: 14, padding: 11, tint: color)
     }

@@ -417,6 +417,13 @@ final class PrinterStore {
                 writeSnapshot(force: true)
             }
         }
+        // Correct a saved model id from the printer's own announcement (setups before 1.2 saved "N7" by default).
+        if let session = session(printer.serial), !printer.modelCode.isEmpty, session.config.modelCode != printer.modelCode,
+           PrinterModel.find(code: printer.modelCode) != nil, !isDemo {
+            session.config.modelCode = printer.modelCode
+            saveConfigs()
+            writeSnapshot(force: true)
+        }
     }
 
     /// Local network access is off, as far as the search or any connection can tell.
