@@ -60,7 +60,7 @@ enum Probe {
 
     // MARK: - Camera
 
-    /// `--probe-camera <host> <serial> <access-code> [seconds] [--jpeg|--rtsp] [--model <name>]`: opens the camera
+    /// `--probe-camera <host> <serial> <access-code|keychain> [seconds] [--jpeg|--rtsp] [--model <name>]`: opens the camera
     /// like the app does, logs the handshake (certificate, RTSP replies, SDP) and the frames, decodes the first one
     /// and saves it as a PNG in the temporary folder. Without `--jpeg`/`--rtsp`, the model decides (a P2S if unknown).
     static var cameraArguments: (host: String, serial: String, code: String, seconds: Double, transport: CameraTransport)? {
@@ -73,7 +73,8 @@ enum Probe {
         var transport = CameraTransport.forModel(model?.name ?? "P2S")
         if a.contains("--jpeg") { transport = .jpeg }
         if a.contains("--rtsp") { transport = .rtsps }
-        return (a[i + 1], a[i + 2], a[i + 3], seconds, transport)
+        let code = a[i + 3] == "keychain" ? Keychain.accessCode(for: a[i + 2]) ?? "" : a[i + 3]
+        return (a[i + 1], a[i + 2], code, seconds, transport)
     }
 
     private static var camera: CameraClient?
@@ -161,6 +162,7 @@ enum Probe {
             "fans part \(s.partFan ?? -1)% aux \(s.auxFan ?? -1)% exhaust \(s.exhaustFan ?? -1)%  speed \(s.speed.title)",
             "light \(s.chamberLightOn.map { $0 ? "on" : "off" } ?? "-") door \(s.doorOpen.map { $0 ? "open" : "closed" } ?? "-") wifi \(s.wifiSignal ?? 0) dBm",
             "controls locked: \(s.controlsLocked)  firmware \(s.firmware ?? "-")  nozzle \(s.nozzleDiameter ?? 0) \(s.nozzleType ?? "-")",
+            "LAN Only Liveview: \(s.liveViewEnabled.map { $0 ? "on" : "off" } ?? "not reported")",
         ]
         for unit in s.ams {
             let spools = unit.spools.map { "\($0.label) \($0.isLoaded ? "\($0.brand ?? "?") \($0.displayName) \($0.colorName ?? "#" + $0.color.prefix(6)) \($0.remainText)" : "empty")" }
