@@ -76,8 +76,11 @@ struct LicenseView: View {
     private func activate() {
         guard !license.isBusy else { return }
         Task {
+            let hadAccess = license.hasAccess
             await license.activate(key: key)
-            if license.hasAccess { key = "" }
+            guard license.hasAccess else { return }
+            key = ""
+            if !hadAccess { Confetti.celebrate() }
         }
     }
 }
