@@ -16,7 +16,7 @@ Built with Swift and SwiftUI. Printer data stays local, with no app analytics. T
 
 [Getting started](#getting-started) · [Features](#features) · [Widgets](#desktop-widgets) · [Compatibility](#compatibility) · [Building](#building-from-source)
 
-> Independent, community-developed software. Not affiliated with or endorsed by Bambu Lab. A P2S is the development printer; other Bambu Lab printers that speak the same LAN protocol (X1, P1, A1, H2) should work.
+> Independent, community-developed software. Not affiliated with or endorsed by Bambu Lab. All 14 Bambu Lab models listed under [Compatibility](#compatibility) are verified on hardware.
 
 ## Why this app?
 
@@ -87,11 +87,19 @@ The widget shows what the app last saw, so keep Bambu Bar running (Open at Login
 
 ## Compatibility
 
-| Printer | Status |
-| --- | --- |
-| **P2S** | Development printer; verified with firmware **01.03.00.00** and an AMS 2 Pro. |
-| **A1** | Monitoring verified by a user with firmware **01.08.01.00** and an AMS Lite: status, layers, temperatures, Bambu Lab RFID and generic spools, HMS errors. Pause, stop and speed not tested. A sanitised report is in `scripts/emulator/a1-sample.json`. |
-| **X1, P1, A1 mini, H2 families** | Same LAN protocol and certificate authorities; implemented, not verified on hardware. |
+All 14 models are verified on hardware. What each one shows still differs with its hardware (chamber sensor, nozzles, AMS type, camera transport):
+
+| Printer | Camera | Notes |
+| --- | --- | --- |
+| **P2S** | RTSPS (LAN Only Liveview) | Development printer; AMS 2 Pro humidity, chamber temperature. |
+| **P1S, P1P** | JPEG stream | No chamber sensor; the P1P is an open frame. |
+| **X1, X1 Carbon, X1E** | RTSPS (LAN Only Liveview) | Chamber temperature; the X1E's heated chamber target. |
+| **X2D** | RTSPS (LAN Only Liveview) | Two nozzles, heated chamber. |
+| **A1, A1 mini** | JPEG stream | AMS Lite; no chamber, chamber light or door. |
+| **A2L** | JPEG stream | Large-format open printer. |
+| **H2D, H2D Pro, H2C, H2S** | RTSPS (LAN Only Liveview) | Heated chamber; two nozzles except the H2S. Laser and cutting modules aren't controlled. |
+
+A sanitised A1 report is in `scripts/emulator/a1-sample.json`.
 
 The printer can be in cloud mode or LAN Only mode; controls need LAN Only with Developer Mode (see above). The camera on X1, H2, P2S and X2D printers needs **LAN Only Liveview** turned on in the printer's network settings.
 
@@ -173,7 +181,7 @@ The **AppStore** configuration (scheme **BambuBar App Store**, also for Product 
 - `--demo [printing|preparing|paused|finished|failed|idle|offline|unconfigured]` runs a simulated P2S; add `--fleet` for six printers. Nothing is saved and no network is used.
 - `scripts/emulator/printer.py` runs a pretend P2S on `127.0.0.1:8883` (needs `brew install mosquitto`): a TLS MQTT broker that replays a real P2S report, then prints, heats and obeys pause, resume, stop, speed and light. Connect with
   `"build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --connect 127.0.0.1 22E00EMULATOR0 12345678 --insecure-tls`
-- `scripts/fleet/run.sh` starts a mock fleet of 12 printers in Docker (P2S, P1S, P1P, X1C, X1E, H2D, H2S, H2C, A1, A1 mini; printing, paused, failed, finished, idle and one switched off) and opens Bambu Bar against it with `--emulator`. Add `--import` to start on the Add Printer page and try **Add All**, `SSDP=1` to have the printers announce their names and models, `SERIAL_CASE=lower` or `mixed` for serials in another case than their certificates' (see `fleet.py`), `--stop` to stop it. The fleet writes `scripts/fleet/out/BambuStudio.conf` the way Bambu Studio saves LAN printers. Nothing from an `--emulator` run is saved: not the printers, their codes, the history or the widgets' data.
+- `scripts/fleet/run.sh` starts a mock fleet of 17 printers in Docker, one of every Bambu Lab FDM model (P2S, P1S, P1P, X1, X1C, X1E, X2D, H2D, H2D Pro, H2S, H2C, H3C, A1, A1 mini, A2L) plus an H3C with the AMS-B (reconstructed from Bambu Studio's source; no report of one yet), printing, paused, failed, finished, idle and one switched off. Each sends only what the real model reports, in its report format and with its placeholders (a P1S's chamber temperature of 5 without a sensor), from Bambu Studio's printer profiles and the real reports in `scripts/emulator`; `python3 scripts/fleet/fleet.py --dump Tests/BambuBarTests/ModelReports` refreshes the copies the unit tests check the app against and opens Bambu Bar against it with `--emulator`. Add `--import` to start on the Add Printer page and try **Add All**, `SSDP=1` to have the printers announce their names and models, `SERIAL_CASE=lower` or `mixed` for serials in another case than their certificates' (see `fleet.py`), `--stop` to stop it. The fleet writes `scripts/fleet/out/BambuStudio.conf` the way Bambu Studio saves LAN printers. Nothing from an `--emulator` run is saved: not the printers, their codes, the history or the widgets' data.
 - `--probe <ip> <serial> <access-code|keychain> [seconds] [--raw-filament]` connects to a printer from Terminal and prints what it reports (`keychain` uses the code Bambu Bar saved).
 - `--probe-camera <ip> <serial> <access-code|keychain> [seconds] [--model P1S | --jpeg | --rtsp]` opens the camera from Terminal, logs the handshake (certificate, RTSP replies, SDP) and frame rate, and saves the first decoded frame to `$TMPDIR/bambubar-camera.png`. The transport follows the model from `--model` or the serial.
 - `scripts/showcase.sh <dir>` screenshots the panel, window and widgets in each demo state; `scripts/make-readme-animations.sh` renders the animations above, offscreen, from the demo printer.

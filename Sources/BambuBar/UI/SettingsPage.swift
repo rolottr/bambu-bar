@@ -5,6 +5,10 @@ struct SettingsPage: View {
     @Environment(LoginItem.self) private var loginItem
 
     @State private var language = AppLanguage.override
+    @AppStorage(PanelContent.temperatures) private var panelTemperatures = true
+    @AppStorage(PanelContent.chamber) private var panelChamber = true
+    @AppStorage(PanelContent.fans) private var panelFans = false
+    @AppStorage(PanelContent.filament) private var panelFilament = true
 
     var body: some View {
         @Bindable var store = store
@@ -51,6 +55,17 @@ struct SettingsPage: View {
                     Text(error).font(.system(size: 11.5)).foregroundStyle(Palette.failed)
                 }
                 Text("At login Bambu Bar starts in the menu bar only, without a Dock icon. Open it from the menu bar or Spotlight to see this window.")
+                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            SettingsGroup("Menu bar panel", symbol: "list.bullet.rectangle") {
+                SettingsToggle("Temperatures", isOn: $panelTemperatures)
+                SettingsToggle("Chamber temperature", isOn: $panelChamber)
+                    .disabled(!panelTemperatures)
+                SettingsToggle("Fans", isOn: $panelFans)
+                SettingsToggle("Filament", isOn: $panelFilament)
+                Text("What the panel under the menu bar icon shows below the print. The chamber temperature appears only for printers with a chamber sensor (not the P1 and A series).")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

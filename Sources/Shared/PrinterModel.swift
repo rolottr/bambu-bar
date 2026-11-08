@@ -28,7 +28,7 @@ struct PrinterModel: Equatable, Sendable {
     var hasAMSHumidity: Bool
     /// Only the AMS Lite fits (A1, A1 mini).
     var usesAMSLite: Bool
-    /// Two tool heads (H2D, H2C, X2D).
+    /// Two tool heads (H2D, H2C, X2D). The H3C has one, fed from a rack of nozzles.
     var nozzleCount: Int
     var nozzleMax: Int
     var bedMax: Int
@@ -90,14 +90,19 @@ struct PrinterModel: Equatable, Sendable {
         .init(code: "O1C", name: "H2C", shape: .wide, serialPrefix: "31B", isEnclosed: true, hasChamberSensor: true,
               chamberHeaterMax: 65, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: true, usesAMSLite: false,
               nozzleCount: 2, nozzleMax: 350, bedMax: 120, buildVolume: (330, 320, 325), hasLidar: false, hasLaserModule: true),
+        .init(code: "N10", name: "H3C", shape: .wide, serialPrefix: "32X", isEnclosed: true, hasChamberSensor: true,
+              chamberHeaterMax: 65, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: true, usesAMSLite: false,
+              nozzleCount: 1, nozzleMax: 350, bedMax: 120, buildVolume: (330, 320, 325), hasLidar: false, hasLaserModule: false),
         .init(code: "O1S", name: "H2S", shape: .wide, serialPrefix: "093", isEnclosed: true, hasChamberSensor: true,
               chamberHeaterMax: 65, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: true, usesAMSLite: false,
               nozzleCount: 1, nozzleMax: 350, bedMax: 120, buildVolume: (340, 320, 340), hasLidar: false, hasLaserModule: true),
     ]
 
-    /// Other ids the same models report (older firmware, Pro and V2 variants).
+    /// Other ids the same models report (older firmware, Pro and V2 variants; the V2 ids are each profile's
+    /// `subseries` in Bambu Studio's resources/printers).
     private static let aliases: [String: String] = [
         "BL-P003": "C13", "A12": "N1", "A04": "N1", "A11": "N2S", "O2D": "O1E", "O1C2": "O1C",
+        "N6-V2": "N6", "N7-V2": "N7", "N10-V2": "N10", "O1C2-V2": "O1C", "O1D-V2": "O1D", "O1E-V2": "O1E", "O1S-V2": "O1S",
     ]
 
     /// By serial prefix when it's one Bambu Lab uses, then by model id. The serial wins because setups before 1.2
@@ -128,8 +133,8 @@ extension PrinterStatus {
         guard let model else { return }
         if !model.hasChamberSensor { chamber = nil; chamberTarget = nil }
         if model.chamberHeaterMax == nil { chamberTarget = nil }
-        if !model.hasAuxFan { auxFan = nil }
-        if !model.hasChamberFan { exhaustFan = nil }
+        if !model.hasAuxFan { auxFan = nil; leftAuxFan = nil }
+        if !model.hasChamberFan { exhaustFan = nil; circulationFan = nil }
         if !model.isEnclosed { doorOpen = nil }
         if !model.hasChamberLight { chamberLightOn = nil }
         if model.nozzleCount < 2 { secondNozzle = nil; leftNozzleInUse = nil }

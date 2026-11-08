@@ -37,6 +37,7 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 
 | Version | Channel | Build | Commit | Date | Status |
 | --- | --- | --- | --- | --- | --- |
+| 2.0.1 | GitHub | 202611082144 | `v2.0.1` (local tag) | 2026-11-08 | Built and notarized, installed locally; not published. Zip SHA-256 `bc2838347205920edbe4af7c9f40605c71f6e1cfab0b26feb735bc62bb609939` |
 | 2.0.0 | GitHub | 202611011630 | 3eb45bb (`v2.0.0`) | 2026-11-01 | Published, latest release; zip SHA-256 `050b40c6ca849924c67852acd7f29a6280e046dbf1082182bd1a919677b55813` |
 | 2.0.0 | App Store | 20261102.0103 | 3eb45bb | 2026-11-02 | Uploaded to App Store Connect; not yet submitted for review |
 | 1.5.0 | GitHub | | 0749232 (`v1.5.0`) | 2026-10-26 | Published |

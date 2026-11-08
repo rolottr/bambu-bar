@@ -116,7 +116,7 @@ struct SmallWidgetView: View {
                 // The filament going into the print.
                 HStack(spacing: 5) {
                     SpoolSwatch(spool: spool, active: true, size: 15)
-                    Text("\(spool.displayName) · \(spool.label)")
+                    Text("\(spool.displayName) · \(spool.slotName)")
                         .font(.system(size: 10.5, weight: .medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

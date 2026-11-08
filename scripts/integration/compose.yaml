@@ -1,6 +1,6 @@
 # The simulators scripts/integration-test.sh runs Bambu Bar's integration tests against. Ports are published
 # on loopback only.
-#   fleet   scripts/fleet: 12 printers over TLS MQTT (one switched off), their Bambu Studio settings in ./out,
+#   fleet   scripts/fleet: 17 printers, every Bambu Lab FDM model, over TLS MQTT (one switched off), their Bambu Studio settings in ./out,
 #           SSDP announcements to this Mac on SSDP_PORT. SERIAL_CASE=mixed: lowercase and uppercase serials,
 #           a stale code under one spelling and the working one under the other.
 #   camera  scripts/camera: RTSPS on 322, the JPEG stream on 6000, its scenario chosen on 18080.
@@ -17,7 +17,7 @@ services:
       SSDP_PORT: "2122"
       SERIAL_CASE: mixed
     ports:
-      - "127.0.0.1:18801-18812:18801-18812"
+      - "127.0.0.1:18801-18817:18801-18817"
     volumes:
       - ./out:/out
   camera:

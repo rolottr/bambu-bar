@@ -25,7 +25,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "2.0.0"
+    MARKETING_VERSION: "2.0.1"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: PCZ6F8Q9DZ
     APP_GROUP: "$(DEVELOPMENT_TEAM).dev.rolottr.BambuBar"
@@ -120,14 +120,21 @@ targets:
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
-  # Unit tests (scripts/test.sh): camera protocol parsing, video depacketizing, slicer import, discovery and saved
-  # printers. They compile the few files they cover instead of loading the app, so nothing launches or connects.
+  # Unit tests (scripts/test.sh): camera protocol parsing, video depacketizing, slicer import, discovery, saved
+  # printers and every model's report through the parser. They compile the few files they cover instead of loading
+  # the app, so nothing launches or connects.
   BambuBarTests:
     type: bundle.unit-test
     platform: macOS
     sources:
       - path: Tests/BambuBarTests
+        excludes:
+          - "ModelReports/**"
       - path: Sources/Shared
+      - path: Sources/BambuBar/Printer/ReportParser.swift
+      - path: Sources/BambuBar/Printer/HMSCatalog.swift
+      - path: Sources/BambuBar/Printer/FilamentCatalog.swift
+      - path: Sources/BambuBar/Services/AppLanguage.swift
       - path: Sources/BambuBar/Printer/CameraProtocol.swift
       - path: Sources/BambuBar/Printer/VideoDepacketizer.swift
       - path: Sources/BambuBar/Printer/SlicerImport.swift

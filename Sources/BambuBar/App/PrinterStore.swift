@@ -16,6 +16,15 @@ enum MenuBarStyle: String, CaseIterable, Identifiable {
     }
 }
 
+/// What the menu bar panel shows under the job, as UserDefaults keys (Settings → Menu bar panel). The panel and
+/// Settings read them with @AppStorage; nothing else needs them.
+enum PanelContent {
+    static let temperatures = "panelShowsTemperatures"
+    static let chamber = "panelShowsChamber"
+    static let fans = "panelShowsFans"
+    static let filament = "panelShowsFilament"
+}
+
 /// The app's single source of truth: the printers, which one is in view, job history and settings.
 ///
 /// The window and the menu bar panel show the *selected* printer; the members below without a session

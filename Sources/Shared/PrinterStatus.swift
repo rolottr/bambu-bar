@@ -102,6 +102,10 @@ struct Spool: Codable, Equatable, Identifiable, Sendable {
     var nozzleRange: ClosedRange<Int>? = nil
 
     static let externalID = 254
+    /// The AMS 3H's slots are 1024 + slot, past the four-slot units (unit * 4 + slot) and the AMS HTs (128-135);
+    /// the AMS-B's follow.
+    static let ams3hBase = 1024
+    static let amsBBase = 1056
 
     var isExternal: Bool { id == Self.externalID }
     var remainText: String {
@@ -131,17 +135,28 @@ struct Spool: Codable, Equatable, Identifiable, Sendable {
         guard let grams = gramsLeft else { return "\(remain)%" }
         return "\(remain)% · \(Format.grams(grams))"
     }
-    /// "A1", "A2"… like the printer's screen; "Ext" for the external spool.
+    /// "A1", "A2"… like the printer's screen; "Ext" for the external spool; 1, 2… for the H3C's rack AMS (AMS 3H
+    /// or AMS-B), as Bambu Studio numbers its slots.
     var label: String {
         if isExternal { return String(localized: "Ext", comment: "Short label for the external spool, beside AMS slots like A1") }
+        if id >= Self.ams3hBase { return "\(slot + 1)" }
         if unit >= 128 { return "HT\(unit - 127)" }
         let letter = String(UnicodeScalar(UInt8(65 + min(unit, 25))))
         return "\(letter)\(slot + 1)"
     }
+
+    /// The label in a sentence: "A1", "HT1" and "Ext" read on their own, a bare number doesn't ("printing with 3
+    /// PETG"), so the rack AMS's slots read "Slot 3".
+    var slotName: String {
+        if id >= Self.ams3hBase { return String(localized: "Slot \(slot + 1)", comment: "A numbered AMS slot, on the H3C's AMS") }
+        return label
+    }
 }
 
 enum AMSKind: String, Codable, Sendable {
-    case ams, lite, pro2, ht
+    /// `ams3h`: the H3C's 9-slot AMS, wired to its hotend rack (Bambu Studio's ZMULTI_A). `amsB`: the other one,
+    /// for rack B (ZMULTI_B), without a feeder motor; known only from Bambu Studio's source, not from a report.
+    case ams, lite, pro2, ht, ams3h, amsB
 
     var title: String {
         switch self {
@@ -149,6 +164,8 @@ enum AMSKind: String, Codable, Sendable {
         case .lite: return "AMS Lite"
         case .pro2: return "AMS 2 Pro"
         case .ht: return "AMS HT"
+        case .ams3h: return "AMS 3H"
+        case .amsB: return "AMS-B"
         }
     }
 }
@@ -166,6 +183,7 @@ struct AMSUnit: Codable, Equatable, Identifiable, Sendable {
 
     /// "AMS A", "AMS 2 Pro B"…
     var title: String {
+        if kind == .ams3h || kind == .amsB { return kind.title }
         if id >= 128 { return "\(kind.title) \(id - 127)" }
         return "\(kind.title) \(String(UnicodeScalar(UInt8(65 + min(id, 25)))))"
     }
@@ -218,6 +236,10 @@ struct PrinterStatus: Codable, Equatable, Sendable {
     var auxFan: Int?
     var exhaustFan: Int?
     var heatbreakFan: Int?
+    /// The H3C's second aux fan (`airduct` part 10, "Left(Aux)" in Bambu Studio); `auxFan` is then the right one.
+    var leftAuxFan: Int?
+    /// The H3C's chamber fan (`airduct` part 15, "Chamber" in Bambu Studio), besides the exhaust (`exhaustFan`).
+    var circulationFan: Int?
     var speed: SpeedLevel = .standard
     var chamberLightOn: Bool?
     var doorOpen: Bool?

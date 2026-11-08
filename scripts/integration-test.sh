@@ -5,7 +5,7 @@
 #   scripts/integration-test.sh --keep          leave the simulators running afterwards
 #   ONLY=CameraIntegrationTests scripts/integration-test.sh
 #                                               one test class (or Class/testMethod)
-# Needs Docker, Xcode and XcodeGen. Loopback ports 322, 6000, 18080 and 18801-18812 must be free (stop
+# Needs Docker, Xcode and XcodeGen. Loopback ports 322, 6000, 18080 and 18801-18817 must be free (stop
 # scripts/fleet/run.sh first), and UDP 2122.
 set -euo pipefail
 

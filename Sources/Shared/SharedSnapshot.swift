@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// What the app hands the widget about one printer.
 struct SharedSnapshot: Codable, Equatable, Sendable {
@@ -46,6 +47,7 @@ struct SharedFleet: Codable, Equatable, Sendable {
 /// Reads and writes the snapshot. The app is the only writer.
 enum SharedStore {
     static let fileName = "printers.json"
+    private static let log = Logger(subsystem: "dev.rolottr.BambuBar", category: "widget")
 
     /// `<TeamID>.dev.rolottr.BambuBar`, read from Info.plist so the team lives in one place (the build settings).
     static var appGroup: String {
@@ -64,12 +66,21 @@ enum SharedStore {
 
     @discardableResult
     static func save(_ fleet: SharedFleet) -> Bool {
-        guard let dir = containerURL else { return false }
+        guard let dir = containerURL else {
+            log.error("No app group container for \(appGroup, privacy: .public); the widgets can't be updated")
+            return false
+        }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         // The single-printer file of earlier versions.
         try? FileManager.default.removeItem(at: dir.appendingPathComponent("snapshot.json"))
-        guard let data = try? encoder.encode(fleet) else { return false }
-        return (try? data.write(to: dir.appendingPathComponent(fileName), options: .atomic)) != nil
+        do {
+            try encoder.encode(fleet).write(to: dir.appendingPathComponent(fileName), options: .atomic)
+            return true
+        } catch {
+            // The widgets go on showing the last file written, so say why this one wasn't.
+            log.error("Couldn't write the widget snapshot: \(String(describing: error), privacy: .public)")
+            return false
+        }
     }
 
     private static let encoder: JSONEncoder = {

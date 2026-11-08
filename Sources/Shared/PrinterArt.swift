@@ -4,7 +4,7 @@ import SwiftUI
 enum PrinterShape: Equatable, Sendable {
     /// P2S, P1S, X1 family, X2D: a closed box with a glass door.
     case enclosed
-    /// H2 family: a wider closed box with a dual-nozzle toolhead.
+    /// H2 family and H3C: a wider closed box.
     case wide
     /// P1P: the CoreXY frame without panels.
     case openFrame
@@ -22,7 +22,7 @@ enum PrinterShape: Equatable, Sendable {
         let m = (model ?? "").lowercased()
         if m.contains("mini") || m == "n1" || m == "a12" || m == "a04" { self = .mini }
         else if m.hasPrefix("a1") || m.hasPrefix("a2") || m == "n2s" || m == "a11" || m == "n9" { self = .bedSlinger }
-        else if m.hasPrefix("h2") || m.hasPrefix("o1") || m.hasPrefix("o2") { self = .wide }
+        else if m.hasPrefix("h2") || m.hasPrefix("h3") || m.hasPrefix("o1") || m.hasPrefix("o2") || m.hasPrefix("n10") { self = .wide }
         else if m == "p1p" || m == "c11" { self = .openFrame }
         else { self = .enclosed }
     }

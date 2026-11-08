@@ -66,6 +66,8 @@ struct TemperatureTiles: View {
     var model: PrinterModel?
     /// Stretch to the row's height (beside the taller fan tile on the Printer page).
     var fillsHeight = false
+    /// The chamber tile, on models with a sensor; the menu bar panel can leave it out (Settings).
+    var showsChamber = true
 
     var body: some View {
         if let left = status.secondNozzle {
@@ -79,18 +81,21 @@ struct TemperatureTiles: View {
             TemperatureTile(fillsHeight: fillsHeight, title: "Nozzle", symbol: "flame.fill", temperature: status.nozzle, tint: Palette.nozzle)
         }
         TemperatureTile(fillsHeight: fillsHeight, title: "Bed", symbol: "heat.waves", temperature: status.bed, tint: Palette.bed)
-        if let chamber = status.chamber {
-            if model?.chamberHeaterMax != nil {
-                TemperatureTile(fillsHeight: fillsHeight, title: "Chamber", symbol: "thermometer.medium",
-                                temperature: Temperature(current: chamber, target: status.chamberTarget ?? 0),
-                                tint: Palette.chamber)
-            } else {
-                TemperatureTile(fillsHeight: fillsHeight, title: "Chamber", symbol: "thermometer.medium", temperature: nil, plain: chamber,
-                                tint: Palette.chamber)
+        if showsChamber {
+            if let chamber = status.chamber {
+                if model?.chamberHeaterMax != nil {
+                    TemperatureTile(fillsHeight: fillsHeight, title: "Chamber", symbol: "thermometer.medium",
+                                    temperature: Temperature(current: chamber, target: status.chamberTarget ?? 0),
+                                    tint: Palette.chamber)
+                } else {
+                    TemperatureTile(fillsHeight: fillsHeight, title: "Chamber", symbol: "thermometer.medium", temperature: nil, plain: chamber,
+                                    tint: Palette.chamber)
+                }
+            } else if model?.hasChamberSensor == true {
+                // A model with a sensor that hasn't reported yet. An unknown model shows a chamber only once it
+                // reports one.
+                TemperatureTile(fillsHeight: fillsHeight, title: "Chamber", symbol: "thermometer.medium", temperature: nil, plain: nil, tint: Palette.chamber)
             }
-        } else if model?.hasChamberSensor ?? true {
-            // A model with a sensor that hasn't reported yet.
-            TemperatureTile(fillsHeight: fillsHeight, title: "Chamber", symbol: "thermometer.medium", temperature: nil, plain: nil, tint: Palette.chamber)
         }
     }
 }

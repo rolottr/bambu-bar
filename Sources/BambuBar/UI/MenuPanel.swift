@@ -26,6 +26,11 @@ struct MenuPanel: View {
     @Environment(\.plainPanel) private var plainPanel
     /// The panel lists every printer instead of showing one.
     @AppStorage("panelShowsAllPrinters") private var showsAllSetting = false
+    /// What the panel shows under the job (Settings → Menu bar panel).
+    @AppStorage(PanelContent.temperatures) private var showsTemperatures = true
+    @AppStorage(PanelContent.chamber) private var showsChamber = true
+    @AppStorage(PanelContent.fans) private var showsFans = false
+    @AppStorage(PanelContent.filament) private var showsFilament = true
     /// Set by README frames, which mustn't touch the setting.
     var showsAllOverride: Bool?
 
@@ -53,8 +58,13 @@ struct MenuPanel: View {
                 if let session = store.current, session.showsCamera {
                     CameraPreview(session: session)
                 }
-                temperatures(status)
-                if !status.ams.isEmpty || status.externalSpool?.isLoaded == true {
+                if showsTemperatures {
+                    temperatures(status)
+                }
+                if showsFans && status.hasFans {
+                    FanStrip(status: status)
+                }
+                if showsFilament && (!status.ams.isEmpty || status.externalSpool?.isLoaded == true) {
                     FilamentStrip(status: status, maxHeight: 360)
                 }
                 if store.showPrinterActions && status.state.isActive {
@@ -167,7 +177,7 @@ struct MenuPanel: View {
 
     private func temperatures(_ s: PrinterStatus) -> some View {
         HStack(spacing: 8) {
-            TemperatureTiles(status: s, model: store.config?.model)
+            TemperatureTiles(status: s, model: store.config?.model, showsChamber: showsChamber)
         }
     }
 
@@ -236,7 +246,7 @@ struct JobHero: View {
     /// The stage while it's doing something special, otherwise the filament it's printing with.
     private var subtitle: String {
         if status.state == .printing, status.stageID == nil || status.stageID == 0 {
-            if let spool = status.activeSpool, spool.isLoaded { return "\(spool.displayName) · \(spool.label)" }
+            if let spool = status.activeSpool, spool.isLoaded { return "\(spool.displayName) · \(spool.slotName)" }
             return status.speed == .standard ? status.state.title : String(localized: "\(status.speed.title) speed", comment: "Speed profile, such as “Sport speed”")
         }
         if status.state == .finished, let job = store.lastJob, job.outcome == .finished, let end = job.endedAt {
@@ -509,8 +519,8 @@ struct FilamentStrip: View {
                 .monospacedDigit()
         }
         .frame(maxWidth: .infinity)
-        .help(!spool.isLoaded ? String(localized: "\(spool.label): empty", comment: "AMS slot such as A1")
-              : "\(spool.label): " + [[spool.brand, spool.displayName].compactMap { $0 }.joined(separator: " "),
+        .help(!spool.isLoaded ? String(localized: "\(spool.slotName): empty", comment: "AMS slot such as A1")
+              : "\(spool.slotName): " + [[spool.brand, spool.displayName].compactMap { $0 }.joined(separator: " "),
                                      spool.colorName, spool.remain == nil ? nil : String(localized: "\(spool.remainDetail) left", comment: "Filament left, such as “81% · ≈ 810 g left”")]
                 .compactMap { $0 }.joined(separator: ", "))
     }

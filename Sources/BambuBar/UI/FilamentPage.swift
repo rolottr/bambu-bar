@@ -50,7 +50,7 @@ struct FilamentPage: View {
             return count + " · " + String(localized: "\(Format.grams(grams.reduce(0, +))) of filament on hand")
         }
         if let active = s.activeSpool, s.state.isActive {
-            return count + " · " + String(localized: "printing with \(active.label) \(active.displayName)", comment: "The slot (A1), then the filament")
+            return count + " · " + String(localized: "printing with \(active.slotName) \(active.displayName)", comment: "The slot (A1), then the filament")
         }
         return count
     }
@@ -164,7 +164,7 @@ struct SpoolCard: View {
     }
 
     private var help: String {
-        guard spool.isLoaded else { return String(localized: "\(spool.label): empty", comment: "AMS slot such as A1") }
+        guard spool.isLoaded else { return String(localized: "\(spool.slotName): empty", comment: "AMS slot such as A1") }
         var lines = [[spool.brand, spool.displayName].compactMap { $0 }.joined(separator: " "),
                      [spool.colorName, "#" + String(spool.color.prefix(6))].compactMap { $0 }.joined(separator: " · ")]
         if let range = spool.nozzleRange { lines.append(String(localized: "Prints at \(range.lowerBound)–\(range.upperBound) °C")) }

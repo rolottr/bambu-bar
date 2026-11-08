@@ -81,8 +81,9 @@ struct OverviewPage: View {
                 VStack(spacing: 9) {
                     DetailRow(title: "Speed", value: String(localized: "\(store.speed.title) (\(store.speed.percent)%)", comment: "Speed profile and its percentage"), symbol: "speedometer")
                     DetailRow(title: "Nozzle", value: nozzleText(s), symbol: "pencil.tip")
-                    if store.config?.model?.isEnclosed ?? true {
-                        DetailRow(title: "Door", value: s.doorOpen.map { $0 ? String(localized: "Open", comment: "Door") : String(localized: "Closed", comment: "Door") } ?? "—", symbol: "door.left.hand.closed")
+                    // Only printers with a door sensor report the door.
+                    if let open = s.doorOpen {
+                        DetailRow(title: "Door", value: open ? String(localized: "Open", comment: "Door") : String(localized: "Closed", comment: "Door"), symbol: "door.left.hand.closed")
                     }
                     if s.chamberLightOn != nil {
                         DetailRow(title: "Light", value: store.chamberLightOn ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
@@ -148,30 +149,101 @@ struct FanTile: View {
             HStack(spacing: 4) {
                 Image(systemName: "fan.fill").font(.system(size: 10, weight: .semibold))
                     .foregroundStyle((status.partFan ?? 0) > 0 ? Palette.chamber : .secondary)
-                    .rotationEffect(.degrees(0))
                 Text("Fans").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
             }
-            fan("Part", status.partFan)
-            if let aux = status.auxFan { fan("Aux", aux) }
-            if let exhaust = status.exhaustFan { fan("Chamber", exhaust) }
-            if let hotend = status.heatbreakFan, status.auxFan == nil || status.exhaustFan == nil { fan("Hotend", hotend) }
+            ForEach(status.fanReadings) { fan in
+                HStack(spacing: 6) {
+                    Text(fan.title).font(.system(size: 10.5)).foregroundStyle(.secondary).frame(width: 46, alignment: .leading)
+                    FanBar(value: fan.value)
+                    FanPercent(value: fan.value).frame(width: 32, alignment: .trailing)
+                }
+            }
         }
         .panel(radius: 14, padding: 11)
     }
+}
 
-    private func fan(_ title: LocalizedStringKey, _ value: Int?) -> some View {
-        HStack(spacing: 6) {
-            Text(title).font(.system(size: 10.5)).foregroundStyle(.secondary).frame(width: 46, alignment: .leading)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.primary.opacity(0.08))
-                    Capsule().fill(Palette.chamber.opacity(0.85)).frame(width: geo.size.width * CGFloat(value ?? 0) / 100)
+/// The fans in one row, for the menu bar panel (Settings → Menu bar panel): narrower than the Printer page's
+/// tile, so it fits beside nothing and works for every model, two nozzles or not.
+struct FanStrip: View {
+    var status: PrinterStatus
+
+    var body: some View {
+        let fans = status.fanReadings
+        // Five fans (the H3C) leave too little room for a name and its speed side by side: the speed goes below.
+        let stacked = fans.count > 4
+        HStack(alignment: .center, spacing: stacked ? 10 : 12) {
+            Image(systemName: "fan.fill").font(.system(size: 11, weight: .semibold))
+                .foregroundStyle((status.partFan ?? 0) > 0 ? Palette.chamber : .secondary)
+                .accessibilityHidden(true)
+            ForEach(fans) { fan in
+                VStack(alignment: .leading, spacing: 4) {
+                    if stacked {
+                        Text(fan.title).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(1)
+                        FanPercent(value: fan.value)
+                    } else {
+                        HStack(spacing: 4) {
+                            Text(fan.title).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(1)
+                            Spacer(minLength: 0)
+                            FanPercent(value: fan.value)
+                        }
+                    }
+                    FanBar(value: fan.value)
                 }
+                .accessibilityElement(children: .combine)
             }
-            .frame(height: 4)
-            Text(value.map { "\($0)%" } ?? "–").font(.system(size: 10.5, weight: .medium)).monospacedDigit()
-                .frame(width: 32, alignment: .trailing)
         }
+        .panel(radius: 14, padding: 11)
+    }
+}
+
+/// One fan's speed as a hairline bar.
+private struct FanBar: View {
+    var value: Int?
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.primary.opacity(0.08))
+                Capsule().fill(Palette.chamber.opacity(0.85)).frame(width: geo.size.width * CGFloat(value ?? 0) / 100)
+            }
+        }
+        .frame(height: 4)
+    }
+}
+
+private struct FanPercent: View {
+    var value: Int?
+
+    var body: some View {
+        Text(value.map { "\($0)%" } ?? "–").font(.system(size: 10.5, weight: .medium)).monospacedDigit()
+            .lineLimit(1).fixedSize()
+    }
+}
+
+struct FanReading: Identifiable {
+    var id: String
+    var title: LocalizedStringKey
+    var value: Int?
+}
+
+extension PrinterStatus {
+    /// Part cooling, then the aux and chamber fans where the model has them, and the hotend fan when one of
+    /// those is missing (the A series reports only part cooling and hotend). The H3C has two aux fans and, besides
+    /// the exhaust, a chamber fan, named as Bambu Studio does.
+    var fanReadings: [FanReading] {
+        var fans = [FanReading(id: "part", title: "Part", value: partFan)]
+        if let auxFan { fans.append(FanReading(id: "aux", title: leftAuxFan == nil ? "Aux" : "Aux R", value: auxFan)) }
+        if let leftAuxFan { fans.append(FanReading(id: "aux-left", title: "Aux L", value: leftAuxFan)) }
+        if let exhaustFan { fans.append(FanReading(id: "chamber", title: circulationFan == nil ? "Chamber" : "Exhaust", value: exhaustFan)) }
+        if let circulationFan { fans.append(FanReading(id: "circulation", title: "Chamber", value: circulationFan)) }
+        if let heatbreakFan, auxFan == nil || exhaustFan == nil { fans.append(FanReading(id: "hotend", title: "Hotend", value: heatbreakFan)) }
+        return fans
+    }
+
+    /// The printer has reported any fan speed yet.
+    var hasFans: Bool {
+        partFan != nil || auxFan != nil || leftAuxFan != nil || exhaustFan != nil || circulationFan != nil || heatbreakFan != nil
     }
 }
 

@@ -110,25 +110,32 @@ enum ReportParser {
             s.chamberTarget = chamber.target
         } else if let t = double((p["info"] as? [String: Any])?["temp"]) ?? double(p["chamber_temper"]) {
             s.chamber = t
+            // The X1E's heater target, in the older report format (Bambu Studio's DevChamber reads it too).
+            s.chamberTarget = double(p["ctt"])
         }
         if let c = s.chamber, c <= 0 || c > 120 { s.chamber = nil; s.chamberTarget = nil }
 
-        // Fans: the `airduct` parts already report percent; the legacy fields are 0-15.
+        // Fans: the `airduct` parts already report percent; the legacy fields are 0-15. Bambu Studio names a part
+        // by bits 4-11 of its id: 1 part cooling, 2 aux, 3 exhaust; the H3C adds 10 (left aux) and 15 (chamber).
         if let parts = (device?["airduct"] as? [String: Any])?["parts"] as? [[String: Any]], !parts.isEmpty {
             for part in parts {
                 guard let id = int(part["id"]), let state = int(part["state"]) else { continue }
                 let pct = max(0, min(100, state & 0xFF))
-                switch id >> 4 {
+                switch (id >> 4) & 0xFF {
                 case 1: s.partFan = pct
                 case 2: s.auxFan = pct
                 case 3: s.exhaustFan = pct
+                case 10: s.leftAuxFan = pct
+                case 15: s.circulationFan = pct
                 default: break
                 }
             }
         } else {
+            // Every model sends all three, "0" for fans it doesn't have (an A1 has no aux or chamber fan); the
+            // printer's model drops those (`PrinterStatus.fit(to:)`), so a stopped fan that exists still shows.
             s.partFan = fan(p["cooling_fan_speed"])
             s.auxFan = fan(p["big_fan1_speed"])
-            if let v = fan(p["big_fan2_speed"]), v > 0 { s.exhaustFan = v }
+            s.exhaustFan = fan(p["big_fan2_speed"])
         }
         if s.partFan == nil { s.partFan = fan(p["cooling_fan_speed"]) }
         s.heatbreakFan = fan(p["heatbreak_fan_speed"])
@@ -138,8 +145,11 @@ enum ReportParser {
            let chamber = lights.first(where: { string($0["node"]) == "chamber_light" }) {
             s.chamberLightOn = string(chamber["mode"]) != "off"
         }
-        if let stat = string(p["stat"]), let bits = UInt64(stat, radix: 16) {
-            s.doorOpen = bits & 0x0080_0000 != 0
+        // The door, only from printers that say they have a door sensor (`fun` bit 12, as Bambu Studio checks):
+        // others leave the bit at 0, which would read as a door that's always closed.
+        if let fun = string(p["fun"]).flatMap({ UInt64($0, radix: 16) }), fun & (1 << 12) != 0,
+           let stat = string(p["stat"]).flatMap({ UInt64($0, radix: 16) }) {
+            s.doorOpen = stat & (1 << 23) != 0
         }
         if let wifi = string(p["wifi_signal"]), let dbm = Int(wifi.replacingOccurrences(of: "dBm", with: "")) {
             s.wifiSignal = dbm
@@ -152,7 +162,10 @@ enum ReportParser {
         if let ipcam = p["ipcam"] as? [String: Any], let url = string(ipcam["rtsp_url"]) {
             s.liveViewEnabled = url != "disable" && !url.isEmpty
         }
-        if let nozzles = (device?["nozzle"] as? [String: Any])?["info"] as? [[String: Any]], let n = nozzles.first {
+        // The nozzle on the printing extruder: its `id` is the extruder's. The H3C also lists the hotends in its rack
+        // (ids 16 and up), in rack order, so the first entry isn't necessarily the mounted one.
+        if let nozzles = (device?["nozzle"] as? [String: Any])?["info"] as? [[String: Any]],
+           let n = nozzles.first(where: { int($0["id"]) == extruders.current }) ?? nozzles.first {
             s.nozzleDiameter = double(n["diameter"])
             s.nozzleType = string(n["type"])
         } else {
@@ -174,35 +187,49 @@ enum ReportParser {
 
     private static func parseFilament(_ p: [String: Any], device: [String: Any]?, doc: ReportDocument, into s: inout PrinterStatus) {
         let amsRoot = p["ams"] as? [String: Any]
+        let extruders = extruders(device)
         let units = (amsRoot?["ams"] as? [[String: Any]]) ?? []
         let existBits = string(amsRoot?["tray_exist_bits"]).flatMap { UInt64($0, radix: 16) }
         let rfidBits = string(amsRoot?["tray_is_bbl_bits"]).flatMap { UInt64($0, radix: 16) }
         s.ams = units.compactMap { u -> AMSUnit? in
             guard let id = int(u["id"]) else { return nil }
-            let kind = amsKind(id: id, info: string(u["info"]), modules: doc.modules)
+            let type = amsType(id: id, info: string(u["info"]), modules: doc.modules)
+            let kind = type.kind
             let trays = (u["tray"] as? [[String: Any]]) ?? []
             let spools = trays.compactMap { t -> Spool? in
                 guard let slot = int(t["id"]) else { return nil }
-                let global = id >= 128 ? id : id * 4 + slot
-                let bit = id >= 128 ? 16 + (id - 128) : id * 4 + slot
-                var spool = spoolFrom(t, id: global, unit: id, slot: slot)
-                if let existBits, existBits & (1 << UInt64(bit)) == 0 { spool.isLoaded = false }
-                // Only ever narrows the tag check: the P2S sets every bit, Bambu spool or not.
-                if let rfidBits, rfidBits & (1 << UInt64(bit)) == 0 { spool.isBambu = false }
+                var spool = spoolFrom(t, id: type.spoolID(unit: id, slot: slot), unit: id, slot: slot)
+                if let bit = type.trayBit(unit: id, slot: slot), (0..<64).contains(bit) {
+                    if let existBits, existBits & (1 << UInt64(bit)) == 0 { spool.isLoaded = false }
+                    // Only ever narrows the tag check: the P2S sets every bit, Bambu spool or not.
+                    if let rfidBits, rfidBits & (1 << UInt64(bit)) == 0 { spool.isBambu = false }
+                }
                 describe(&spool)
                 return spool
             }.sorted { $0.slot < $1.slot }
-            var humidity = int(u["humidity_raw"])
+            // The AMS 3H measures each of its drying zones instead of the whole unit; show the dampest one.
+            let zones = (u["zone_info"] as? [[String: Any]]) ?? []
+            let sensor = u["humidity_raw"] != nil || u["humidity"] != nil || zones.isEmpty
+                ? u : zones.max { (int($0["humidity_raw"]) ?? -1) < (int($1["humidity_raw"]) ?? -1) } ?? u
+            var humidity = int(sensor["humidity_raw"])
             if let h = humidity, h < 1 || h > 100 { humidity = nil }
-            var level = int(u["humidity"])
+            var level = int(sensor["humidity"])
             if let l = level, l < 1 || l > 5 { level = nil }
-            var temp = double(u["temp"])
+            var temp = double(sensor["temp"])
             if let t = temp, t <= 0 || t > 100 { temp = nil }
+            // The AMS Lite has no humidity or temperature sensor; it reports "5" (the driest level) and "0.0".
+            if kind == .lite { humidity = nil; level = nil; temp = nil }
             return AMSUnit(id: id, kind: kind, humidity: humidity, humidityLevel: level.map { 6 - $0 }, temperature: temp,
                            dryingMinutesLeft: int(u["dry_time"]) ?? 0, spools: spools)
         }.sorted { $0.id < $1.id }
 
-        let virtual = (p["vir_slot"] as? [[String: Any]])?.first ?? (p["vt_tray"] as? [String: Any])
+        // The external spool of the printing nozzle: Bambu Studio numbers the virtual slots 255 down, one per extruder
+        // (255 right, 254 left on an H2D) or, on the H3C, one per hotend rack position (255 - addr_id, 247-255).
+        let slots = p["vir_slot"] as? [[String: Any]]
+        let nozzles = ((device?["nozzle"] as? [String: Any])?["info"] as? [[String: Any]]) ?? []
+        let mountedAddr = int(nozzles.first { int($0["id"]) == extruders.current }?["addr_id"])
+        let wanted = 255 - (mountedAddr ?? extruders.current)
+        let virtual = slots?.first { int($0["id"]) == wanted } ?? slots?.first ?? (p["vt_tray"] as? [String: Any])
         if let v = virtual {
             var ext = spoolFrom(v, id: Spool.externalID, unit: 255, slot: 0)
             ext.isLoaded = !(string(v["tray_type"]) ?? "").isEmpty
@@ -213,11 +240,12 @@ enum ReportParser {
         }
 
         // Active slot: the printing extruder's `snow` (unit << 8 | slot) on newer firmware, else `tray_now`.
-        let extruders = extruders(device)
         if let snow = int(extruders.byID[extruders.current]?["snow"]), snow != 0xFFFF {
             let unit = snow >> 8, slot = snow & 0xFF
-            if unit == 254 || unit == 255 {
+            if (247...255).contains(unit) {
                 s.activeSpoolID = slot == 255 ? nil : Spool.externalID
+            } else if let spool = s.ams.first(where: { $0.id == unit })?.spools.first(where: { $0.slot == slot }) {
+                s.activeSpoolID = spool.id
             } else if unit >= 128 {
                 s.activeSpoolID = unit
             } else {
@@ -272,20 +300,66 @@ enum ReportParser {
         }
     }
 
-    private static func amsKind(id: Int, info: String?, modules: [String: (product: String, version: String)]) -> AMSKind {
+    /// Bambu Studio's AMS type (`DevAmsType`, bits 0-3 of the unit's `info`), which also places the unit's slots in
+    /// `tray_exist_bits`.
+    private enum AMSType {
+        case ams, lite, pro2, ht
+        /// The A2L's AMS Lite (type 5).
+        case liteMixed
+        /// The H3C's AMS 3H (type 6, ZMULTI_A).
+        case ams3h
+        /// The H3C's AMS-B (type 7, ZMULTI_B), for hotend rack B. Not seen in a report yet.
+        case amsB
+
+        var kind: AMSKind {
+            switch self {
+            case .ams: return .ams
+            case .lite, .liteMixed: return .lite
+            case .pro2: return .pro2
+            case .ht: return .ht
+            case .ams3h: return .ams3h
+            case .amsB: return .amsB
+            }
+        }
+
+        /// The slot's bit in `tray_exist_bits` and `tray_is_bbl_bits` (`DevAms::GetTrayId`).
+        func trayBit(unit: Int, slot: Int) -> Int? {
+            switch self {
+            case .ams, .lite, .pro2: return unit * 4 + slot
+            case .ht: return unit >= 128 ? 16 + (unit - 128) + slot : nil
+            case .liteMixed: return 24 + slot
+            case .ams3h: return 28 + slot
+            case .amsB: return 37 + slot
+            }
+        }
+
+        /// The app's spool id: unit * 4 + slot for the four-slot units, the unit id for an AMS HT (one slot), and
+        /// past both ranges for the H3C's rack AMS.
+        func spoolID(unit: Int, slot: Int) -> Int {
+            switch self {
+            case .ht where unit >= 128: return unit
+            case .ams3h: return Spool.ams3hBase + slot
+            case .amsB: return Spool.amsBBase + slot
+            default: return unit * 4 + slot
+            }
+        }
+    }
+
+    private static func amsType(id: Int, info: String?, modules: [String: (product: String, version: String)]) -> AMSType {
+        let type = info.flatMap { UInt64($0, radix: 16) }.map { $0 & 0xF }
+        if type == 6 || modules["n10a/\(id)"] != nil { return .ams3h }
+        if type == 7 { return .amsB }
+        if type == 5 { return .liteMixed }
         if id >= 128 || modules["n3s/\(id)"] != nil { return .ht }
         if modules["n3f/\(id)"] != nil { return .pro2 }
         if modules["ams_f1/\(id)"] != nil { return .lite }
         if modules["ams/\(id)"] != nil { return .ams }
-        if let info, let bits = UInt64(info, radix: 16) {
-            switch bits & 0xF {
-            case 2: return .lite
-            case 3: return .pro2
-            case 4: return .ht
-            default: return .ams
-            }
+        switch type {
+        case 2: return .lite
+        case 3: return .pro2
+        case 4: return .ht
+        default: return .ams
         }
-        return .ams
     }
 
     // MARK: - Issues
@@ -370,21 +444,26 @@ enum ReportParser {
     static func int(_ value: Any?) -> Int? {
         switch value {
         case let v as Int: return v
-        case let v as Double: return Int(v)
+        case let v as Double: return Int(exactly: v.rounded(.towardZero))
         case let v as NSNumber: return v.intValue
-        case let v as String: return Int(v) ?? Double(v).map { Int($0) }
+        // `Int(Double)` traps on "nan", "inf" or anything past Int's range; `exactly:` returns nil instead.
+        case let v as String: return Int(v) ?? Double(v).flatMap { Int(exactly: $0.rounded(.towardZero)) }
         default: return nil
         }
     }
 
+    /// Finite numbers only. `Double("nan")` parses, slips past every range check (comparisons with NaN are
+    /// false) and makes JSONEncoder refuse the whole widget snapshot.
     static func double(_ value: Any?) -> Double? {
+        let result: Double?
         switch value {
-        case let v as Double: return v
-        case let v as Int: return Double(v)
-        case let v as NSNumber: return v.doubleValue
-        case let v as String: return Double(v)
-        default: return nil
+        case let v as Double: result = v
+        case let v as Int: result = Double(v)
+        case let v as NSNumber: result = v.doubleValue
+        case let v as String: result = Double(v)
+        default: result = nil
         }
+        return result.flatMap { $0.isFinite ? $0 : nil }
     }
 
     static func string(_ value: Any?) -> String? {

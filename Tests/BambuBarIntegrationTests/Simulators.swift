@@ -20,9 +20,9 @@ enum Simulators {
         URL(fileURLWithPath: environment["BAMBUBAR_FLEET_SETTINGS"] ?? "scripts/integration/out/BambuStudio.conf")
     }
 
-    static let fleetSize = 12
+    static let fleetSize = 17
     /// Listed in the settings, never answers: a printer that's switched off.
-    static let switchedOffPrinter = "01PF00000000012"
+    static let switchedOffPrinter = "01PF00000000017"
     /// Where the fleet sends its announcements (compose.yaml).
     static let announcementPort: UInt16 = 2122
 
