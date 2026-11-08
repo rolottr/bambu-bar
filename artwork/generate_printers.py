@@ -8,6 +8,8 @@ All geometry and materials are authored here; no product photographs, CAD or log
 visual approximations of Bambu Lab's printer families at their published outer dimensions:
     enclosed    P2S, P1S, X1 family, X2D   389 x 389 x 457 mm, AMS on top
     wide        H2 family                  492 x 514 x 626 mm (body ~ 550 tall), AMS 2 Pro on top
+    h3c         H3C                        493 x 571 x 587 mm body, nine-tool rack, the AMS 3H built into a hood on
+                                           top (about 1 m tall in all), nine spools side by side under a clear lid
     openFrame   P1P                        386 x 389 x 458 mm, AMS on top
     bedSlinger  A1, A2L                    385 x 410 x 445 mm, AMS Lite on top
     mini        A1 mini                    312 x 296 x 365 mm, AMS Lite on top
@@ -20,7 +22,7 @@ For every shape it writes, under Resources/Printers:
     <shape>-body.png        everything but the print and spools, chamber light on
     <shape>-dark.png        the same with the chamber light off
     <shape>-part.png        the finished print in white, cut out by whatever stands in front of it
-    <shape>-spool<i>.png    spool i in white (tinted by the app)
+    <shape>-spool<i>.png    spool i in white (tinted by the app): four, or nine for the H3C's AMS 3H
     <shape>-sheen.png       reflections on the door glass, drawn over the print
     <shape>.json            where the print sits in the frame, for revealing it with progress
 """
@@ -210,6 +212,23 @@ class Kit:
         ob.data.set_sharp_from_angle(angle=math.radians(50))
         return ob
 
+    def arc(self, name, x, centre, radius, a0, a1, r, mat, parent=None, steps=18, segments=10):
+        """A thin tube bent along an arc in the YZ plane at `x` (feed tubes), from angle a0 to a1 in degrees."""
+        bm = bmesh.new()
+        rings = []
+        for k in range(steps + 1):
+            a = math.radians(a0 + (a1 - a0) * k / steps)
+            p = Vector((x, centre[0] + radius * math.cos(a), centre[1] + radius * math.sin(a)))
+            v = Vector((0, math.cos(a), math.sin(a)))
+            rings.append([bm.verts.new(p + r * (math.cos(2 * math.pi * i / segments) * Vector((1, 0, 0)) +
+                                                math.sin(2 * math.pi * i / segments) * v)) for i in range(segments)])
+        for a, b in zip(rings, rings[1:]):
+            for i in range(segments):
+                j = (i + 1) % segments
+                bm.faces.new((a[i], a[j], b[j], b[i]))
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+        return self.mesh_from_bm(name, bm, mat, (0, 0, 0), parent, smooth=True)
+
     def lathe_slice(self, name, profile, z0, z1, mat, parent, segments=56):
         """One closed band of a lathed solid between heights z0 and z1 (profile: [(z, r)])."""
         def radius(z):
@@ -266,6 +285,8 @@ def materials(kit):
     m['rubber'] = kit.mat('Rubber', (.015, .015, .016), rough=.8)
     m['ams'] = kit.mat('AMS', (.05, .052, .056), rough=.4, coat=.2, noise=.03)
     m['ams_light'] = kit.mat('AMSLight', (.6, .61, .63), rough=.38, coat=.2)
+    m['tube'] = kit.mat('Tube', (.85, .86, .88), rough=.25, coat=.4)
+    m['alu'] = kit.mat('Alu', (.4, .41, .43), rough=.42, metal=.45, noise=.04)
     return m
 
 
@@ -302,15 +323,26 @@ def toolhead(kit, m, parent, loc, width=.062, depth=.06, height=.072, dual=False
     tips = (-.016, .016) if dual else (0,)
     for i, x in enumerate(tips):
         kit.cylinder('Heatsink%d' % i, .007, .012, (x, 0, -height / 2 - .006), m['metal'], segments=24, parent=head)
-        cone = bpy.data.meshes.new('NozzleTip%d' % i)
-        bm = bmesh.new()
-        bmesh.ops.create_cone(bm, cap_ends=True, segments=24, radius1=.0012, radius2=.0045, depth=.008)
-        bm.to_mesh(cone)
-        bm.free()
-        ob = bpy.data.objects.new('NozzleTip%d' % i, cone)
-        ob.location = (x, 0, -height / 2 - .016)
-        kit.link(ob, head, m['nozzle'])
+        nozzle_tip(kit, m, 'NozzleTip%d' % i, (x, 0, -height / 2 - .016), head)
     return head
+
+
+def nozzle_tip(kit, m, name, loc, parent=None):
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=24, radius1=.0012, radius2=.0045, depth=.008)
+    return kit.mesh_from_bm(name, bm, m['nozzle'], loc, parent)
+
+
+def tool_rack(kit, m, span, y, z, count=9):
+    """The H3C's docked hotends in a row along the top front of the chamber, each with its status light."""
+    kit.box('RackBar', (span + .02, .032, .016), (0, y, z), m['frame'], bevel=.004)
+    step = span / count
+    for i in range(count):
+        x = -span / 2 + step * (i + .5)
+        kit.box('Dock_%d' % i, (step * .72, .03, .03), (x, y - .002, z - .022), m['toolhead'], bevel=.004)
+        kit.box('DockLed_%d' % i, (step * .28, .002, .003), (x, y - .018, z - .012), m['led'])
+        kit.cylinder('DockHeatsink_%d' % i, .0055, .016, (x, y, z - .045), m['metal'], segments=20)
+        nozzle_tip(kit, m, 'DockNozzle_%d' % i, (x, y, z - .057))
 
 
 def ams(kit, m, base_z, width=.36, depth=.285, height=.228, light=False, name='AMS'):
@@ -364,13 +396,55 @@ def ams_lite(kit, m, base_z, span=.34):
     return root
 
 
+def ams_3h(kit, m, base_z, W, D):
+    """The H3C's AMS 3H, built into a dark hood on the printer: a smoked window over the nine feed tubes, then a
+    clear rounded lid over nine spools standing side by side, axles left to right. The hood is part of the printer,
+    so the render without an AMS keeps it and only drops the spools."""
+    hood = kit.empty('Hood', (0, 0, base_z))
+    neck_h, cap_h, band_h = .2, .215, .095
+    nw, nd = W - .014, D - .03
+    neck = kit.box('HoodNeck', (nw, nd, neck_h + .02), (0, .01, neck_h / 2 - .01), m['shell'], bevel=.012, parent=hood)
+    # Open at the front behind the window, so the tubes show.
+    kit.cut(neck, (nw - .03, nd, neck_h - .04), (0, .01 - .012, base_z + neck_h / 2 + .005), bevel=.006)
+    window = kit.box('HoodWindow', (nw - .02, .004, neck_h - .03), (0, .01 - nd / 2 - .001, neck_h / 2 + .005), m['smoke'],
+                     bevel=.006, parent=hood)
+    kit.glass.append(window)
+    span = W - .06
+    for i in range(9):
+        x = -span / 2 + span / 9 * (i + .5)
+        kit.arc('FeedTube_%d' % i, x, (.01 - nd / 2 + .1, neck_h / 2 + .005), neck_h * .36, 95, 265, .0026, m['tube'], hood)
+    # The lid: a smoked shell with big rounded top edges, its lower part behind an opaque band.
+    cap = kit.box('HoodLid', (W - .004, D - .004, cap_h), (0, -.002, neck_h + cap_h / 2), m['smoke'], bevel=.08, segments=10,
+                  parent=hood)
+    kit.cut(cap, (W - .02, D - .02, cap_h), (0, -.002, base_z + neck_h + cap_h / 2 - .008), bevel=.07)
+    kit.glass.append(cap)
+    kit.box('HoodBand', (W + .002, D + .002, band_h), (0, -.002, neck_h + band_h / 2), m['shell'], bevel=.014, parent=hood)
+    kit.box('HoodSeam', (W + .003, D + .003, .004), (0, -.002, neck_h + band_h - .006), m['frame'], bevel=.0015, parent=hood)
+    kit.box('HoodLatch', (.09, .006, .012), (0, -.002 - D / 2 - .002, neck_h + band_h - .02), m['frame'], bevel=.003, parent=hood)
+    kit.box('HoodFloor', (W - .03, D - .03, .006), (0, -.002, neck_h + .02), m['inner'], parent=hood)
+    # Spools, toward the front of the lid; the dryer trays behind them aren't drawn.
+    root = kit.empty('AMS', (0, 0, base_z))
+    pitch = (W - .03) / 9
+    for i in range(9):
+        x = -(W - .03) / 2 + pitch * (i + .5)
+        spool = kit.empty('Spool_%d' % i, (x, -D / 2 + .15, neck_h + .108), root)
+        reel = [kit.tube('Flange_%d_%s' % (i, side), .086, .024, .003, (sx * .0225, 0, 0), m['reel'], axis='X', parent=spool)
+                for side, sx in (('L', -1), ('R', 1))]
+        reel.append(kit.tube('Core_%d' % i, .036, .024, .042, (0, 0, 0), m['reel'], axis='X', parent=spool))
+        fil = kit.tube('Filament_%d' % i, .077, .035, .041, (0, 0, 0), m['filament'], axis='X', parent=spool)
+        kit.spools.append((reel, fil, spool))
+    return root
+
+
 # --------------------------------------------------------------------------- printer families
 
 
-def corexy(kit, m, W, D, H, open_frame=False, dual=False, light_shell=False):
-    """A CoreXY box: shell (or frame), glass door, chamber light, gantry, toolhead, bed and print."""
-    shell_mat = m['shell_light'] if light_shell else m['shell']
-    base_h, top_h, wall = .085, .055, .022
+def corexy(kit, m, W, D, H, open_frame=False, dual=False, light_shell=False, base_h=.085, screen_top=False, rack=0,
+           shell=None):
+    """A CoreXY box: shell (or frame), glass door, chamber light, gantry, toolhead, bed and print. `screen_top` puts
+    the screen on a stalk above the door's top left (H3C); `rack` docks that many hotends along the top front."""
+    shell_mat = shell or (m['shell_light'] if light_shell else m['shell'])
+    top_h, wall = .055, .022
     cav_w, cav_d = W - 2 * wall, D - 2 * wall
     cav_z0, cav_z1 = base_h, H - top_h
 
@@ -402,9 +476,18 @@ def corexy(kit, m, W, D, H, open_frame=False, dual=False, light_shell=False):
                         parent=door)
         kit.cut(frame, (dw - .024, .02, dh - .024), (W / 2 - wall - dw / 2 - .006, -D / 2 - .0035, (cav_z0 + cav_z1) / 2), bevel=.006)
         kit.box('DoorHandle', (.008, .012, dh * .32), (-.016, -.012, (cav_z0 + cav_z1) / 2), m['frame'], bevel=.003, parent=door)
-        # Front fascia under the door: screen on the left, light bar in the middle.
-        kit.box('Screen', (.085, .004, .05), (-W / 2 + .075, -D / 2 - .0005, base_h * .5), m['screen'], bevel=.004)
-        kit.box('StatusBar', (.06, .003, .004), (0, -D / 2 - .0005, base_h * .42), m['led'], bevel=.0015)
+        if screen_top:
+            # On a short stalk at the top left, standing proud of the door.
+            kit.box('ScreenStalk', (.016, .02, .02), (-W / 2 + .085, -D / 2 - .008, H - top_h / 2), m['frame'], bevel=.004)
+            kit.box('ScreenBezel', (.112, .008, .07), (-W / 2 + .1, -D / 2 - .019, H - .018), m['frame'], bevel=.006)
+            kit.box('Screen', (.1, .004, .058), (-W / 2 + .1, -D / 2 - .0235, H - .018), m['screen'], bevel=.004)
+            # Dark filter windows high on the side panels.
+            for sx in (-1, 1):
+                kit.box('SideWindow', (.003, D * .4, H * .17), (sx * (W / 2 + .0008), -D * .06, H * .78), m['frame'], bevel=.006)
+        else:
+            # Front fascia under the door: screen on the left, light bar in the middle.
+            kit.box('Screen', (.085, .004, .05), (-W / 2 + .075, -D / 2 - .0005, base_h * .5), m['screen'], bevel=.004)
+            kit.box('StatusBar', (.06, .003, .004), (0, -D / 2 - .0005, base_h * .42), m['led'], bevel=.0015)
         # Feet.
         for sx in (-1, 1):
             for sy in (-1, 1):
@@ -429,6 +512,8 @@ def corexy(kit, m, W, D, H, open_frame=False, dual=False, light_shell=False):
     kit.cylinder('XRod', .0055, cav_w - .04, (0, -.03, gz), m['carbon'], axis='X', segments=24)
     kit.cylinder('XRod2', .0055, cav_w - .04, (0, .0, gz), m['carbon'], axis='X', segments=24)
     head = toolhead(kit, m, None, (cav_w * .08, -.02, gz - .006), width=.085 if dual else .062, dual=dual)
+    if rack:
+        tool_rack(kit, m, cav_w - .08, -cav_d / 2 + .035, cav_z1 - .014, rack)
 
     # Bed and print. At 100 % the bed has dropped by the print's height; the model is posed there.
     part_h = (cav_z1 - cav_z0) * .38
@@ -737,7 +822,7 @@ def export_usdz(kit, path):
             mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 1
 
 
-SHAPES = ('enclosed', 'wide', 'openFrame', 'bedSlinger', 'mini')
+SHAPES = ('enclosed', 'wide', 'h3c', 'openFrame', 'bedSlinger', 'mini')
 
 
 def build(shape):
@@ -750,6 +835,9 @@ def build(shape):
     elif shape == 'wide':
         info = corexy(kit, m, .492, .485, .55, dual=True, light_shell=False)
         ams(kit, m, info['top'], width=.372, depth=.285, height=.228)
+    elif shape == 'h3c':
+        info = corexy(kit, m, .493, .571, .587, shell=m['alu'], base_h=.045, screen_top=True, rack=9)
+        ams_3h(kit, m, info['top'], .493, .571)
     elif shape == 'openFrame':
         info = corexy(kit, m, .386, .389, .458, open_frame=True)
         ams(kit, m, info['top'])

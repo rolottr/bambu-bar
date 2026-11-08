@@ -242,7 +242,7 @@ final class PrinterSceneView: SCNView {
         }
 
         ams = root.childNode(withName: "AMS", recursively: true)
-        spools = (0..<4).compactMap { i -> (SCNNode, SCNMaterial)? in
+        spools = (0..<9).compactMap { i -> (SCNNode, SCNMaterial)? in
             guard let spool = root.childNode(withName: "Spool_\(i)", recursively: true),
                   let filament = spool.childNode(withName: "Filament_\(i)", recursively: true) else { return nil }
             let material = SCNMaterial()

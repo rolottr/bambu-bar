@@ -4,8 +4,10 @@ import SwiftUI
 enum PrinterShape: Equatable, Sendable {
     /// P2S, P1S, X1 family, X2D: a closed box with a glass door.
     case enclosed
-    /// H2 family and H3C: a wider closed box.
+    /// H2 family: a wider closed box.
     case wide
+    /// H3C: a wide closed box with nine docked tools and the AMS 3H built into a hood on top.
+    case h3c
     /// P1P: the CoreXY frame without panels.
     case openFrame
     /// A1 and A2L: an open bed-slinger under an arch-shaped gantry.
@@ -22,12 +24,15 @@ enum PrinterShape: Equatable, Sendable {
         let m = (model ?? "").lowercased()
         if m.contains("mini") || m == "n1" || m == "a12" || m == "a04" { self = .mini }
         else if m.hasPrefix("a1") || m.hasPrefix("a2") || m == "n2s" || m == "a11" || m == "n9" { self = .bedSlinger }
-        else if m.hasPrefix("h2") || m.hasPrefix("h3") || m.hasPrefix("o1") || m.hasPrefix("o2") || m.hasPrefix("n10") { self = .wide }
+        else if m.hasPrefix("h3") || m.hasPrefix("n10") { self = .h3c }
+        else if m.hasPrefix("h2") || m.hasPrefix("o1") || m.hasPrefix("o2") { self = .wide }
         else if m == "p1p" || m == "c11" { self = .openFrame }
         else { self = .enclosed }
     }
 
     var isBedSlinger: Bool { self == .bedSlinger || self == .mini }
+    /// The wide drawing: H2 family and H3C.
+    var isWide: Bool { self == .wide || self == .h3c }
 }
 
 /// A drawn Bambu Lab printer: enclosure (or open frame), chamber light, build plate, and the part being printed,
@@ -110,7 +115,7 @@ struct PrinterArt: View {
         if ams { drawAMS(&ctx, y: 6) }
 
         let open = shape == .openFrame
-        let inset: CGFloat = shape == .wide ? 3 : 8
+        let inset: CGFloat = shape.isWide ? 3 : 8
 
         // Enclosure (for the P1P, just its frame).
         let body = CGRect(x: inset, y: top, width: 100 - inset * 2, height: 114 - top)
@@ -132,7 +137,7 @@ struct PrinterArt: View {
                    with: .linearGradient(Gradient(colors: [.white.opacity(0.35), .white.opacity(0.04)]),
                                          startPoint: CGPoint(x: 50, y: top), endPoint: CGPoint(x: 50, y: 114)),
                    lineWidth: 0.8)
-        if shape == .wide {
+        if shape.isWide {
             // The H2's vented top edge.
             for i in 0..<7 {
                 ctx.fill(Path(roundedRect: CGRect(x: 36 + CGFloat(i) * 4.4, y: top + 2, width: 2.4, height: 1.2), cornerRadius: 0.6),

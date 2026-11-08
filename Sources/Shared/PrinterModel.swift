@@ -90,7 +90,7 @@ struct PrinterModel: Equatable, Sendable {
         .init(code: "O1C", name: "H2C", shape: .wide, serialPrefix: "31B", isEnclosed: true, hasChamberSensor: true,
               chamberHeaterMax: 65, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: true, usesAMSLite: false,
               nozzleCount: 2, nozzleMax: 350, bedMax: 120, buildVolume: (330, 320, 325), hasLidar: false, hasLaserModule: true),
-        .init(code: "N10", name: "H3C", shape: .wide, serialPrefix: "32X", isEnclosed: true, hasChamberSensor: true,
+        .init(code: "N10", name: "H3C", shape: .h3c, serialPrefix: "32X", isEnclosed: true, hasChamberSensor: true,
               chamberHeaterMax: 65, hasAuxFan: true, hasChamberFan: true, hasAMSHumidity: true, usesAMSLite: false,
               nozzleCount: 1, nozzleMax: 350, bedMax: 120, buildVolume: (330, 320, 325), hasLidar: false, hasLaserModule: false),
         .init(code: "O1S", name: "H2S", shape: .wide, serialPrefix: "093", isEnclosed: true, hasChamberSensor: true,

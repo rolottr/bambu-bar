@@ -7,6 +7,7 @@ extension PrinterShape {
         switch self {
         case .enclosed: return "enclosed"
         case .wide: return "wide"
+        case .h3c: return "h3c"
         case .openFrame: return "openFrame"
         case .bedSlinger: return "bedSlinger"
         case .mini: return "mini"
@@ -53,7 +54,8 @@ final class PrinterRenderSet: @unchecked Sendable {
         bare = image("bare")
         bareDark = image("baredark")
         self.part = part
-        spools = (0..<4).compactMap { image("spool\($0)") }
+        // Four AMS spools, or the H3C's nine.
+        spools = (0..<9).compactMap { image("spool\($0)") }
         sheen = image("sheen")
         canvas = CGSize(width: anchors.size[0], height: anchors.size[1])
         partBox = anchors.part

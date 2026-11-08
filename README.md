@@ -16,7 +16,7 @@ Built with Swift and SwiftUI. Printer data stays local, with no app analytics. T
 
 [Getting started](#getting-started) · [Features](#features) · [Widgets](#desktop-widgets) · [Compatibility](#compatibility) · [Building](#building-from-source)
 
-> Independent, community-developed software. Not affiliated with or endorsed by Bambu Lab. All 14 Bambu Lab models listed under [Compatibility](#compatibility) are verified on hardware.
+> Independent, community-developed software. Not affiliated with or endorsed by Bambu Lab. The Bambu Lab models listed under [Compatibility](#compatibility) are verified on hardware; the H3C is supported from a real H3C report.
 
 ## Why this app?
 
@@ -87,7 +87,7 @@ The widget shows what the app last saw, so keep Bambu Bar running (Open at Login
 
 ## Compatibility
 
-All 14 models are verified on hardware. What each one shows still differs with its hardware (chamber sensor, nozzles, AMS type, camera transport):
+The first 14 models are verified on hardware; the H3C is supported from a real report (`scripts/emulator/h3c-sample.json`) and not yet confirmed by an owner. What each one shows still differs with its hardware (chamber sensor, nozzles, AMS type, camera transport):
 
 | Printer | Camera | Notes |
 | --- | --- | --- |
@@ -98,6 +98,7 @@ All 14 models are verified on hardware. What each one shows still differs with i
 | **A1, A1 mini** | JPEG stream | AMS Lite; no chamber, chamber light or door. |
 | **A2L** | JPEG stream | Large-format open printer. |
 | **H2D, H2D Pro, H2C, H2S** | RTSPS (LAN Only Liveview) | Heated chamber; two nozzles except the H2S. Laser and cutting modules aren't controlled. |
+| **H3C** | RTSPS (LAN Only Liveview) | Heated chamber; nine-tool rack (shows the mounted nozzle); the built-in AMS 3H with nine slots and per-zone humidity. Its own render with the AMS 3H hood. |
 
 A sanitised A1 report is in `scripts/emulator/a1-sample.json`.
 

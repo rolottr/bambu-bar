@@ -95,6 +95,16 @@ final class PrinterIdentityTests: XCTestCase {
         }
     }
 
+    /// The H3C has its own render (the AMS 3H hood, nine spools); the H2 family keeps the wide one.
+    func testH3CHasItsOwnShape() {
+        XCTAssertEqual(PrinterShape(model: "H3C"), .h3c)
+        XCTAssertEqual(PrinterShape(model: "N10"), .h3c)
+        XCTAssertEqual(PrinterShape(model: "N10-V2"), .h3c)
+        XCTAssertEqual(PrinterShape(model: "H2C"), .wide)
+        XCTAssertEqual(PrinterShape.h3c.assetName, "h3c")
+        XCTAssertTrue(PrinterShape.h3c.isWide)
+    }
+
     // MARK: - Names
 
     func testPlaceholderName() {
