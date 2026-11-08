@@ -16,14 +16,7 @@ enum PolarConfiguration {
     }
 
     static func supportURL(from placement: SupportPlacement) -> URL {
-        var url = URLComponents(string: "https://bambubar.app/download")!
-        url.queryItems = [
-            URLQueryItem(name: "utm_source", value: "bambu_bar"),
-            URLQueryItem(name: "utm_medium", value: "app"),
-            URLQueryItem(name: "utm_campaign", value: "support_project"),
-            URLQueryItem(name: "utm_content", value: placement.rawValue),
-        ]
-        return url.url!
+        Website.url("download", campaign: "support_project", content: placement.rawValue)
     }
 }
 

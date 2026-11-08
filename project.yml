@@ -25,7 +25,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "2.0.1"
+    MARKETING_VERSION: "2.0.2"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: PCZ6F8Q9DZ
     APP_GROUP: "$(DEVELOPMENT_TEAM).dev.rolottr.BambuBar"
@@ -135,6 +135,7 @@ targets:
       - path: Sources/BambuBar/Printer/HMSCatalog.swift
       - path: Sources/BambuBar/Printer/FilamentCatalog.swift
       - path: Sources/BambuBar/Services/AppLanguage.swift
+      - path: Sources/BambuBar/Services/Website.swift
       - path: Sources/BambuBar/Printer/CameraProtocol.swift
       - path: Sources/BambuBar/Printer/VideoDepacketizer.swift
       - path: Sources/BambuBar/Printer/SlicerImport.swift

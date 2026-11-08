@@ -56,10 +56,10 @@ struct AboutPage: View {
                 }
 
                 section("Links") {
-                    link("bambubar.app", symbol: "globe", AppInfo.websiteURL)
+                    link("bambubar.app", symbol: "globe", Website.home)
                     // The App Store shows what's new itself, and the release page offers the app outside the store.
                     if UpdateChecker.isAvailable {
-                        link("Release Notes", symbol: "doc.text", URL(string: "https://bambubar.app/changelog")!)
+                        link("Release Notes", symbol: "doc.text", Website.changelog)
                     }
                     #if !APP_STORE
                     link("Manage Subscription", symbol: "person.crop.circle", PolarConfiguration.portalURL)
@@ -145,7 +145,6 @@ enum AppInfo {
             "Intel"
         #endif
     }()
-    static let websiteURL = URL(string: "https://bambubar.app/?utm_source=bambu_bar&utm_medium=app&utm_campaign=about&utm_content=website")!
     static let project = URL(string: "https://github.com/\(UpdateChecker.repository)")!
     static var summary: String { "Bambu Bar \(version) (\(build)) · \(system) · \(architecture)" }
 }
