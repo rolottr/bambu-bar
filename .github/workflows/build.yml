@@ -217,6 +217,7 @@ jobs:
       - name: Accessibility check (UI Automation)
         id: a11y
         if: matrix.rid == 'win-x64'
+        timeout-minutes: 12
         # BambuBar.exe --a11y-check (src/BambuBar.Windows/A11yCheck.cs, P3.12): the panel, its menus, the stop
         # confirmation and every page of the window over the demo fleet, read through UI Automation and walked with Tab.
         # Fails on a control without a name, a meaningless or duplicated name, one Tab never reaches, or Esc and Enter
@@ -224,7 +225,8 @@ jobs:
         # artifact either way.
         run: |
           $out = "$PWD/../build/a11y"
-          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--a11y-check', $out -Wait -PassThru
+          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--a11y-check', $out -PassThru
+          if (-not $p.WaitForExit(600000)) { Stop-Process $p -Force; throw "The accessibility check didn't end within 10 minutes" }
           if (Test-Path "$out/a11y-problems.txt") { Get-Content "$out/a11y-problems.txt" }
           if ($p.ExitCode -ne 0) { throw "The accessibility check failed (exit $($p.ExitCode)): see a11y-report.txt in the a11y artifact" }
       - uses: actions/upload-artifact@v7

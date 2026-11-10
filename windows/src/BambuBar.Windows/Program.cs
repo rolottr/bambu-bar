@@ -21,7 +21,9 @@ public static partial class Program
             return Probe.RunAsync(probe, Console.Out).GetAwaiter().GetResult();
         }
         if (Snapshot.Folder(args) is { } folder) return Snapshot.Run(folder);
-        if (A11yCheck.Folder(args) is { } report) return A11yCheck.Run(report);
+        // Ended outright: a thread the checks leave behind (a printer's connection, UI Automation's) mustn't keep
+        // the process, and with it CI, waiting.
+        if (A11yCheck.Folder(args) is { } report) Environment.Exit(A11yCheck.Run(report));
         var app = new App();
         app.InitializeComponent();
         return app.Run();
