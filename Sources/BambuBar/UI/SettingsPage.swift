@@ -5,40 +5,13 @@ struct SettingsPage: View {
     @Environment(LoginItem.self) private var loginItem
 
     @State private var language = AppLanguage.override
-    @AppStorage(PanelContent.temperatures) private var panelTemperatures = true
-    @AppStorage(PanelContent.chamber) private var panelChamber = true
-    @AppStorage(PanelContent.fans) private var panelFans = false
-    @AppStorage(PanelContent.filament) private var panelFilament = true
 
     var body: some View {
         @Bindable var store = store
         VStack(alignment: .leading, spacing: 22) {
             PageHeader(title: "Settings")
 
-            SettingsGroup("Menu bar", symbol: "menubar.rectangle") {
-                if store.hasMultiplePrinters {
-                    SettingsRow("Printer in the menu bar") {
-                        Picker("", selection: $store.menuBarSerial) {
-                            Text("Automatic").tag(String?.none)
-                            Divider()
-                            ForEach(store.sessions) { Text($0.config.name).tag(Optional($0.id)) }
-                        }
-                        .labelsHidden()
-                        .frame(width: 220)
-                    }
-                    if store.menuBarSerial == nil {
-                        Text("Automatic shows whichever printer is busy (paused first, then printing), otherwise the one you last looked at.")
-                            .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                SettingsRow("While printing, show") {
-                    Picker("", selection: $store.menuBarStyle) {
-                        ForEach(MenuBarStyle.allCases) { Text($0.title).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                }
+            SettingsGroup("General", symbol: "gearshape") {
                 SettingsRow("Open at login") {
                     Toggle("", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) }))
                         .toggleStyle(.switch).labelsHidden().tint(Palette.accentDeep)
@@ -55,26 +28,6 @@ struct SettingsPage: View {
                     Text(error).font(.system(size: 11.5)).foregroundStyle(Palette.failed)
                 }
                 Text("At login Bambu Bar starts in the menu bar only, without a Dock icon. Open it from the menu bar or Spotlight to see this window.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            SettingsGroup("Menu bar panel", symbol: "list.bullet.rectangle") {
-                SettingsToggle("Temperatures", isOn: $panelTemperatures)
-                SettingsToggle("Chamber temperature", isOn: $panelChamber)
-                    .disabled(!panelTemperatures)
-                SettingsToggle("Fans", isOn: $panelFans)
-                SettingsToggle("Filament", isOn: $panelFilament)
-                Text("What the panel under the menu bar icon shows below the print. The chamber temperature appears only for printers with a chamber sensor (not the P1 and A series).")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            SettingsGroup("Controls", symbol: "slider.horizontal.3") {
-                SettingsToggle("Show printer actions", isOn: $store.showPrinterActions)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(Text("Show printer actions"))
-                Text("Show pause, resume, stop and print speed controls in the menu bar panel and main window, and print actions in the Printer menu.")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -104,13 +57,6 @@ struct SettingsPage: View {
                 }
             }
 
-            SettingsGroup("Notifications", symbol: "bell.badge.fill") {
-                SettingsToggle("Print finished", isOn: $store.notifyFinished)
-                SettingsToggle("Print failed, canceled or an error", isOn: $store.notifyFailed)
-                SettingsToggle("Print paused (filament runout, user)", isOn: $store.notifyPaused)
-                SettingsToggle("Print started", isOn: $store.notifyStarted)
-            }
-
             SettingsGroup("Camera", symbol: "video.fill") {
                 SettingsToggle("Show the printer camera", isOn: $store.cameraEnabled)
                 Text("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.")
@@ -126,15 +72,6 @@ struct SettingsPage: View {
 
             if UpdateChecker.isAvailable {
                 UpdatesGroup()
-            }
-
-            SettingsGroup("Desktop widget", symbol: "widget.small") {
-                HStack {
-                    Text("See what each widget size shows, your printers as widgets, and how to add one.")
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Show Widgets") { MainWindow.show(.widgets) }
-                }
             }
         }
     }
@@ -228,23 +165,5 @@ private struct UpdatesGroup: View {
         if case .available = updates.state { return String(localized: "You have \(updates.currentVersion). Bambu Bar installs the update and restarts.") }
         guard let last = updates.lastChecked else { return String(localized: "Not checked yet") }
         return String(localized: "Version \(updates.currentVersion) · last checked \(last.formatted(.relative(presentation: .named)))")
-    }
-}
-
-/// Approximates the desktop widget chrome around a widget view.
-struct WidgetFrame<Content: View>: View {
-    var width: CGFloat
-    var height: CGFloat
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        content
-            .padding(16)
-            .frame(width: width, height: height)
-            .background(WidgetBackdrop())
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 0.75))
-            .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
-            .environment(\.colorScheme, .dark)
     }
 }

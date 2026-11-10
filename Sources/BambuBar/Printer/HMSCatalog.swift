@@ -20,8 +20,18 @@ final class HMSCatalog {
         return localized.errors[key] ?? english.errors[key]
     }
 
-    static func wikiURL(for code: String) -> URL? {
-        URL(string: "https://wiki.bambulab.com/en/hms/home")
+    /// Bambu Lab's wiki page for a code on this printer model, through the redirect Bambu Studio uses: it picks the
+    /// model's page (the wiki's paths don't follow the code, and slot-specific codes share one page) and falls back
+    /// to the HMS index when there isn't one. Only the serial's three-character model prefix goes along, never the
+    /// serial itself. `code` is the HMS code's 16 hex digits; print errors (8) have no pages of their own.
+    static func wikiURL(code: String, serial: String?) -> URL? {
+        let chinese = AppLanguage.current.hasPrefix("zh")
+        let home = URL(string: "https://wiki.bambulab.com/\(chinese ? "zh" : "en")/hms/home")
+        guard code.count == 16, var url = URLComponents(string: "https://e.bambulab.com/index.php") else { return home }
+        url.queryItems = [URLQueryItem(name: "e", value: code.uppercased())]
+            + (serial.map { $0.count >= 3 ? [URLQueryItem(name: "d", value: String($0.prefix(3)))] : [] } ?? [])
+            + [URLQueryItem(name: "s", value: "device_hms"), URLQueryItem(name: "lang", value: chinese ? "zh-cn" : "en")]
+        return url.url ?? home
     }
 
     /// The app's language if there's a catalogue for it. Traditional Chinese readers get the Simplified one,

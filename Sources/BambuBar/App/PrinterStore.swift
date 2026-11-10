@@ -14,10 +14,25 @@ enum MenuBarStyle: String, CaseIterable, Identifiable {
         case .both: return String(localized: "Progress and time left", comment: "Menu bar style")
         }
     }
+
+    /// The text beside the icon during a print, in this style; nil for the icon alone.
+    func text(for s: PrinterStatus) -> String? {
+        let pct = "\(s.progress)%"
+        let left = s.remainingMinutes > 0 ? Format.duration(minutes: s.remainingMinutes) : nil
+        switch self {
+        case .icon: return nil
+        case .percent: return s.state == .paused ? s.state.title : pct
+        case .remaining: return s.state == .paused ? s.state.title : (left ?? pct)
+        case .both:
+            if s.state == .paused { return "\(pct) · \(s.state.title)" }
+            if s.state == .preparing { return s.progress > 0 ? pct : s.state.title }
+            return left.map { "\(pct) · \($0)" } ?? pct
+        }
+    }
 }
 
-/// What the menu bar panel shows under the job, as UserDefaults keys (Settings → Menu bar panel). The panel and
-/// Settings read them with @AppStorage; nothing else needs them.
+/// What the menu bar panel shows under the job, as UserDefaults keys (Menu Bar page). The panel and
+/// that page read them with @AppStorage; nothing else needs them.
 enum PanelContent {
     static let temperatures = "panelShowsTemperatures"
     static let chamber = "panelShowsChamber"

@@ -73,7 +73,8 @@ struct ReportDocument {
 
 /// Turns the merged report into a `PrinterStatus`.
 enum ReportParser {
-    static func status(from doc: ReportDocument, hms: HMSCatalog) -> PrinterStatus {
+    /// `serial` picks the wiki pages for this printer model; issues link to the HMS index without it.
+    static func status(from doc: ReportDocument, hms: HMSCatalog, serial: String? = nil) -> PrinterStatus {
         let p = doc.print
         var s = PrinterStatus()
         s.updatedAt = Date()
@@ -178,7 +179,7 @@ enum ReportParser {
         s.firmware = doc.modules["ota"]?.version
 
         parseFilament(p, device: device, doc: doc, into: &s)
-        s.issues = issues(p, hms: hms, state: s.state)
+        s.issues = issues(p, hms: hms, state: s.state, serial: serial)
         s.canceled = s.state == .failed && wasCanceled(doc)
         return s
     }
@@ -364,7 +365,7 @@ enum ReportParser {
 
     // MARK: - Issues
 
-    private static func issues(_ p: [String: Any], hms catalog: HMSCatalog, state: JobState) -> [PrinterIssue] {
+    private static func issues(_ p: [String: Any], hms catalog: HMSCatalog, state: JobState, serial: String?) -> [PrinterIssue] {
         var out: [PrinterIssue] = []
         for entry in (p["hms"] as? [[String: Any]]) ?? [] {
             guard let attr = int(entry["attr"]), let code = int(entry["code"]) else { continue }
@@ -375,7 +376,7 @@ enum ReportParser {
             let severity = IssueSeverity(rawValue: Int(c >> 16)) ?? .common
             out.append(PrinterIssue(id: pretty, severity: severity,
                                     message: catalog.hmsText(key) ?? String(localized: "The printer reported \(pretty).", comment: "An HMS code"),
-                                    wikiURL: HMSCatalog.wikiURL(for: pretty)))
+                                    wikiURL: HMSCatalog.wikiURL(code: key, serial: serial)))
         }
         if let error = int(p["print_error"]), error != 0 {
             let e = UInt32(truncatingIfNeeded: error)
@@ -388,7 +389,7 @@ enum ReportParser {
                 if !out.contains(where: { $0.id.hasSuffix(pretty) }) {
                     out.append(PrinterIssue(id: pretty, severity: severity,
                                             message: catalog.errorText(key) ?? String(localized: "The printer reported error \(pretty).", comment: "An error code"),
-                                            wikiURL: HMSCatalog.wikiURL(for: pretty)))
+                                            wikiURL: HMSCatalog.wikiURL(code: key, serial: serial)))
                 }
             }
         }

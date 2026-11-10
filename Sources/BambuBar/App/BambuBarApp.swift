@@ -178,7 +178,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 enum AppSection: String, CaseIterable, Identifiable {
-    case fleet, overview, filament, widgets, printers, settings, about
+    case fleet, overview, filament, menuBar, notifications, printers, widgets, settings, about
     var id: String { rawValue }
 
     var title: String {
@@ -187,6 +187,8 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .overview: return String(localized: "Printer")
         case .filament: return String(localized: "Filament")
         case .widgets: return String(localized: "Widgets")
+        case .menuBar: return String(localized: "Menu Bar", comment: "Sidebar page")
+        case .notifications: return String(localized: "Notifications")
         case .printers: return String(localized: "Printers")
         case .settings: return String(localized: "Settings")
         case .about: return String(localized: "About")
@@ -203,6 +205,8 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .settings: return "4"
         case .about: return "5"
         case .printers: return "6"
+        case .menuBar: return "7"
+        case .notifications: return "8"
         }
     }
 
@@ -212,6 +216,8 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .overview: return "printer.fill"
         case .filament: return "circle.circle.fill"
         case .widgets: return "widget.medium"
+        case .menuBar: return "menubar.rectangle"
+        case .notifications: return "bell.badge.fill"
         case .printers: return "printer.dotmatrix.fill"
         case .settings: return "gearshape.fill"
         case .about: return "info.circle.fill"

@@ -183,7 +183,7 @@ final class PrinterConnection {
     }
 
     private func publishStatus() {
-        var status = ReportParser.status(from: document, hms: HMSCatalog.shared)
+        var status = ReportParser.status(from: document, hms: HMSCatalog.shared, serial: config?.serial)
         if let last = lastStatus {
             // Keep the timestamp the remaining time was measured at, so the ETA doesn't drift between reports.
             var same = status

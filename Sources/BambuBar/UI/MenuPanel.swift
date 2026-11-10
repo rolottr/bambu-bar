@@ -26,7 +26,7 @@ struct MenuPanel: View {
     @Environment(\.plainPanel) private var plainPanel
     /// The panel lists every printer instead of showing one.
     @AppStorage("panelShowsAllPrinters") private var showsAllSetting = false
-    /// What the panel shows under the job (Settings → Menu bar panel).
+    /// What the panel shows under the job (Menu Bar page).
     @AppStorage(PanelContent.temperatures) private var showsTemperatures = true
     @AppStorage(PanelContent.chamber) private var showsChamber = true
     @AppStorage(PanelContent.fans) private var showsFans = false
@@ -203,6 +203,8 @@ struct MenuPanel: View {
 struct JobHero: View {
     var status: PrinterStatus
     var compact: Bool
+    /// Draws another printer than the selected one (the Menu Bar page's preview of the menu bar printer).
+    var model: String? = nil
     @Environment(PrinterStore.self) private var store
 
     var body: some View {
@@ -230,7 +232,7 @@ struct JobHero: View {
 
     /// After a print the part stays on the plate in the colour it was printed in.
     private var art: PrinterArt {
-        var art = PrinterArt(status: status, model: store.config?.modelName, lightOverride: store.chamberLightOn)
+        var art = PrinterArt(status: status, model: model ?? store.config?.modelName, lightOverride: store.chamberLightOn)
         if art.filament == nil, !status.state.isActive, let color = store.lastJob?.filamentColor {
             art.filament = Color(bambuHex: color)
         }
@@ -674,6 +676,7 @@ struct IssueBanner: View {
     var issue: PrinterIssue
     /// Hides the issue until the printer stops reporting it; nil shows no dismiss button.
     var onDismiss: (() -> Void)? = nil
+    @State private var copied = false
 
     var body: some View {
         let color = issue.severity <= .fatal ? Palette.failed : issue.severity == .serious ? Palette.paused : Palette.preparing
@@ -686,7 +689,21 @@ struct IssueBanner: View {
                     .font(.system(size: 11.5, weight: .medium))
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
-                    Text(issue.id).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(issue.id).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                        Button(action: copyCode) {
+                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 9.5, weight: .semibold))
+                                .foregroundStyle(copied ? Palette.accent : .secondary)
+                                .contentTransition(.symbolEffect(.replace))
+                                .frame(width: 14, height: 14)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(copied ? Text("Copied") : Text("Copy code"))
+                        .accessibilityLabel(copied ? Text("Copied") : Text("Copy code"))
+                    }
                     if let url = issue.wikiURL {
                         Link("Wiki", destination: url).font(.system(size: 10.5, weight: .semibold))
                     }
@@ -703,6 +720,17 @@ struct IssueBanner: View {
             }
         }
         .panel(radius: 14, padding: 11, tint: color)
+    }
+
+    /// The code as shown, for a search or a support ticket; the icon turns into a tick for a moment.
+    private func copyCode() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(issue.id, forType: .string)
+        withAnimation(.smooth(duration: 0.2)) { copied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation(.smooth(duration: 0.3)) { copied = false }
+        }
     }
 }
 

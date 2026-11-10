@@ -252,7 +252,11 @@ struct ShowcasePrinter {
 
     @MainActor
     init(_ store: PrinterStore) {
-        let session = store.current
+        self.init(session: store.current)
+    }
+
+    @MainActor
+    init(session: PrinterSession?) {
         name = session?.config.name ?? "P2S Workshop"
         model = session?.config.modelName ?? "P2S"
         let status = session?.status
@@ -449,6 +453,24 @@ struct WidgetShowcase: View {
     private func pick(scene new: ShowcaseScene) {
         withAnimation(.smooth(duration: 0.4)) { scene = new }
         startTicker()
+    }
+}
+
+/// Approximates the desktop widget chrome around a widget view.
+struct WidgetFrame<Content: View>: View {
+    var width: CGFloat
+    var height: CGFloat
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .padding(16)
+            .frame(width: width, height: height)
+            .background(WidgetBackdrop())
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 0.75))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+            .environment(\.colorScheme, .dark)
     }
 }
 

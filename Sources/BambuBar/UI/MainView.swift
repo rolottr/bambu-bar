@@ -97,6 +97,8 @@ private struct MainContentView: View {
             if store.isConfigured && !navigation.addingPrinter { OverviewPage() } else { SetupPage() }
         case .filament: FilamentPage()
         case .widgets: WidgetsPage()
+        case .menuBar: MenuBarPage()
+        case .notifications: NotificationsPage()
         case .printers: PrintersPage()
         case .settings: SettingsPage()
         case .about: AboutPage()

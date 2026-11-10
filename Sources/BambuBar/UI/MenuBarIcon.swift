@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// The status item: a small printer glyph whose chamber fills with the print, plus optional text.
-/// It follows the menu bar printer (Settings), not whichever printer the panel happens to show.
+/// It follows the menu bar printer (Menu Bar page), not whichever printer the panel happens to show.
 struct MenuBarLabel: View {
     @Environment(PrinterStore.self) private var store
 
@@ -16,22 +16,8 @@ struct MenuBarLabel: View {
                                                     progress: Double(s?.progress ?? 0) / 100,
                                                     alert: online && (s?.mostSevereIssue?.severity ?? .info) <= .serious,
                                                     offline: store.isConfigured && !online),
-                            text: active ? s.flatMap(text) : nil,
+                            text: active ? s.flatMap(store.menuBarStyle.text) : nil,
                             accessibility: accessibilityText(session))
-    }
-
-    private func text(_ s: PrinterStatus) -> String? {
-        let pct = "\(s.progress)%"
-        let left = s.remainingMinutes > 0 ? Format.duration(minutes: s.remainingMinutes) : nil
-        switch store.menuBarStyle {
-        case .icon: return nil
-        case .percent: return s.state == .paused ? s.state.title : pct
-        case .remaining: return s.state == .paused ? s.state.title : (left ?? pct)
-        case .both:
-            if s.state == .paused { return "\(pct) · \(s.state.title)" }
-            if s.state == .preparing { return s.progress > 0 ? pct : s.state.title }
-            return left.map { "\(pct) · \($0)" } ?? pct
-        }
     }
 
     private func accessibilityText(_ session: PrinterSession?) -> String {
