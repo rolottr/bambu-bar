@@ -192,15 +192,6 @@ jobs:
             "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
             "$($_.Name): $([math]::Round($_.Length / 1MB, 1)) MB, $hash"
           }
-      - name: Install, snapshot and uninstall (silent)
-        if: matrix.rid == 'win-x64'
-        run: ./installer/smoke.ps1 -Installer (Get-ChildItem ../build/installer/*.exe)[0].FullName -Out ../build/install-smoke
-      - uses: actions/upload-artifact@v7
-        if: always() && matrix.rid == 'win-x64'
-        with:
-          name: Bambu-Bar-windows-install-smoke
-          path: build/install-smoke/
-          if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
         with:
           name: Bambu-Bar-windows-installer-${{ matrix.rid }}
@@ -223,6 +214,16 @@ jobs:
           name: Bambu-Bar-windows-${{ matrix.rid }}
           path: build/windows/${{ matrix.rid }}/
           if-no-files-found: error
+      # Last, so a failing install test never holds back the artifacts above (the installers people test by hand).
+      - name: Install, snapshot and uninstall (silent)
+        if: matrix.rid == 'win-x64'
+        run: ./installer/smoke.ps1 -Installer (Get-ChildItem ../build/installer/*.exe)[0].FullName -Out ../build/install-smoke
+      - uses: actions/upload-artifact@v7
+        if: always() && matrix.rid == 'win-x64'
+        with:
+          name: Bambu-Bar-windows-install-smoke
+          path: build/install-smoke/
+          if-no-files-found: ignore
 
   # The widget skins in the pinned Rainmeter on a real Windows desktop: screenshots and Rainmeter's log as artifacts.
   widgets:

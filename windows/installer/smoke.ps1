@@ -47,9 +47,15 @@ New-Item -ItemType Directory -Force $userData | Out-Null
 '{}' | Set-Content (Join-Path $userData 'settings.json')
 
 # 4. Uninstall (the uninstaller hands over to a copy in %TEMP% and returns: wait for the folder to go).
-$p = Start-Process (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$(Join-Path $Out 'uninstall.log')" -Wait -PassThru
-if ($p.ExitCode -ne 0) { throw "Uninstall exited with $($p.ExitCode)" }
+$uninstallLog = Join-Path $env:TEMP 'bambubar-uninstall.log'
+$p = Start-Process (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=`"$uninstallLog`"" -Wait -PassThru
+$uninstallExit = $p.ExitCode
 for ($i = 0; $i -lt 60 -and (Test-Path $app); $i++) { Start-Sleep -Seconds 1 }
+# Inno's uninstaller hands over to a copy in %TEMP%: keep whatever logs it wrote, and say what it returned.
+Copy-Item $uninstallLog (Join-Path $Out 'uninstall.log') -ErrorAction SilentlyContinue
+Get-ChildItem $env:TEMP -Filter 'Setup Log*.txt' -ErrorAction SilentlyContinue | Copy-Item -Destination $Out
+"Uninstaller exit code: $uninstallExit"
+if (Test-Path $uninstallLog) { Get-Content $uninstallLog | Select-Object -Last 30 } else { 'The uninstaller wrote no log.' }
 $left = @()
 if (Test-Path $app) { $left += "$app ($(@(Get-ChildItem $app -Recurse).Count) entries)" }
 foreach ($key in "$classes\bambubar", "$classes\AppUserModelId\dev.rolottr.BambuBar", $uninstallKey) { if (Test-Path $key) { $left += $key } }
@@ -57,4 +63,5 @@ if ((Get-ItemProperty $run -ErrorAction SilentlyContinue).'Bambu Bar') { $left +
 if (Test-Path $shortcut) { $left += $shortcut }
 if ($left) { throw "Left after uninstall: $($left -join '; ')" }
 if (-not (Test-Path (Join-Path $userData 'settings.json'))) { throw 'The uninstaller removed the settings' }
+if ($uninstallExit -ne 0) { throw "The uninstaller cleaned up but exited with $uninstallExit" }
 'Uninstalled: app folder, keys, shortcut and sign-in entry gone; settings kept'
