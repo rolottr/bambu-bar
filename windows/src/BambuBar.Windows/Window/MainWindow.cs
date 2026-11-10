@@ -65,11 +65,12 @@ public sealed class MainWindow : Window
         StateChanged += (_, _) => FitMaximized();
         PreviewKeyDown += OnPreviewKeyDown;
         IsVisibleChanged += (_, _) => _view.IsLive = IsVisible;
-        Closing += (_, _) => SaveFrame();
+        // Closing the window only hides the app: nothing on the way out may take it down.
+        Closing += (_, _) => Platform.CrashLog.Step("saving the window frame", SaveFrame);
         Closed += (_, _) =>
         {
             AppTheme.Changed -= OnThemeChanged;
-            _view.Dispose();
+            Platform.CrashLog.Step("closing the window", _view.Dispose);
         };
         AppTheme.Changed += OnThemeChanged;
     }

@@ -70,6 +70,11 @@ MinVersion=10.0.18362
 CloseApplications=no
 RestartIfNeededByRun=no
 WizardStyle=modern
+; The welcome and finish pages carry the art (installer\art\make-art.py: the printer at work on a green glow), the
+; other pages the app icon; Inno picks the size for the screen's scale. The welcome page is on so the art is seen.
+WizardImageFile=art\wizard-*.bmp
+WizardSmallImageFile=art\small-*.bmp
+DisableWelcomePage=no
 SetupIconFile=..\src\BambuBar.Windows\Assets\BambuBar.ico
 UninstallDisplayIcon={app}\BambuBar.exe
 UninstallDisplayName=Bambu Bar
@@ -84,6 +89,13 @@ SignedUninstaller=yes
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
+
+[Messages]
+WelcomeLabel1=Welcome to Bambu Bar
+WelcomeLabel2=Your Bambu Lab printers in the Windows tray: the print's progress at a glance, the camera, filament, alerts, and widgets for your desktop.%n%nBambu Bar {#AppVersion} installs just for you; no administrator needed.
+FinishedHeadingLabel=Bambu Bar is ready
+FinishedLabel=Bambu Bar lives in the tray, by the clock. If Windows tucked its icon away, click ^ there and drag it onto the taskbar.
+FinishedLabelNoIcons=Bambu Bar lives in the tray, by the clock. If Windows tucked its icon away, click ^ there and drag it onto the taskbar.
 
 [CustomMessages]
 en.RemoveUserData=Also remove your Bambu Bar settings, print history and widgets from this PC?%n%nPrinter access codes and the supporter license stay in Windows Credential Manager.

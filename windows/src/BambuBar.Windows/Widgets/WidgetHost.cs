@@ -311,16 +311,23 @@ public sealed partial class WidgetHost : IDisposable
     {
         _quitting = true;
         if (_process is not { HasExited: false } process) return;
-        Bang("!Quit");
-        if (!process.WaitForExit(3000)) process.Kill();
         _process = null;
+        try
+        {
+            Bang(process, "!Quit");
+            if (!process.WaitForExit(3000)) process.Kill();
+        }
+        // It went on its own in the meantime, or isn't ours to end.
+        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception) { }
     }
 
     /// <summary>Sends a bang to our Rainmeter: WM_COPYDATA with dwData 1 and the UTF-16 command, to the
     /// "Rainmeter control window" its process owns. Not <c>Rainmeter.exe !Bang</c>, which goes to the first one found.</summary>
-    public bool Bang(string command)
+    public bool Bang(string command) => _process is { } process && Bang(process, command);
+
+    private static bool Bang(Process process, string command)
     {
-        if (_process is not { HasExited: false } process) return false;
+        if (process.HasExited) return false;
         var window = ControlWindow(process.Id);
         if (window == 0) return false;
         var text = Marshal.StringToHGlobalUni(command);

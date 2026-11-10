@@ -12,7 +12,7 @@ It needs Windows 10 1903 or later, or Windows 11, on x64 or ARM64.
 | `windows/tests/BambuBar.Core.Tests` | Unit tests, against the fixtures in `shared/ModelReports` |
 | `windows/tests/BambuBar.Integration.Tests` | Tests against the Docker simulators in `shared/scripts/integration`; they skip without them |
 | `windows/ffmpeg` | `build.sh` builds the minimal FFmpeg the camera decodes with; `version.txt` pins its source, toolchain (SHA-256) and configure flags |
-| `windows/installer` | `BambuBar.iss` (Inno Setup), `notices.ps1` (THIRD-PARTY-NOTICES.txt), `smoke.ps1` (CI install test), `licenses/` |
+| `windows/installer` | `BambuBar.iss` (Inno Setup), `notices.ps1` (THIRD-PARTY-NOTICES.txt), `smoke.ps1` (CI install test), `licenses/`, `art/` (the wizard's pictures and `make-art.py`, which draws them) |
 | `windows/tools` | `version.sh`/`version.ps1` (the shared version), `integration-test.sh`, `BambuBar.Cli` (Core's commands on any platform), `windows-strings.txt` (Windows texts waiting for translation) |
 | `shared/` | Printer art and models, HMS texts, certificates, filament names, `Localizable.xcstrings`, fixtures, simulators |
 
@@ -87,6 +87,11 @@ pwsh rainmeter/ci/payload.ps1 -Out build/windows/win-x64/Rainmeter -SourceDir bu
 pwsh windows/installer/notices.ps1 -App build/windows/win-x64
 ISCC /DAppVersion=$(pwsh windows/tools/version.ps1) /DArch=x64 /DSourceDir=$PWD\build\windows\win-x64 /DOutputDir=$PWD\build\installer windows\installer\BambuBar.iss
 ```
+
+The wizard's pictures are committed BMPs, one per Windows scale: the welcome and finish pages show the printer at work on
+a green glow with the name, the other pages the app icon. To redraw them (Pillow needed):
+`dotnet run --project windows/tools/BambuBar.Cli -- --art /tmp/printer.png 588 696`, then
+`python3 windows/installer/art/make-art.py /tmp/printer.png`.
 
 What it does:
 

@@ -40,6 +40,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        CrashLog.Install(this);
         var args = e.Args;
         _arguments = args;
         var ephemeral = PrinterStore.IsEphemeralRun(args);
@@ -239,17 +240,19 @@ public partial class App : Application
     /// <summary>Lets go of everything: the window, panel, tray icon, printers, widgets and the single-instance lock.</summary>
     private void Release()
     {
+        // Each step on its own: one that fails is logged and the rest still let go (a crash on Quit helps nobody).
+        CrashLog.Quitting = true;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         SystemEvents.SessionSwitch -= OnSessionSwitch;
-        CameraWindow.CloseAll();
-        _window?.Close();
-        _panel?.Quit();
-        _tray?.Dispose();
-        _license?.Stop();
-        _store?.Dispose();
+        CrashLog.Step("cameras", CameraWindow.CloseAll);
+        CrashLog.Step("window", () => _window?.Close());
+        CrashLog.Step("panel", () => _panel?.Quit());
+        CrashLog.Step("tray", () => _tray?.Dispose());
+        CrashLog.Step("license", () => _license?.Stop());
+        CrashLog.Step("printers", () => _store?.Dispose());
         // Widgets close with the app (O5).
-        _widgets?.Dispose();
-        _instance?.Dispose();
+        CrashLog.Step("widgets", () => _widgets?.Dispose());
+        CrashLog.Step("single instance", () => _instance?.Dispose());
         _instance = null;
     }
 
