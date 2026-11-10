@@ -205,6 +205,9 @@ function BB.model(s, now)
 		m.temps, m.spools, m.ams, m.issue = {}, {}, nil, nil
 	end
 
+	-- What a click opens (contract: url; older files only had the serial).
+	m.url = s.url or ((m.serial and m.serial ~= "") and ("bambubar://printer/" .. m.serial) or "bambubar://open")
+
 	m.stale = (m.link == "online" or m.link == "connecting") and s.savedAt ~= nil
 		and now - s.savedAt > BB.STALE_AFTER
 	if m.stale then
@@ -231,14 +234,18 @@ function BB.model(s, now)
 	end
 	-- The Small widget writes "left" under the big countdown: the pattern without its argument, when the
 	-- duration comes first ("{0} left"). "Noch {0}" has no word that reads alone after it, so none is shown
-	-- unless the app sends one (strings.leftWord, not in contract v1 yet).
+	-- unless the app sends one (strings.leftWord).
 	local pattern = m.strings.left or "{0} left"
 	m.leftWord = m.strings.leftWord
 		or (find(pattern, "^%s*{0}") and BB.trim((gsub(pattern, "{0}", "")))) or nil
 
 	-- detail is "Done 5:15 PM · 170/305" while printing; the Medium widget shows the finish time on its own.
 	local first = string.match(m.detail or "", "^(.-) · ") or m.detail
-	if m.live and m.state == "printing" and first and first ~= "" and first ~= m.layers then m.finish = first end
+	if m.live and m.state == "printing" and s.finish then
+		m.finish = BB.fill(m.strings.done or "{0}", s.finish)
+	elseif m.live and m.state == "printing" and first and first ~= "" and first ~= m.layers then
+		m.finish = first
+	end
 	m.detailFirst = first
 
 	for _, sp in ipairs(m.spools) do if sp.active then m.activeSpool = sp end end
@@ -1096,7 +1103,7 @@ local function show(m, p)
 	end
 	for name, o in pairs(G.view.out) do apply(name, o) end
 	if not G.anims.art then apply("ArtB", { Hidden = "1" }) end
-	apply("Card", { LeftMouseUpAction = "[\"bambubar://printer/" .. (m.serial or "") .. "\"]" })
+	apply("Card", { LeftMouseUpAction = "[\"" .. m.url .. "\"]" })
 end
 
 local function stopSpinner()

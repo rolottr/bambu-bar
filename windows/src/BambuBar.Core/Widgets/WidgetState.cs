@@ -19,6 +19,8 @@ public sealed record WidgetState
     public string Serial { get; init; } = "";
     public string Name { get; init; } = "";
     public string Model { get; init; } = "";
+    /// <summary>What a click opens: the printer's page, or the app when no printer is set up.</summary>
+    public string Url { get; init; } = "bambubar://open";
     /// <summary>"online", "connecting", "offline", "unauthorized", "unconfigured".</summary>
     public string Link { get; init; } = "unconfigured";
     /// <summary>A live status is on hand (online, or reconnecting with one).</summary>
@@ -37,6 +39,12 @@ public sealed record WidgetState
     public string Detail { get; init; } = "";
     /// <summary>Why it paused, short ("Filament ran out"), or the stage while preparing.</summary>
     public string? Reason { get; init; }
+    /// <summary>The Large widget's info box when not live ("Enter the access code again in the app").</summary>
+    public string? Info { get; init; }
+    /// <summary>When the print ends, as a time ("5:15 PM", "tomorrow 08:10"); <c>strings.done</c> wraps it.</summary>
+    public string? Finish { get; init; }
+    /// <summary>What to show when the file is older than 30 minutes while online (the app has stopped writing).</summary>
+    public OfflineView Offline { get; init; } = new("", "", "", "", "");
     /// <summary>Progress bar and ring colour: the active filament when it reads on dark glass, else state colours.</summary>
     public string Tint { get; init; } = "";
 
@@ -69,6 +77,7 @@ public sealed record WidgetState
     public sealed record SpoolView(string Label, string Color, IReadOnlyList<string> Colors, string Name, string Amount,
         double? Fraction, bool Active, bool Empty, string Tooltip);
     public sealed record IssueView(string Text, string Severity);
+    public sealed record OfflineView(string Caption, string Headline, string StateLine, string Detail, string Info);
     public sealed record LastJobView(string Name, string Outcome, string Ago, string? Took);
 
     /// <summary>Patterns for the countdown in the app's language. <c>{0}</c> and <c>{1}</c> are filled by Lua.</summary>
@@ -80,6 +89,9 @@ public sealed record WidgetState
         public string DaysHours { get; init; } = "";
         public string Left { get; init; } = "";
         public string Done { get; init; } = "";
+        /// <summary>The word under the Small widget's countdown ("left"); empty where the language has none.</summary>
+        public string LeftWord { get; init; } = "";
+        public string Last { get; init; } = "";
     }
 
     public static readonly JsonSerializerOptions Json = new()
@@ -200,7 +212,19 @@ public sealed class WidgetStateWriter(string folder, Func<bool>? motion = null) 
             : status.DetailText;
 
         string? layers = status is { TotalLayers: > 0 } s0 ? $"{s0.Layer}/{s0.TotalLayers}" : null;
-        var detail = status is null ? "" : status.State switch
+        var notLiveDetail = snapshot.Link switch
+        {
+            PrinterSnapshot.LinkState.Unconfigured => Loc.T("Open the app"),
+            PrinterSnapshot.LinkState.Unauthorized => Loc.T("Access code rejected"),
+            _ => Loc.T("No connection"),
+        };
+        var info = status is not null ? null : snapshot.Link switch
+        {
+            PrinterSnapshot.LinkState.Unconfigured => Loc.T("Open the app to connect your printer"),
+            PrinterSnapshot.LinkState.Unauthorized => Loc.T("Enter the access code again in the app"),
+            _ => Loc.T("Waiting for the printer"),
+        };
+        var detail = status is null ? notLiveDetail : status.State switch
         {
             JobState.Printing => string.Join(" · ", new[] { finish is null ? null : Loc.F("Done %@", finish), layers }.OfType<string>()),
             JobState.Preparing => status.ActiveNozzle.IsHeating
@@ -269,8 +293,14 @@ public sealed class WidgetStateWriter(string folder, Func<bool>? motion = null) 
         return new WidgetState
         {
             SavedAt = now.ToUnixTimeSeconds(), Serial = snapshot.Serial, Name = snapshot.PrinterName, Model = snapshot.Model,
+            Url = snapshot.Serial.Length == 0 ? "bambubar://open" : $"bambubar://printer/{snapshot.Serial}",
+            Info = info, Finish = finish,
+            Offline = new(Loc.T("Offline"), Loc.T("Offline"), lastJobLine ?? Loc.T("Waiting for the printer"), Loc.T("No connection"),
+                Loc.T("Waiting for the printer")),
             Link = link, Live = status is not null, State = state.ToString().ToLowerInvariant(), Canceled = status?.Canceled ?? false,
-            Caption = caption, StateColor = status is { State: JobState.Failed, Canceled: true } ? WidgetPalette.Idle : WidgetPalette.For(state),
+            Caption = caption,
+            StateColor = snapshot.Link == PrinterSnapshot.LinkState.Unauthorized ? WidgetPalette.Paused
+                : status is { State: JobState.Failed, Canceled: true } ? WidgetPalette.Idle : WidgetPalette.For(state),
             Headline = headline, StateLine = stateLine, Detail = detail, Reason = reason, Tint = Tint(status),
             Progress = status?.Progress ?? 0, UpdatedAt = status?.UpdatedAt.ToUnixTimeSeconds(),
             EndsAt = status?.EstimatedEnd?.ToUnixTimeSeconds(), RemainingMinutes = status?.RemainingMinutes ?? 0,
@@ -289,6 +319,8 @@ public sealed class WidgetStateWriter(string folder, Func<bool>? motion = null) 
                 DaysHours = Loc.Apply(Loc.T("%lldd %lldh"), "{0}", "{1}"),
                 Left = Loc.Apply(Loc.T("%@ left"), "{0}"),
                 Done = Loc.Apply(Loc.T("Done %@"), "{0}"),
+                LeftWord = Loc.T("left"),
+                Last = Loc.Apply(Loc.T("Last: %@"), "{0}"),
             },
         };
     }

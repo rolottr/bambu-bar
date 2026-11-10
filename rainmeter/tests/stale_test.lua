@@ -22,7 +22,7 @@ T.test("online but older than 30 minutes: the offline look", function()
 	T.eq(#m.spools, 0)
 	T.eq(m.caption, "Offline")
 	T.eq(m.captionColor, BB.C.sec)
-	T.eq(m.stateLine, "Benchy") -- the last job, without a translated "Last:" (not in the contract yet)
+	T.eq(m.stateLine, "Last: Benchy") -- the offline block's line (contract: offline.stateLine)
 	for _, size in ipairs({ "Small", "Medium", "Large" }) do
 		local v = BB.render(m, size, T.ctx(), 0, 0)
 		T.eq(v.out.ArtA.Greyscale, "1", size .. " art dimmed")

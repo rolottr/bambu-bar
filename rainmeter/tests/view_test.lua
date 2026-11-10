@@ -84,7 +84,7 @@ T.test("Small: every state leads with what matters", function()
 	T.eq(v.out.FootDetail.Text, "Nozzle 164° → 220°")
 	v = render("finished", "Small")
 	T.ok(v.out.DialIcon.SvgImage:find("checkmark", 1, true))
-	T.eq(v.out.Big.Text, "2h 00m ago")
+	T.eq(v.out.Big.Text, "5m ago") -- the print that just finished is its own last job
 	v = render("failed", "Small")
 	T.ok(v.out.DialIcon.SvgImage:find("important", 1, true))
 	v = render("failed", "Small", 0, function(s) s.canceled = true; s.tint = "#8E8E93" end)

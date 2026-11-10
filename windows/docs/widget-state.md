@@ -27,14 +27,18 @@ camelCase JSON. `null` means "don't show".
 | --- | --- | --- |
 | `v` | 1 | Contract version. A skin that sees a higher one shows "Update Bambu Bar". |
 | `savedAt` | unix s | When written. Online but older than 30 min → draw as `offline` (the app has stopped). |
-| `serial`, `name`, `model` | string | Click target (`bambubar://printer/<serial>`), title, model name. |
+| `serial`, `name`, `model` | string | Printer, title, model name. |
+| `url` | string | What a left click opens: `bambubar://printer/<serial>`, or `bambubar://open` with no printer set up. |
 | `link` | string | `online`, `connecting`, `offline`, `unauthorized`, `unconfigured`. |
 | `live` | bool | A live status is shown. False: caption + headline + stateLine + art only. |
 | `state`, `canceled` | string, bool | `idle`, `preparing`, `printing`, `paused`, `finished`, `failed`. |
-| `caption`, `stateColor` | string, `#RRGGBB` | The upper-case caption and its colour. |
+| `caption`, `stateColor` | string, `#RRGGBB` | The upper-case caption and its colour (amber for a rejected code). |
 | `headline` | string | The job, or what's going on. |
 | `stateLine` | string | The line under it at `savedAt`; while printing Lua rebuilds it from `strings.left`. |
-| `detail` | string | Small widget's second line ("Done 14:32 · 170/305"). |
+| `detail` | string | Small widget's second line ("Done 14:32 · 170/305"; when not live "No connection", "Open the app"). |
+| `info` | string? | Not live: the Large widget's info box ("Enter the access code again in the app"). |
+| `finish` | string? | Printing: when it ends ("5:15 PM", "tomorrow 08:10"); show it through `strings.done`. |
+| `offline` | object | `{caption, headline, stateLine, detail, info}` to show when the file is stale. |
 | `reason` | string? | Paused: why ("Filament ran out"); preparing: the stage. |
 | `tint` | `#RRGGBB` | Ring and bar colour (active filament when it reads on dark glass, else state colour). |
 | `progress` | 0–100 | Percent at `updatedAt`. |
@@ -49,7 +53,7 @@ camelCase JSON. `null` means "don't show".
 | `lastJob` | `{name, outcome, ago, took}`? | `ago` is at `savedAt` ("1h 05m ago"). |
 | `art`, `artUnlit` | file name? | Art for this state; `artUnlit` the same with the chamber light off (null when already off). |
 | `motion` | bool | False when Windows' animation effects are off: no tweens, no pulses, no spinner (a static glyph). |
-| `strings` | object | Patterns with `{0}`/`{1}`: `lessThanMinute`, `minutes`, `hoursMinutes`, `daysHours`, `left`, `done`. |
+| `strings` | object | Patterns with `{0}`/`{1}`: `lessThanMinute`, `minutes`, `hoursMinutes`, `daysHours`, `left`, `done`, `last`, and `leftWord` (the word under the Small countdown; empty where the language has none). |
 
 `spools[]`: `{label, color, colors[], name, amount, fraction, active, empty, tooltip}`. `colors` has more than one
 entry for multicolour spools (draw a multi-stop gradient); `fraction` is 0–1 or null when not measured; `tooltip` is

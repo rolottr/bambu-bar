@@ -46,12 +46,12 @@ T.test("fill() takes text literally", function()
 	T.eq(BB.fill("{1} of {0}", "a", "b"), "b of a")
 end)
 
-T.test("the finish time comes out of detail, only while printing", function()
+T.test("the finish time (contract: finish, else cut from detail) only while printing", function()
 	local m = BB.model(T.state("printing"), T.state("printing").savedAt)
 	T.eq(m.finish, "Done 5:15\226\128\175PM")
 	T.eq(BB.model(T.state("paused"), 0).finish, nil)
 	local s = T.state("printing")
-	s.detail = "170/305" -- no finish known
+	s.finish, s.detail = nil, "170/305" -- no finish known
 	T.eq(BB.model(s, s.savedAt).finish, nil)
 end)
 

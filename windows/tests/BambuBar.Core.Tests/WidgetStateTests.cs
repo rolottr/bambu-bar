@@ -54,6 +54,12 @@ public sealed class WidgetStateTests : IDisposable
         Assert.Equal("PLA Silk+ · A4", w.ActiveSpoolLine);
         Assert.Equal("{0}h {1}m", w.Strings.HoursMinutes);
         Assert.Equal("{0} left", w.Strings.Left);
+        Assert.Equal("left", w.Strings.LeftWord);
+        Assert.Equal("Last: {0}", w.Strings.Last);
+        Assert.Equal("bambubar://printer/22E00A000000000", w.Url);
+        Assert.NotNull(w.Finish);
+        Assert.Equal("Offline", w.Offline.Caption);
+        Assert.Null(w.Info);
     }
 
     [Fact]
@@ -100,6 +106,10 @@ public sealed class WidgetStateTests : IDisposable
         Assert.Equal(headline, w.Headline);
         Assert.Equal(line, w.StateLine);
         Assert.Empty(w.Temps);
+        Assert.NotNull(w.Info);
+        Assert.NotEqual("", w.Detail);
+        if (link == PrinterSnapshot.LinkState.Unauthorized) Assert.Equal(WidgetPalette.Paused, w.StateColor);
+        if (link == PrinterSnapshot.LinkState.Unconfigured) Assert.Equal("Open the app", w.Detail);
     }
 
     [Fact]
@@ -138,7 +148,11 @@ public class WidgetStateSamples
         var folder = Environment.GetEnvironmentVariable("BAMBUBAR_STATE_OUT");
         Assert.SkipWhen(folder is null, "Set BAMBUBAR_STATE_OUT to write sample state files");
         Directory.CreateDirectory(folder!);
-        var now = DateTimeOffset.Now;
+        // Fixed, so the samples (and the skin tests that read them) don't change with the clock: printing ends 17:15
+        // local time, shown the en-US way ("5:15 PM").
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("en-US");
+        var local = new DateTime(2026, 11, 10, 16, 13, 0);
+        var now = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
         var last = new JobRecord { Name = "Benchy", StartedAt = now.AddHours(-3), EndedAt = now.AddHours(-2), Outcome = JobOutcome.Finished };
         void Save(string name, PrinterSnapshot snapshot) =>
             File.WriteAllText(Path.Combine(folder!, name + ".json"),
@@ -150,11 +164,15 @@ public class WidgetStateSamples
             {
                 var driver = new DemoDriver(s, variant) { OnStatus = (st, _) => status = st };
                 driver.Start(animate: false);
+                if (status is not null) status.UpdatedAt = now;
             }
             return new PrinterSnapshot { Serial = "22E00A000000000", PrinterName = "P2S Workshop", Model = model, Link = link,
                 Status = status, LastJob = last, SavedAt = now };
         }
-        foreach (var scenario in new[] { "printing", "preparing", "paused", "finished", "failed", "idle" }) Save(scenario, Snap(scenario));
+        foreach (var scenario in new[] { "printing", "preparing", "paused", "idle" }) Save(scenario, Snap(scenario));
+        // A print that just ended is its own last job.
+        Save("finished", Snap("finished") with { LastJob = last with { Name = "Rear Dry Pod", StartedAt = now.AddMinutes(-90), EndedAt = now.AddMinutes(-5) } });
+        Save("failed", Snap("failed") with { LastJob = last with { Name = "Rear Dry Pod", StartedAt = now.AddMinutes(-60), EndedAt = now.AddMinutes(-5), Outcome = JobOutcome.Failed } });
         Save("a1-multicolour", Snap("printing", model: "A1", variant: 2));
         Save("h2d-two-nozzles", Snap("printing", model: "H2D", variant: 3));
         Save("offline", Snap("printing", PrinterSnapshot.LinkState.Offline));
