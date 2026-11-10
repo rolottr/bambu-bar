@@ -6,3 +6,4 @@ This is how Bambu Bar tells you a print finished, failed or needs you.
 Send a sample notification to see how it looks.
 Send Test Notification
 Downloading…
+The license could not be saved in Windows Credential Manager. Try again, or restart Windows if it keeps failing.

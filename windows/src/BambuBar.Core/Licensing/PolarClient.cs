@@ -49,7 +49,7 @@ public sealed class LicenseException(LicenseFailure failure, Exception? inner = 
         LicenseFailure.Unavailable => Loc.T("Cannot reach the licensing service right now. Check your internet connection and try again."),
         LicenseFailure.InvalidResponse => Loc.T("The licensing service returned an unexpected response. Please try again later."),
         // The catalog has only the Mac's wording; a Windows one ("Credential Manager") waits for P4.2.
-        _ => Loc.T("The license could not be saved in your Mac’s Keychain. Check Keychain access and try again."),
+        _ => Loc.T("The license could not be saved in Windows Credential Manager. Try again, or restart Windows if it keeps failing."),
     };
 }
 

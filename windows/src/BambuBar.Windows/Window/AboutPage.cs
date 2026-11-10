@@ -281,8 +281,11 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
     private async void Activate()
     {
         if (License is not { IsBusy: false } license || _key.Text.Trim().Length == 0) return;
+        var hadAccess = license.HasAccess;
         await license.ActivateAsync(_key.Text);
         if (license.HasAccess) _key.Text = "";
+        // A supporter license just activated: the Mac's confetti over the window.
+        if (!hadAccess && license.HasAccess) Confetti.Celebrate(Application.Current.Windows.OfType<MainWindow>().FirstOrDefault(w => w.IsActive) ?? Application.Current.Windows.OfType<MainWindow>().FirstOrDefault());
         Fill();
     }
 
