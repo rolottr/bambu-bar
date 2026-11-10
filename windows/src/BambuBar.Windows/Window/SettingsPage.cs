@@ -87,7 +87,8 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
             : null);
 
         var access = Ctx.Services.License?.HasAccess ?? false;
-        _updates.Show(access.ToString(), () => Updates(access));
+        var u = Ctx.Services.Updates;
+        _updates.Show($"{access}|{u?.State}|{u?.LastChecked}|{u?.Release?.DisplayVersion}|{u?.Error}", () => Updates(access));
     }
 
     // MARK: Open at sign-in
@@ -162,8 +163,24 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
 
     // MARK: Updates
 
-    /// <summary>Automatic checks and downloads, which need the supporter license (the Mac's UpdatesGroup). The Windows
-    /// updater itself comes with P5.4: until then the switches keep their settings and "Check Now" waits.</summary>
+    /// <summary>What the last check found: a newer release, an error, up to date, or when it ran.</summary>
+    private string UpdateLine(DateTimeOffset? last)
+    {
+        var updates = Ctx.Services.Updates;
+        return updates?.State switch
+        {
+            UpdateState.Checking => Loc.T("Checking…"),
+            UpdateState.Downloading => Loc.T("Downloading…"),
+            UpdateState.Available or UpdateState.Ready when updates.Available is { } release =>
+                Loc.F("Bambu Bar %@ is available", release.DisplayVersion ?? ""),
+            UpdateState.Failed => updates.Error ?? Loc.T("Couldn’t check for updates"),
+            UpdateState.UpToDate => Loc.T("Bambu Bar is up to date"),
+            _ => last is { } when ? Loc.F("Version %@ · last checked %@", AppVersion.Marketing, PanelText.Ago(when)) : Loc.T("Not checked yet"),
+        };
+    }
+
+    /// <summary>Automatic checks and downloads, which need the supporter license (the Mac's UpdatesGroup), the last
+    /// check's result, Check Now, and Update… when a newer release is waiting.</summary>
     private FrameworkElement Updates(bool access)
     {
         var group = W.Group(Loc.T("Updates"), Icons.Download, out var body);
@@ -176,7 +193,8 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         ToggleSwitch? downloads = null;
         body.Children.Add(W.Switch(Loc.T("Check for updates automatically"), access && checks, on =>
         {
-            Ctx.Settings.Set(UpdateChecker.Keys.AutomaticChecks, on);
+            if (Ctx.Services.Updates is { } checker) checker.ChecksAutomatically = on;
+            else Ctx.Settings.Set(UpdateChecker.Keys.AutomaticChecks, on);
             if (downloads is not null)
             {
                 downloads.IsEnabled = on;
@@ -185,7 +203,11 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         }, out var checksSwitch));
         checksSwitch.IsEnabled = access;
         body.Children.Add(W.Switch(Loc.T("Download and install updates automatically"), access && checks && Ctx.Settings.Get(UpdateChecker.Keys.AutomaticDownloads, false),
-            on => Ctx.Settings.Set(UpdateChecker.Keys.AutomaticDownloads, on), out downloads));
+            on =>
+            {
+                if (Ctx.Services.Updates is { } checker) checker.DownloadsAutomatically = on;
+                else Ctx.Settings.Set(UpdateChecker.Keys.AutomaticDownloads, on);
+            }, out downloads));
         downloads.IsEnabled = access && checks;
         body.Children.Add(W.Divider());
 
@@ -200,13 +222,22 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
             Children =
             {
                 Ui.Text(Loc.F("Version %@", AppVersion.Marketing), WRamp.Body, FontWeights.Medium),
-                Ui.Text(last is { } when ? Loc.F("Version %@ · last checked %@", AppVersion.Marketing, PanelText.Ago(when)) : Loc.T("Not checked yet"), WRamp.Note, null, ThemeKeys.TextSecondary),
+                Ui.Text(UpdateLine(last), WRamp.Note, null, ThemeKeys.TextSecondary),
             },
         };
         status.Children.Add(Ui.At(titles, 1));
-        var check = W.Button(Loc.T("Check Now"), null, small: true);
-        check.IsEnabled = false;
-        status.Children.Add(Ui.At(check, 2));
+        var updates = Ctx.Services.Updates;
+        UIElement action;
+        if (updates?.Available is { } release && updates.State is UpdateState.Available or UpdateState.Ready)
+            action = W.Button(Loc.T("Update…"), Ctx.Services.InstallUpdate, accent: true, small: true);
+        else
+        {
+            var check = W.Button(updates?.State == UpdateState.Checking ? Loc.T("Checking…") : Loc.T("Check Now"),
+                () => _ = updates?.CheckAsync(), small: true);
+            check.IsEnabled = access && updates is { CanCheckForUpdates: true } && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
+            action = check;
+        }
+        status.Children.Add(Ui.At(action, 2));
         body.Children.Add(status);
         body.Children.Add(W.Note(Loc.T("When enabled, automatic checks run once a day. Updates show what’s new and install in place after their signature is verified.")));
         return group;

@@ -7,6 +7,7 @@ using BambuBar.CameraViews;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Licensing;
+using BambuBar.Core.Updates;
 using BambuBar.Notifications;
 using BambuBar.Platform;
 using BambuBar.Theme;
@@ -30,6 +31,7 @@ public partial class App : Application
     private PrinterStore? _store;
     private AppSettings? _settings;
     private LicenseStore? _license;
+    private UpdateChecker? _updates;
     private TrayIcon? _tray;
     private PanelWindow? _panel;
     private PanelView? _panelView;
@@ -105,10 +107,28 @@ public partial class App : Application
         _license = new LicenseStore(new PolarClient(), ephemeral ? new MemoryLicenseVault() : new CredentialLicenseVault());
         _license.PropertyChanged += (_, _) => { if (_panelView is not null) _panelView.ShowsSupport = !_license.HasAccess; };
         _license.Start();
+        if (!ephemeral)
+        {
+            // Updates (ledger P5.4): the shared appcast's Windows item for this PC, checked daily while the supporter
+            // license is active, Ed25519-verified before the installer runs.
+            var license = _license;
+            _updates = new UpdateChecker(() => license.HasAccess, _settings, new UpdateFeed(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "Updates"));
+            _updates.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(ShowUpdateOffer);
+            license.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(() => _updates?.SupporterStatusChanged());
+            _updates.Start();
+        }
 
         _tray = new TrayIcon(_store) { ShowPercent = _settings.Get(WindowSettings.TrayShowsPercent, false) };
         _tray.OpenWindow += () => ShowWindow();
         _tray.OpenPage += page => ShowWindow(page);
+        // "Check for Updates…": Settings → Updates shows the check and its result.
+        if (_updates is { } updates)
+            _tray.CheckForUpdates = () =>
+            {
+                ShowWindow(AppPage.Settings);
+                if (updates.CanCheckForUpdates) _ = updates.CheckAsync();
+            };
         _tray.OpenPanel += TogglePanel;
         _tray.Quit += Quit;
         _tray.ShowCamera += CameraWindow.Show;
@@ -136,6 +156,7 @@ public partial class App : Application
         {
             var view = new PanelView(_store, _settings, AppTheme.Current, animate: true) { ShowsSupport = !(_license?.HasAccess ?? false) };
             _panelView = view;
+            ShowUpdateOffer();
             _panel = new PanelWindow(view);
             // Every button that leads out of the panel opens the window at its page.
             view.Navigate += (destination, printer) =>
@@ -188,6 +209,8 @@ public partial class App : Application
                 License = _license,
                 Widgets = _widgets,
                 ToastsEnabled = _widgets is null ? null : ToastNotifier.Enabled,
+                Updates = _updates,
+                InstallUpdate = InstallUpdate,
                 TestNotification = () => _notifier.Post(Loc.T("Notifications are on"),
                     Loc.T("This is how Bambu Bar tells you a print finished, failed or needs you."), "bambubar-test"),
                 Restart = Restart,
@@ -217,9 +240,54 @@ public partial class App : Application
             Dispatcher.BeginInvoke(() => CameraPlayer.SessionLocked(false));
     }
 
+    /// <summary>The tray panel's "Bambu Bar X is available" row, while there's a release to offer.</summary>
+    private void ShowUpdateOffer()
+    {
+        if (_panelView is null || _updates is null) return;
+        var offered = _updates.Offered;
+        var offer = offered is null ? null : new UpdateOffer(offered.DisplayVersion ?? "", InstallUpdate, _updates.RemindLater);
+        if (offer?.Version == _panelView.UpdateOffer?.Version && (offer is null) == (_panelView.UpdateOffer is null)) return;
+        _panelView.UpdateOffer = offer;
+        _panelView.Refresh();
+    }
+
+    /// <summary>"Update…": downloads and verifies the release (unless it's already here), runs its installer silently
+    /// and quits; the installer replaces the files and starts Bambu Bar again (/RELAUNCH=1). A failure shows in
+    /// Settings → Updates.</summary>
+    private async void InstallUpdate()
+    {
+        if (_updates is null) return;
+        var installer = _updates.Installer is { } ready && File.Exists(ready.Path) ? ready : await _updates.DownloadAsync();
+        if (installer is null)
+        {
+            ShowWindow(AppPage.Settings);
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo(installer.Path, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1") { UseShellExecute = false })?.Dispose();
+        }
+        catch (System.ComponentModel.Win32Exception e)
+        {
+            CrashLog.Write("starting the update installer", e);
+            ShowWindow(AppPage.Settings);
+            return;
+        }
+        Quit();
+    }
+
     private void Quit()
     {
+        var waiting = _updates is { DownloadsAutomatically: true, State: UpdateState.Ready, Installer: { } ready } && File.Exists(ready.Path)
+            ? _updates.Installer!.Path : null;
         Release();
+        // "Download and install updates automatically": one downloaded and verified in the background installs as the
+        // app quits (Sparkle's install on quit), silently and without starting it again.
+        if (waiting is not null)
+        {
+            try { Process.Start(new ProcessStartInfo(waiting, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART") { UseShellExecute = false })?.Dispose(); }
+            catch (System.ComponentModel.Win32Exception e) { CrashLog.Write("installing the downloaded update", e); }
+        }
         Shutdown();
     }
 
@@ -251,6 +319,7 @@ public partial class App : Application
         CrashLog.Step("cameras", CameraWindow.CloseAll);
         CrashLog.Step("window", () => _window?.Close());
         CrashLog.Step("panel", () => _panel?.Quit());
+        CrashLog.Step("updates", () => _updates?.Stop());
         CrashLog.Step("license", () => _license?.Stop());
         // The printers before the tray icon, which shows their state to the end.
         CrashLog.Step("printers", () => _store?.Dispose());

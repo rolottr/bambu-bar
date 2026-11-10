@@ -95,6 +95,10 @@ public sealed class WindowServices
 
     /// <summary>Whether Windows lets Bambu Bar's toasts through (the Notifications page's banner); null when unknown.</summary>
     public Func<bool?>? ToastsEnabled { get; init; }
+    /// <summary>The updater (P5.4); null in demo and developer runs.</summary>
+    public Core.Updates.UpdateChecker? Updates { get; init; }
+    /// <summary>Downloads, verifies and installs the offered release, then quits.</summary>
+    public Action? InstallUpdate { get; init; }
     /// <summary>Posts a sample notification (the Notifications page's test button).</summary>
     public Action? TestNotification { get; init; }
 }

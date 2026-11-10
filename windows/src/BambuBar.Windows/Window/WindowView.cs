@@ -69,6 +69,7 @@ public sealed class WindowView : Border, IDisposable
         store.PropertyChanged += OnChanged;
         ((INotifyCollectionChanged)store.Sessions).CollectionChanged += OnSessionsChanged;
         if (services.License is { } license) license.PropertyChanged += OnChanged;
+        if (services.Updates is { } updates) updates.PropertyChanged += OnChanged;
         Watch();
     }
 
@@ -465,6 +466,7 @@ public sealed class WindowView : Border, IDisposable
         _store.PropertyChanged -= OnChanged;
         ((INotifyCollectionChanged)_store.Sessions).CollectionChanged -= OnSessionsChanged;
         if (_services.License is { } license) license.PropertyChanged -= OnChanged;
+        if (_services.Updates is { } updates) updates.PropertyChanged -= OnChanged;
         foreach (var session in _watched) session.PropertyChanged -= OnChanged;
         _watched.Clear();
         _page?.Dispose();

@@ -29,6 +29,8 @@ public sealed partial class TrayIcon : IDisposable
     public event Action? Quit;
     /// <summary>Opens the window at a page (Widgets, Settings).</summary>
     public event Action<AppPage>? OpenPage;
+    /// <summary>Set while the updater can check (supporter license active).</summary>
+    public Action? CheckForUpdates { get; set; }
 
     /// <summary>Draw the percentage instead of the printer while printing (Tray page, P3.5).</summary>
     public bool ShowPercent { get; set; }
@@ -136,6 +138,7 @@ public sealed partial class TrayIcon : IDisposable
         if (_store.IsConfigured) items.Add(Item(Loc.T("Refresh"), _store.Refresh));
         items.Add(Item(Loc.T("Widgets"), () => OpenPage?.Invoke(AppPage.Widgets)));
         items.Add(Item(Loc.T("Settings…"), () => OpenPage?.Invoke(AppPage.Settings)));
+        if (CheckForUpdates is not null) items.Add(Item(Loc.T("Check for Updates…"), () => CheckForUpdates?.Invoke()));
         items.Add(new Forms.ToolStripSeparator());
         items.Add(Item(Loc.T("Quit"), () => Quit?.Invoke()));
         MenuRenderer.Dress(items, dark);

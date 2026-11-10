@@ -5,3 +5,4 @@ Notifications are on
 This is how Bambu Bar tells you a print finished, failed or needs you.
 Send a sample notification to see how it looks.
 Send Test Notification
+Downloading…

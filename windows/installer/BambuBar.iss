@@ -193,9 +193,10 @@ begin
   Result := '';
 end;
 
+{ The app's own updater quits before the installer gets this far and passes /RELAUNCH=1 so it comes back. }
 function RelaunchAfterSilentInstall: Boolean;
 begin
-  Result := WizardSilent and WasRunning;
+  Result := WizardSilent and (WasRunning or (ExpandConstant('{param:RELAUNCH|0}') = '1'));
 end;
 
 function RelaunchParameters(Param: String): String;
