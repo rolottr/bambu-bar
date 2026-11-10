@@ -21,4 +21,8 @@ internal static class Simulators
         ?? Path.Combine(RepoRoot, "shared", "scripts", "integration", "out", "BambuStudio.conf");
 
     public const int FleetSize = 17;
+    /// <summary>Listed in the settings, never answers: a printer that's switched off.</summary>
+    public const string SwitchedOffPrinter = "01PF00000000017";
+    /// <summary>Where the fleet sends its announcements (compose.yaml).</summary>
+    public const int AnnouncementPort = 2122;
 }

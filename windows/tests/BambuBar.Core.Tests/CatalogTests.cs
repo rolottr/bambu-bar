@@ -14,6 +14,9 @@ public partial class CatalogTests
     {
         using var catalog = JsonDocument.Parse(File.ReadAllBytes(Repo.Shared("Localizable.xcstrings")));
         var keys = catalog.RootElement.GetProperty("strings").EnumerateObject().Select(p => p.Name).ToHashSet();
+        // Windows-only texts waiting to join the catalog with their translations (P4.2).
+        keys.UnionWith(File.ReadAllLines(Path.Combine(Repo.Root, "windows", "tools", "windows-strings.txt"))
+            .Where(line => line.Length > 0 && !line.StartsWith('#')));
         var sources = Directory.GetFiles(Path.Combine(Repo.Root, "windows", "src", "BambuBar.Core"), "*.cs", SearchOption.AllDirectories);
         var missing = new List<string>();
         var count = 0;

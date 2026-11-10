@@ -281,6 +281,17 @@ public sealed class PrinterStatus
         return copy;
     }
 
+    private static readonly System.Text.Json.JsonSerializerOptions ContentOptions = new() { IncludeFields = false };
+
+    /// <summary>Everything but <see cref="UpdatedAt"/> is the same (Swift's <c>==</c> with the timestamp aligned).</summary>
+    public bool SameContent(PrinterStatus other)
+    {
+        var a = Clone();
+        var b = other.Clone();
+        a.UpdatedAt = b.UpdatedAt = default;
+        return System.Text.Json.JsonSerializer.Serialize(a, ContentOptions) == System.Text.Json.JsonSerializer.Serialize(b, ContentOptions);
+    }
+
     /// <summary>Drops readings the model has no sensor or fan for. Some firmware reports placeholders there (a P1S
     /// sends a chamber temperature without a sensor, an A1 sends fan fields it doesn't have).</summary>
     public void FitTo(PrinterModel? model)
