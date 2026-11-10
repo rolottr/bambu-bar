@@ -483,14 +483,14 @@ public sealed class WindowView : Border, IDisposable
             _indicator.SetResourceReference(BackgroundProperty, ThemeKeys.AccentFill);
             var icon = Tile(page);
             icon.Margin = new Thickness(8, 0, 12, 0);
-            var label = Ui.Text(page.Title(), WRamp.Body);
+            var label = Ui.Text(page.Title(), 15);
             var grid = Ui.Columns("Auto", "Auto", "*");
             grid.Children.Add(Ui.At(_indicator, 0));
             grid.Children.Add(Ui.At(icon, 1));
             grid.Children.Add(Ui.At(label, 2));
             Content = grid;
-            Height = 36;
-            Margin = new Thickness(0, 2, 0, 2);
+            Height = 38;
+            Margin = new Thickness(0, 1, 0, 1);
             Padding = new Thickness(0, 0, 8, 0);
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             var shortcut = $"Ctrl+{page.Shortcut()}";
@@ -508,10 +508,10 @@ public sealed class WindowView : Border, IDisposable
             var tint = page.Tint();
             var fill = new LinearGradientBrush(SpoolArt.Mix(tint, Colors.White, 0.16), SpoolArt.Mix(tint, Colors.Black, 0.10), 90);
             fill.Freeze();
-            var glyph = Icons.Glyph(page.Glyph(), 13, null, Brushes.White);
+            var glyph = Icons.Glyph(page.Glyph(), 15, null, Brushes.White);
             return new Border
             {
-                Width = 24, Height = 24, CornerRadius = new CornerRadius(6), Background = fill, Child = glyph,
+                Width = 28, Height = 28, CornerRadius = new CornerRadius(7), Background = fill, Child = glyph,
                 BorderBrush = Palette.Brush(Color.FromArgb(0x26, 0, 0, 0)), BorderThickness = new Thickness(0.5),
                 VerticalAlignment = VerticalAlignment.Center,
             };

@@ -95,6 +95,8 @@ public sealed class WindowServices
 
     /// <summary>Whether Windows lets Bambu Bar's toasts through (the Notifications page's banner); null when unknown.</summary>
     public Func<bool?>? ToastsEnabled { get; init; }
+    /// <summary>Posts a sample notification (the Notifications page's test button).</summary>
+    public Action? TestNotification { get; init; }
 }
 
 /// <summary>Keys this app adds to the Mac's settings (same file, Windows-only).</summary>

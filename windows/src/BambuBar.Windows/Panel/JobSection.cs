@@ -110,7 +110,8 @@ internal sealed class JobSection : PanelSection
         {
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -2, -2, 0),
             Padding = new Thickness(8, 3, 9, 4), CornerRadius = Metrics.Pill, Look = ButtonLook.Standard,
-            CheckedLook = ButtonLook.Tinted(Palette.Lamp, 0.16, 0.22, 0.28) with { Stroke = null },
+            // The Mac's: a yellow tint with a yellow edge when on.
+            CheckedLook = ButtonLook.Tinted(Palette.Lamp, 0.16, 0.22, 0.28) with { StrokeBrush = Palette.Brush(Palette.WithAlpha(Palette.Lamp, 0.45)) },
         };
         AutomationProperties.SetName(toggle, Loc.T("Chamber light"));
         toggle.Click += (_, _) => Store.ToggleLight();

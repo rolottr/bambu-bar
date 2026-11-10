@@ -25,6 +25,8 @@ public sealed record ButtonLook(string? Rest, string? Hover, string? Pressed, st
     public Brush? RestBrush { get; init; }
     public Brush? HoverBrush { get; init; }
     public Brush? PressedBrush { get; init; }
+    /// <summary>An explicit edge, in place of <see cref="Stroke"/>'s theme key.</summary>
+    public Brush? StrokeBrush { get; init; }
 
     public static ButtonLook Tinted(Color tint, double rest = 0.12, double hover = 0.18, double pressed = 0.24) => new(null, null, null, ThemeKeys.ControlStroke)
     {
@@ -256,7 +258,12 @@ internal static class Chrome
         if (brush is not null) control.Background = brush;
         else if (key is not null) control.SetResourceReference(Control.BackgroundProperty, key);
         else control.Background = Brushes.Transparent;
-        if (look.Stroke is not null)
+        if (look.StrokeBrush is not null)
+        {
+            control.BorderBrush = look.StrokeBrush;
+            control.BorderThickness = new Thickness(1);
+        }
+        else if (look.Stroke is not null)
         {
             control.SetResourceReference(Control.BorderBrushProperty, look.Stroke);
             control.BorderThickness = new Thickness(1);

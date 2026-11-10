@@ -19,6 +19,12 @@ internal sealed class NotificationsPage(WindowContext ctx) : Page(ctx)
         body.Children.Add(W.Switch(Loc.T("Print failed, canceled or an error"), Store.NotifyFailed, on => Store.NotifyFailed = on));
         body.Children.Add(W.Switch(Loc.T("Print paused (filament runout, user)"), Store.NotifyPaused, on => Store.NotifyPaused = on));
         body.Children.Add(W.Switch(Loc.T("Print started"), Store.NotifyStarted, on => Store.NotifyStarted = on));
+        // Windows only: a sample, to see where notifications appear and how they sound.
+        if (Ctx.Services.TestNotification is { } test)
+        {
+            body.Children.Add(W.Divider());
+            body.Children.Add(W.Row(Loc.T("Send a sample notification to see how it looks."), W.Button(Loc.T("Send Test Notification"), test, small: true)));
+        }
         return new Stack
         {
             Spacing = 22,

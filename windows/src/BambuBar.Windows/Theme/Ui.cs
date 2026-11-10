@@ -95,8 +95,8 @@ public static class Ui
         return card;
     }
 
-    /// <summary>"● Printing": the state in its colour on a tinted capsule with a hairline edge. The dot's glow is a
-    /// drawn halo, not an effect: effects render through a bitmap and blur the pill at small sizes.</summary>
+    /// <summary>"● Printing": the state in its colour on a soft tint of it, corners rounded a little (the Mac's
+    /// StatePill). The dot's glow is a drawn halo, not an effect: effects render through a bitmap and blur the pill.</summary>
     public static Border Pill(out Ellipse dot, out TextBlock label)
     {
         var halo = new Ellipse { Width = 10, Height = 10 };
@@ -108,7 +108,7 @@ public static class Ui
         var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { mark, label } };
         return new Border
         {
-            Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(6, 2, 9, 3), BorderThickness = new Thickness(1),
+            Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(6, 3, 9, 4),
             HorizontalAlignment = HorizontalAlignment.Left,
         };
     }
@@ -122,13 +122,12 @@ public static class Ui
         label.Text = text;
     }
 
-    /// <summary>A capsule tinted with a state colour: a soft fill and a hairline edge in the same colour, so it holds
-    /// its shape on light cards as well as dark ones.</summary>
+    /// <summary>A pill tinted with a state colour: a soft fill of it, no outline (the Mac's StatePill).</summary>
     public static void TintCapsule(Border capsule, Color color, bool dark)
     {
-        capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.16 : 0.10));
-        capsule.BorderBrush = Palette.Brush(Palette.WithAlpha(color, dark ? 0.30 : 0.28));
-        capsule.BorderThickness = new Thickness(1);
+        capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.18 : 0.14));
+        capsule.BorderBrush = null;
+        capsule.BorderThickness = new Thickness(0);
     }
 
     /// <summary>Small uppercase heading above a group, with an optional note on the right (the Mac's SectionLabel).</summary>

@@ -34,6 +34,7 @@ public partial class App : Application
     private PanelWindow? _panel;
     private PanelView? _panelView;
     private WidgetHost? _widgets;
+    private INotifier _notifier = new NullNotifier();
     private MainWindow? _window;
     private string[] _arguments = [];
 
@@ -68,7 +69,7 @@ public partial class App : Application
         strings.Use(_settings.Get<string>(WindowSettings.Language) ?? strings.Match(CultureInfo.CurrentUICulture));
 
         var install = AppContext.BaseDirectory;
-        INotifier notifier = new NullNotifier();
+        INotifier notifier = _notifier;
         if (!ephemeral)
         {
             _widgets = new WidgetHost(install);
@@ -76,7 +77,7 @@ public partial class App : Application
             Registration.RegisterUriScheme();
             // Toasts need the app's AppUserModelID registered and taken before the first one (P3.1, P3.7).
             AppIdentity.Register();
-            notifier = new ToastNotifier();
+            notifier = _notifier = new ToastNotifier();
         }
         _store = new PrinterStore(new PrinterStore.Services
         {
@@ -186,6 +187,8 @@ public partial class App : Application
                 License = _license,
                 Widgets = _widgets,
                 ToastsEnabled = _widgets is null ? null : ToastNotifier.Enabled,
+                TestNotification = () => _notifier.Post(Loc.T("Notifications are on"),
+                    Loc.T("This is how Bambu Bar tells you a print finished, failed or needs you."), "bambubar-test"),
                 Restart = Restart,
                 TrayChanged = () => { if (_tray is not null && _settings is not null) _tray.ShowPercent = _settings.Get(WindowSettings.TrayShowsPercent, false); },
             });

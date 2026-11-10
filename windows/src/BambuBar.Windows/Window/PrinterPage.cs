@@ -263,7 +263,7 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
             _ctx = ctx;
             _pencil = new ChromeButton
             {
-                Width = 28, Height = 28, Padding = new Thickness(0), CornerRadius = Metrics.Pill, Look = ButtonLook.Standard,
+                Width = 28, Height = 28, Padding = new Thickness(0), CornerRadius = Metrics.Round, Look = ButtonLook.Standard,
                 Content = Icons.Glyph("", 12), Margin = new Thickness(10, 4, 0, 0), VerticalAlignment = VerticalAlignment.Center,
             };
             AutomationProperties.SetName(_pencil, Loc.T("Rename this printer in Bambu Bar"));

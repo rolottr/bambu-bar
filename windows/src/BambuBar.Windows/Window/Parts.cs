@@ -175,7 +175,7 @@ internal sealed class RefreshControl : StackPanel, IDisposable
         var glyph = Icons.Glyph(Icons.Refresh, 14);
         glyph.RenderTransform = _spin;
         glyph.RenderTransformOrigin = new Point(0.5, 0.5);
-        _button = new ChromeButton { Width = 32, Height = 32, Padding = new Thickness(0), Content = glyph, Look = ButtonLook.Standard, CornerRadius = Metrics.Pill };
+        _button = new ChromeButton { Width = 32, Height = 32, Padding = new Thickness(0), Content = glyph, Look = ButtonLook.Standard, CornerRadius = Metrics.Round };
         AutomationProperties.SetName(_button, Loc.T("Refresh"));
         AutomationProperties.SetAcceleratorKey(_button, "Ctrl+R");
         Ui.Tip(_button, Loc.T("Ask the printer for a full status report"));

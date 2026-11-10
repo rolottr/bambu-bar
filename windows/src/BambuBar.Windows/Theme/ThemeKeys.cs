@@ -106,7 +106,11 @@ public static class Metrics
     public static readonly CornerRadius Control = new(4);
     /// <summary>Menus and tooltips (Fluent OverlayCornerRadius).</summary>
     public static readonly CornerRadius Overlay = new(8);
-    public static readonly CornerRadius Pill = new(999);
+    /// <summary>State pills, chips, slot labels, the light switch: a rectangle rounded only a little at the corners,
+    /// as on the Mac.</summary>
+    public static readonly CornerRadius Pill = new(6);
+    /// <summary>Round icon buttons.</summary>
+    public static readonly CornerRadius Round = new(999);
 
     /// <summary>Header icon buttons (Mac 28, Fluent 32).</summary>
     public const double HeaderButton = 32;
