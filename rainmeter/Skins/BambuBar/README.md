@@ -47,8 +47,8 @@ BambuBarExe=C:\Users\<user>\AppData\Local\Programs\Bambu Bar\BambuBar.exe
 
 ## Clicks (P2.5)
 
-- Left click on the card: `["bambubar://printer/<serial>"]` (the script writes the serial into the card's
-  `LeftMouseUpAction`; empty serial when no printer is set up).
+- Left click on the card: the state's `url` (`bambubar://printer/<serial>`, or `bambubar://open` when no printer is
+  set up), which the script writes into the card's `LeftMouseUpAction`.
 - Right click anywhere: `["#BambuBarExe#" --widget-menu "#CURRENTCONFIG#"]`, a skin-level `RightMouseUpAction`.
   Defining it keeps Rainmeter's own menu away (Ctrl+right-click still opens it, as accepted in the ledger).
 
