@@ -34,6 +34,36 @@ final class HMSCatalog {
         return url.url ?? home
     }
 
+    /// The links to try for a `wikiURL`, best first (HMSWiki opens the first that isn't the index). The wiki files
+    /// AMS codes once for every unit and slot (0700_2100 and 0701_2300 under 0700_2000), and Bambu's lookup doesn't
+    /// always see that, nor a page filed under another model. So: the code for this model, then with the AMS unit
+    /// and slot zeroed, then both for any model.
+    static func wikiCandidates(for url: URL) -> [URL] {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let code = components.queryItems?.first(where: { $0.name == "e" })?.value else { return [url] }
+        let codes = [code, amsGeneric(code)]
+        var out: [URL] = []
+        for keepModel in [true, false] {
+            for c in codes {
+                var candidate = components
+                candidate.queryItems = components.queryItems?.compactMap { item in
+                    if item.name == "d" { return keepModel ? item : nil }
+                    return item.name == "e" ? URLQueryItem(name: "e", value: c) : item
+                }
+                if let link = candidate.url, !out.contains(link) { out.append(link) }
+            }
+        }
+        return out
+    }
+
+    /// An AMS code (modules 07, 12, 18) with the unit (digits 3–4) and the slot (digit 6) zeroed.
+    static func amsGeneric(_ code: String) -> String {
+        var c = Array(code.uppercased())
+        guard c.count == 16, ["07", "12", "18"].contains(String(c[0..<2])) else { return code.uppercased() }
+        c[2] = "0"; c[3] = "0"; c[5] = "0"
+        return String(c)
+    }
+
     /// The app's language if there's a catalogue for it. Traditional Chinese readers get the Simplified one,
     /// which Bambu Lab does publish, rather than English.
     private static var language: String {

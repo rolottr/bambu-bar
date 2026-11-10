@@ -30,6 +30,22 @@ final class HMSWikiTests: XCTestCase {
         XCTAssertTrue(url?.path.hasSuffix("/hms/home") == true)
     }
 
+    func testAMSCodesAreTriedForEveryUnitAndSlot() {
+        XCTAssertEqual(HMSCatalog.amsGeneric("0700210000020019"), "0700200000020019", "AMS A slot 2 → the shared page")
+        XCTAssertEqual(HMSCatalog.amsGeneric("0701230000020001"), "0700200000020001", "AMS B slot 4 → the shared page")
+        XCTAssertEqual(HMSCatalog.amsGeneric("0501040000030002"), "0501040000030002", "not an AMS code: unchanged")
+    }
+
+    func testCandidatesGoFromThisModelToAnyModel() throws {
+        let url = try XCTUnwrap(HMSCatalog.wikiURL(code: "0700210000020019", serial: "22E00A000000000"))
+        let tried = HMSCatalog.wikiCandidates(for: url).map { (query($0)["e"] ?? "", query($0)["d"]) }
+        XCTAssertEqual(tried.map(\.0), ["0700210000020019", "0700200000020019", "0700210000020019", "0700200000020019"])
+        XCTAssertEqual(tried.map(\.1), ["22E", "22E", nil, nil])
+        // A code that's the same either way isn't asked twice.
+        let lube = try XCTUnwrap(HMSCatalog.wikiURL(code: "0501040000030002", serial: "01P00A000000000"))
+        XCTAssertEqual(HMSCatalog.wikiCandidates(for: lube).count, 2)
+    }
+
     func testParserLinksIssuesForThePrinter() throws {
         var doc = ReportDocument()
         // HMS_0700_2100_0002_0019 and print error 0700_8006.

@@ -705,7 +705,10 @@ struct IssueBanner: View {
                         .accessibilityLabel(copied ? Text("Copied") : Text("Copy code"))
                     }
                     if let url = issue.wikiURL {
-                        Link("Wiki", destination: url).font(.system(size: 10.5, weight: .semibold))
+                        // Resolved on click, so it lands on the code's page rather than the HMS index where it can.
+                        Button("Wiki") { HMSWiki.open(url) }
+                            .buttonStyle(.link)
+                            .font(.system(size: 10.5, weight: .semibold))
                     }
                 }
             }
