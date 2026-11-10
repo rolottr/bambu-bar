@@ -40,7 +40,8 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 
 | Version | Channel | Build | Commit | Date | Status |
 | --- | --- | --- | --- | --- | --- |
-| 2.1.0 | GitHub | 202611101251 | `v2.1.0` | 2026-11-10 | Published, latest release; zip SHA-256 `fb32096294681d48f1196fe54298515b3616021bf7e3ec354be7250cce120f0c` |
+| 2.1.1 | GitHub | 202611101352 | `v2.1.1` | 2026-11-10 | Published, latest release; zip SHA-256 `dbce0d7e11fc7b2b84ab47757621e856a8edf54b53bcba15fafc9a851790515d` |
+| 2.1.0 | GitHub | 202611101251 | `v2.1.0` | 2026-11-10 | Published; zip SHA-256 `fb32096294681d48f1196fe54298515b3616021bf7e3ec354be7250cce120f0c` |
 | 2.0.2 | GitHub | 202611090033 | `v2.0.2` | 2026-11-09 | Published; zip SHA-256 `fc64b2bc7b5c11019df3f13978604ad0c1f2b004df5124c3793a8caa42eafb03` |
 | 2.0.1 | GitHub | 202611082312 | `v2.0.1` | 2026-11-08 | Published; zip SHA-256 `962b9b692b13c26da016a46b42741ddd9843aa606b67e494960a948f57284e8f` |
 | 2.0.0 | GitHub | 202611011630 | 3eb45bb (`v2.0.0`) | 2026-11-01 | Published; zip SHA-256 `050b40c6ca849924c67852acd7f29a6280e046dbf1082182bd1a919677b55813` |
