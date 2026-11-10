@@ -91,3 +91,21 @@ jobs:
           name: Bambu-Bar-windows-${{ matrix.rid }}
           path: build/windows/${{ matrix.rid }}/
           if-no-files-found: error
+
+  # The widget skins in the pinned Rainmeter on a real Windows desktop: screenshots and Rainmeter's log as artifacts.
+  widgets:
+    name: Widgets (Rainmeter smoke)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Load the skins and screenshot them
+        shell: pwsh
+        run: ./rainmeter/ci/smoke.ps1 -Out build/widgets
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Bambu-Bar-widgets-smoke
+          path: build/widgets/
