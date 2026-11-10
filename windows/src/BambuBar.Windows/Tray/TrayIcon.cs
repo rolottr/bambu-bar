@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Media.Imaging;
 using BambuBar.Core;
 using BambuBar.Core.App;
+using BambuBar.AppWindow;
 using BambuBar.Core.Model;
 using Microsoft.Win32;
 using Forms = System.Windows.Forms;
@@ -26,11 +27,14 @@ public sealed partial class TrayIcon : IDisposable
     /// <summary>"Show Camera" (the Mac's Printer menu, ⌘K): only while the selected printer's camera is on.</summary>
     public event Action<PrinterSession>? ShowCamera;
     public event Action? Quit;
+    /// <summary>Opens the window at a page (Widgets, Settings).</summary>
+    public event Action<AppPage>? OpenPage;
 
     /// <summary>Draw the percentage instead of the printer while printing (Tray page, P3.5).</summary>
     public bool ShowPercent { get; set; }
 
-    public TrayIcon(PrinterStore store)
+    /// <param name="visible">False for the snapshot's picture of the menu: no icon in the tray.</param>
+    public TrayIcon(PrinterStore store, bool visible = true)
     {
         _store = store;
         _icon.MouseClick += (_, e) =>
@@ -43,28 +47,98 @@ public sealed partial class TrayIcon : IDisposable
         ((System.Collections.Specialized.INotifyCollectionChanged)store.Sessions).CollectionChanged += OnSessionsChanged;
         SystemEvents.UserPreferenceChanged += OnPreferenceChanged;
         Update();
-        _icon.Visible = true;
+        _icon.Visible = visible;
     }
 
-    /// <summary>The right-click menu. Each item acts once the menu has closed (posted to the dispatcher): Quit
-    /// disposes the icon and this menu, and doing that inside the item's own click left WinForms' menu code running on
-    /// a disposed menu (a NullReferenceException in WinForms' error dialog).</summary>
+    /// <summary>The menu as it would open now, drawn to a bitmap (the snapshot's tray-menu-*.png).</summary>
+    internal static System.Drawing.Bitmap MenuPicture(PrinterStore store, bool dark)
+    {
+        using var tray = new TrayIcon(store, visible: false);
+        var menu = tray._icon.ContextMenuStrip!;
+        tray.Fill(menu, dark);
+        menu.CreateControl();
+        menu.PerformLayout();
+        var size = menu.GetPreferredSize(System.Drawing.Size.Empty);
+        menu.Size = size;
+        var bitmap = new System.Drawing.Bitmap(size.Width, size.Height);
+        menu.DrawToBitmap(bitmap, new System.Drawing.Rectangle(System.Drawing.Point.Empty, size));
+        return bitmap;
+    }
+
+    /// <summary>The right-click menu (ledger P3.4), rebuilt each time it opens so it shows the printer as it is:
+    /// Open Bambu Bar; the printers when there are several; Pause or Resume and Stop… while printing (with the Tray
+    /// page's "Pause, stop and speed" on); the chamber light; Show Camera; Refresh, Widgets and Settings; Quit.
+    /// Each item acts once the menu has closed (posted to the dispatcher): Quit disposes the icon and this menu, and
+    /// doing that inside the item's own click left WinForms' menu code running on a disposed menu.</summary>
     private Forms.ContextMenuStrip Menu()
+    {
+        var menu = new Forms.ContextMenuStrip();
+        menu.Opening += (_, e) =>
+        {
+            Fill(menu);
+            e.Cancel = false;
+        };
+        Fill(menu);
+        return menu;
+    }
+
+    private void Fill(Forms.ContextMenuStrip menu, bool? darkMenu = null)
     {
         var dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
         EventHandler Later(Action action) => (_, _) => dispatcher.BeginInvoke(action);
-        var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add(Loc.T("Open Bambu Bar"), null, Later(() => OpenWindow?.Invoke()));
-        menu.Items.Add(Loc.T("Refresh"), null, Later(() => _store.Refresh()));
-        var camera = new Forms.ToolStripMenuItem(Loc.T("Show Camera"), null, Later(() =>
+        Forms.ToolStripMenuItem Item(string text, Action action) => new(text, null, Later(action));
+        var items = menu.Items;
+        items.Clear();
+
+        var dark = darkMenu ?? !TaskbarIsLight();
+        MenuRenderer.Apply(menu, dark);
+
+        var open = Item(Loc.T("Open Bambu Bar"), () => OpenWindow?.Invoke());
+        // The default action (a left click opens the panel; this opens the window), bold as Windows marks it.
+        open.Font = new System.Drawing.Font(menu.Font, System.Drawing.FontStyle.Bold);
+        items.Add(open);
+
+        var sessions = _store.Sessions;
+        var current = _store.Current;
+        if (sessions.Count > 1)
         {
-            if (_store.Current is { ShowsCamera: true } session) ShowCamera?.Invoke(session);
-        })) { ShortcutKeyDisplayString = "Ctrl+K" };
-        menu.Items.Add(camera);
-        menu.Opening += (_, _) => camera.Visible = _store.Current?.ShowsCamera == true;
-        menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add(Loc.T("Quit"), null, Later(() => Quit?.Invoke()));
-        return menu;
+            var printers = new Forms.ToolStripMenuItem(Loc.T("Printers"));
+            foreach (var session in sessions)
+            {
+                var id = session.Id;
+                var row = Item($"{session.Config.Name}  ·  {session.ShortState}", () => _store.Select(id));
+                row.Checked = session.Id == current?.Id;
+                printers.DropDownItems.Add(row);
+            }
+            items.Add(printers);
+        }
+
+        var status = current is { IsOnline: true } ? current.Status : null;
+        var printItems = new List<Forms.ToolStripItem>();
+        if (status is not null && _store.ShowPrinterActions && status.State.IsActive())
+        {
+            printItems.Add(status.State == JobState.Paused
+                ? Item(Loc.T("Resume"), _store.Resume)
+                : Item(Loc.T("Pause"), _store.Pause));
+            printItems.Add(Item(Loc.T("Stop…"), _store.StopPrint));
+        }
+        if (status?.ChamberLightOn is { } lightOn)
+            printItems.Add(new Forms.ToolStripMenuItem(Loc.T("Chamber light"), null, Later(_store.ToggleLight)) { Checked = lightOn });
+        if (current is { ShowsCamera: true } withCamera)
+            printItems.Add(new Forms.ToolStripMenuItem(Loc.T("Show Camera"), null, Later(() => ShowCamera?.Invoke(withCamera))) { ShortcutKeyDisplayString = "Ctrl+K" });
+        if (printItems.Count > 0)
+        {
+            items.Add(new Forms.ToolStripSeparator());
+            foreach (var item in printItems) items.Add(item);
+        }
+
+        items.Add(new Forms.ToolStripSeparator());
+        if (_store.IsConfigured) items.Add(Item(Loc.T("Refresh"), _store.Refresh));
+        items.Add(Item(Loc.T("Widgets"), () => OpenPage?.Invoke(AppPage.Widgets)));
+        items.Add(Item(Loc.T("Settings…"), () => OpenPage?.Invoke(AppPage.Settings)));
+        items.Add(new Forms.ToolStripSeparator());
+        items.Add(Item(Loc.T("Quit"), () => Quit?.Invoke()));
+        MenuRenderer.Dress(items, dark);
     }
 
     private void OnStoreChanged(object? sender, PropertyChangedEventArgs e) => Update();

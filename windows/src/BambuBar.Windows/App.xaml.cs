@@ -108,6 +108,7 @@ public partial class App : Application
 
         _tray = new TrayIcon(_store) { ShowPercent = _settings.Get(WindowSettings.TrayShowsPercent, false) };
         _tray.OpenWindow += () => ShowWindow();
+        _tray.OpenPage += page => ShowWindow(page);
         _tray.OpenPanel += TogglePanel;
         _tray.Quit += Quit;
         _tray.ShowCamera += CameraWindow.Show;

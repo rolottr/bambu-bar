@@ -48,6 +48,7 @@ public static class Snapshot
         Renderer3D.LogPath = null;
         Save(TraySheet(), Path.Combine(folder, "tray-glyphs.png"));
         var errors = RenderPanels(folder);
+        errors.AddRange(RenderTrayMenus(folder));
         errors.AddRange(ThemeResources.Errors);
         Report(Path.Combine(folder, "panel-errors.txt"), errors);
         var cameraErrors = new List<string>();
@@ -72,6 +73,32 @@ public static class Snapshot
         }
         Report(Path.Combine(folder, "window-errors.txt"), windowErrors);
         return 0;
+    }
+
+    /// <summary>The tray icon's right-click menu over the demo fleet, light and dark (tray-menu-*.png).</summary>
+    private static List<string> RenderTrayMenus(string folder)
+    {
+        var errors = new List<string>();
+        try
+        {
+            using var store = new PrinterStore(new PrinterStore.Services
+            {
+                Settings = new AppSettings(null), History = new HistoryStore(null), Secrets = new MemorySecretStore(),
+                Arguments = ["--demo", "printing", "--fleet"],
+            });
+            store.Start();
+            Pump(TimeSpan.FromSeconds(2), () => store.Sessions.All(s => s.Status is not null));
+            foreach (var dark in new[] { false, true })
+            {
+                using var picture = Tray.TrayIcon.MenuPicture(store, dark);
+                picture.Save(Path.Combine(folder, $"tray-menu-{(dark ? "dark" : "light")}.png"), System.Drawing.Imaging.ImageFormat.Png);
+            }
+        }
+        catch (Exception e)
+        {
+            errors.Add($"tray-menu: {e}");
+        }
+        return errors;
     }
 
     private static void Report(string path, List<string> errors)
