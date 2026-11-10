@@ -1,0 +1,776 @@
+{
+  "activeSpoolID" : 0,
+  "activeSpoolLabel" : "A1",
+  "ams" : [
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 41,
+      "humidityLevel" : 3,
+      "id" : 0,
+      "kind" : "pro2",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FF6A13FF",
+          "colorName" : "Orange",
+          "colors" : [
+            "FF6A13FF"
+          ],
+          "gramsLeft" : 640,
+          "id" : 0,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A1",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 64,
+          "slot" : 0,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FFFFFFFF",
+          "colorName" : "Ivory White",
+          "colors" : [
+            "FFFFFFFF"
+          ],
+          "gramsLeft" : 480,
+          "id" : 1,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A2",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 48,
+          "slot" : 1,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "0056B8FF",
+          "colorName" : "Cobalt Blue",
+          "colors" : [
+            "0056B8FF"
+          ],
+          "gramsLeft" : 220,
+          "id" : 2,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A3",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 22,
+          "slot" : 2,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "61C680FF",
+          "colorName" : "Grass Green",
+          "colors" : [
+            "61C680FF"
+          ],
+          "gramsLeft" : 990,
+          "id" : 3,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A4",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 99,
+          "slot" : 3,
+          "unit" : 0,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 26.300000000000001,
+      "title" : "AMS 2 Pro A"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 36,
+      "humidityLevel" : 5,
+      "id" : 1,
+      "kind" : "pro2",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "EAECEBFF",
+          "colorName" : "Silver",
+          "colors" : [
+            "EAECEBFF"
+          ],
+          "gramsLeft" : 350,
+          "id" : 4,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "B1",
+          "material" : "PLA",
+          "name" : "PLA Silk",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA05",
+          "remain" : 35,
+          "slot" : 0,
+          "unit" : 1,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FFFFFFFF",
+          "colorName" : "Ivory White",
+          "colors" : [
+            "FFFFFFFF"
+          ],
+          "gramsLeft" : 480,
+          "id" : 5,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "B2",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 48,
+          "slot" : 1,
+          "unit" : 1,
+          "weight" : 1000
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 6,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "B3",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 2,
+          "unit" : 1,
+          "weight" : null
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "1F79E5FF",
+          "colorName" : "Lake Blue",
+          "colors" : [
+            "1F79E5FF"
+          ],
+          "gramsLeft" : 570,
+          "id" : 7,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "B4",
+          "material" : "PETG",
+          "name" : "PETG HF",
+          "nozzleRange" : [
+            230,
+            270
+          ],
+          "preset" : "GFG02",
+          "remain" : 57,
+          "slot" : 3,
+          "unit" : 1,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 28.5,
+      "title" : "AMS 2 Pro B"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 38,
+      "humidityLevel" : 5,
+      "id" : 2,
+      "kind" : "pro2",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "0056B8FF",
+          "colorName" : "Cobalt Blue",
+          "colors" : [
+            "0056B8FF"
+          ],
+          "gramsLeft" : 220,
+          "id" : 8,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "C1",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 22,
+          "slot" : 0,
+          "unit" : 2,
+          "weight" : 1000
+        },
+        {
+          "brand" : "SUNLU",
+          "color" : "FFFFFFFF",
+          "colorName" : null,
+          "colors" : [
+            "FFFFFFFF"
+          ],
+          "gramsLeft" : null,
+          "id" : 9,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "C2",
+          "material" : "PLA",
+          "name" : "PLA+",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFSNL03",
+          "remain" : null,
+          "slot" : 1,
+          "unit" : 2,
+          "weight" : null
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "ADB1B2FF",
+          "colorName" : "Gray",
+          "colors" : [
+            "ADB1B2FF"
+          ],
+          "gramsLeft" : 120,
+          "id" : 10,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "C3",
+          "material" : "PETG",
+          "name" : "PETG HF",
+          "nozzleRange" : [
+            230,
+            270
+          ],
+          "preset" : "GFG02",
+          "remain" : 12,
+          "slot" : 2,
+          "unit" : 2,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "000000FF",
+          "colorName" : "Charcoal",
+          "colors" : [
+            "000000FF"
+          ],
+          "gramsLeft" : 760,
+          "id" : 11,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "C4",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 76,
+          "slot" : 3,
+          "unit" : 2,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 29.199999999999999,
+      "title" : "AMS 2 Pro C"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 51,
+      "humidityLevel" : 2,
+      "id" : 3,
+      "kind" : "pro2",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "00B1B7FF",
+          "colorName" : "Turquoise",
+          "colors" : [
+            "00B1B7FF"
+          ],
+          "gramsLeft" : 910,
+          "id" : 12,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "D1",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 91,
+          "slot" : 0,
+          "unit" : 3,
+          "weight" : 1000
+        },
+        {
+          "brand" : "eSUN",
+          "color" : "D23A3AFF",
+          "colorName" : null,
+          "colors" : [
+            "D23A3AFF"
+          ],
+          "gramsLeft" : null,
+          "id" : 13,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "D2",
+          "material" : "PLA",
+          "name" : "PLA+",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFL03",
+          "remain" : null,
+          "slot" : 1,
+          "unit" : 3,
+          "weight" : null
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "4CE4A0FF",
+          "colorName" : "Green",
+          "colors" : [
+            "4CE4A0FF"
+          ],
+          "gramsLeft" : 800,
+          "id" : 14,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "D3",
+          "material" : "PLA",
+          "name" : "PLA Silk",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA05",
+          "remain" : 80,
+          "slot" : 2,
+          "unit" : 3,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FF6A13FF",
+          "colorName" : "Orange",
+          "colors" : [
+            "FF6A13FF"
+          ],
+          "gramsLeft" : 640,
+          "id" : 15,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "D4",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 64,
+          "slot" : 3,
+          "unit" : 3,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 29.300000000000001,
+      "title" : "AMS 2 Pro D"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 19,
+      "humidityLevel" : 2,
+      "id" : 128,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "SUNLU",
+          "color" : "F330F9FF",
+          "colorName" : null,
+          "colors" : [
+            "F330F9FF"
+          ],
+          "gramsLeft" : null,
+          "id" : 128,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "HT1",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFSNL02",
+          "remain" : null,
+          "slot" : 0,
+          "unit" : 128,
+          "weight" : null
+        }
+      ],
+      "temperature" : 26,
+      "title" : "AMS HT 1"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 28,
+      "humidityLevel" : 5,
+      "id" : 129,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "1F79E5FF",
+          "colorName" : "Lake Blue",
+          "colors" : [
+            "1F79E5FF"
+          ],
+          "gramsLeft" : 570,
+          "id" : 129,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "HT2",
+          "material" : "PETG",
+          "name" : "PETG HF",
+          "nozzleRange" : [
+            230,
+            270
+          ],
+          "preset" : "GFG02",
+          "remain" : 57,
+          "slot" : 0,
+          "unit" : 129,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 24.100000000000001,
+      "title" : "AMS HT 2"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 38,
+      "humidityLevel" : 2,
+      "id" : 130,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FF6A13FF",
+          "colorName" : "Orange",
+          "colors" : [
+            "FF6A13FF"
+          ],
+          "gramsLeft" : 640,
+          "id" : 130,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "HT3",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 64,
+          "slot" : 0,
+          "unit" : 130,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 25.699999999999999,
+      "title" : "AMS HT 3"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 42,
+      "humidityLevel" : 4,
+      "id" : 131,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FFFFFFFF",
+          "colorName" : "Ivory White",
+          "colors" : [
+            "FFFFFFFF"
+          ],
+          "gramsLeft" : 480,
+          "id" : 131,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "HT4",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 48,
+          "slot" : 0,
+          "unit" : 131,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 30.899999999999999,
+      "title" : "AMS HT 4"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 26,
+      "humidityLevel" : 3,
+      "id" : 132,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "61C680FF",
+          "colorName" : "Grass Green",
+          "colors" : [
+            "61C680FF"
+          ],
+          "gramsLeft" : 990,
+          "id" : 132,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "HT5",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 99,
+          "slot" : 0,
+          "unit" : 132,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 24.699999999999999,
+      "title" : "AMS HT 5"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 32,
+      "humidityLevel" : 2,
+      "id" : 133,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "489FDFFF",
+          "colorName" : "Azure",
+          "colors" : [
+            "489FDFFF"
+          ],
+          "gramsLeft" : 700,
+          "id" : 133,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "HT6",
+          "material" : "ABS",
+          "name" : "ABS",
+          "nozzleRange" : [
+            240,
+            280
+          ],
+          "preset" : "GFB00",
+          "remain" : 70,
+          "slot" : 0,
+          "unit" : 133,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 29.5,
+      "title" : "AMS HT 6"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 24,
+      "humidityLevel" : 3,
+      "id" : 134,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "000000FF",
+          "colorName" : "Black",
+          "colors" : [
+            "000000FF"
+          ],
+          "gramsLeft" : 660,
+          "id" : 134,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "HT7",
+          "material" : "PA6-CF",
+          "name" : "PA6-CF",
+          "nozzleRange" : [
+            260,
+            300
+          ],
+          "preset" : "GFN05",
+          "remain" : 66,
+          "slot" : 0,
+          "unit" : 134,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 30.699999999999999,
+      "title" : "AMS HT 7"
+    },
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 38,
+      "humidityLevel" : 2,
+      "id" : 135,
+      "kind" : "ht",
+      "spools" : [
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 135,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "HT8",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 0,
+          "unit" : 135,
+          "weight" : null
+        }
+      ],
+      "temperature" : 30.399999999999999,
+      "title" : "AMS HT 8"
+    }
+  ],
+  "auxFan" : 30,
+  "bed" : {
+    "current" : 55,
+    "target" : 55
+  },
+  "canceled" : false,
+  "chamber" : 34,
+  "chamberLightOn" : true,
+  "chamberTarget" : 0,
+  "circulationFan" : null,
+  "controlsLocked" : false,
+  "detailText" : "Layer 120 of 240",
+  "doorOpen" : false,
+  "exhaustFan" : 40,
+  "externalSpool" : {
+    "brand" : null,
+    "color" : "00000000",
+    "colorName" : null,
+    "colors" : [
+      "00000000"
+    ],
+    "gramsLeft" : null,
+    "id" : 254,
+    "isBambu" : false,
+    "isLoaded" : false,
+    "label" : "Ext",
+    "material" : "",
+    "name" : "",
+    "nozzleRange" : null,
+    "preset" : null,
+    "remain" : null,
+    "slot" : 0,
+    "unit" : 255,
+    "weight" : null
+  },
+  "firmware" : null,
+  "hasSDCard" : true,
+  "heatbreakFan" : 100,
+  "issues" : [
+
+  ],
+  "jobName" : "Fixture",
+  "layer" : 120,
+  "leftAuxFan" : null,
+  "leftNozzleInUse" : false,
+  "liveViewEnabled" : false,
+  "nozzle" : {
+    "current" : 220,
+    "target" : 220
+  },
+  "nozzleDiameter" : 0.40000000000000002,
+  "nozzleType" : "HS01",
+  "partFan" : 90,
+  "plateIndex" : 1,
+  "progress" : 50,
+  "remainingMinutes" : 60,
+  "secondNozzle" : {
+    "current" : 170,
+    "target" : 170
+  },
+  "speed" : 2,
+  "stageID" : 0,
+  "state" : "printing",
+  "stateTitle" : "Printing",
+  "taskID" : "100010",
+  "totalLayers" : 240,
+  "updateAvailable" : false,
+  "wifiSignal" : -61
+}

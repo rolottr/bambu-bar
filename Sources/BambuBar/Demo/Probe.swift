@@ -63,6 +63,87 @@ enum Probe {
         }
     }
 
+    // MARK: - Status dump
+
+    /// `--dump-status <out-dir> <report.json>...`: runs each saved report through the parser and the model's
+    /// capabilities, as the app does, and writes what it shows as `<out-dir>/<name>.json`. The Windows port's tests
+    /// compare their parser against these (shared/ModelReports/expected). A report is either a fleet fixture
+    /// (`model`, `serial`, `print`) or a captured sample (`get_version`, `pushall`, named `<model>-sample.json`).
+    /// Run it in English so the texts match: `-AppleLanguages '(en)'`.
+    static var dumpStatusArguments: (output: URL, inputs: [URL])? {
+        let a = CommandLine.arguments
+        guard let i = a.firstIndex(of: "--dump-status"), i + 2 < a.count else { return nil }
+        let rest = a[(i + 2)...].prefix { !$0.hasPrefix("-") }
+        return (URL(fileURLWithPath: a[i + 1]), rest.map { URL(fileURLWithPath: $0) })
+    }
+
+    static func runDumpStatus(output: URL, inputs: [URL]) {
+        var failed = false
+        try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        for input in inputs {
+            guard let data = try? Data(contentsOf: input),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                print("can't read \(input.path)"); failed = true; continue
+            }
+            var doc = ReportDocument()
+            let name = input.deletingPathExtension().lastPathComponent
+            let serial = json["serial"] as? String ?? ""
+            let model: PrinterModel?
+            if let print = json["print"] as? [String: Any] {
+                doc.apply(["print": print])
+                model = PrinterModel.find(code: json["model"] as? String ?? "", serial: serial)
+            } else {
+                if let version = json["get_version"] as? [String: Any] { doc.apply(version) }
+                if let pushall = json["pushall"] as? [String: Any] { doc.apply(pushall) }
+                model = PrinterModel.named(name.replacingOccurrences(of: "-sample", with: ""))
+            }
+            var status = ReportParser.status(from: doc, hms: .shared, serial: serial.isEmpty ? nil : serial)
+            status.fit(to: model)
+            let out = output.appendingPathComponent("\(name).json")
+            guard let text = try? JSONSerialization.data(withJSONObject: golden(status), options: [.prettyPrinted, .sortedKeys]),
+                  (try? (text + Data("\n".utf8)).write(to: out)) != nil else {
+                print("can't write \(out.path)"); failed = true; continue
+            }
+            print("\(name): \(model?.name ?? "unknown model") → \(out.lastPathComponent)")
+        }
+        exit(failed ? 1 : 0)
+    }
+
+    /// What the app shows from a status, with every optional present (null when missing), under the Swift names.
+    private static func golden(_ s: PrinterStatus) -> [String: Any] {
+        func opt(_ value: Any?) -> Any { value ?? NSNull() }
+        func temp(_ t: Temperature?) -> Any { t.map { ["current": $0.current, "target": $0.target] } ?? NSNull() }
+        func spool(_ s: Spool?) -> Any {
+            guard let s else { return NSNull() }
+            return ["id": s.id, "unit": s.unit, "slot": s.slot, "material": s.material, "name": s.name, "color": s.color,
+                    "colors": s.colors, "remain": opt(s.remain), "weight": opt(s.weight), "isLoaded": s.isLoaded,
+                    "isBambu": s.isBambu, "preset": opt(s.preset), "brand": opt(s.brand), "colorName": opt(s.colorName),
+                    "nozzleRange": opt(s.nozzleRange.map { [$0.lowerBound, $0.upperBound] }), "label": s.label,
+                    "gramsLeft": opt(s.gramsLeft)] as [String: Any]
+        }
+        let units: [[String: Any]] = s.ams.map { u in
+            ["id": u.id, "kind": u.kind.rawValue, "title": u.title, "humidity": opt(u.humidity),
+             "humidityLevel": opt(u.humidityLevel), "temperature": opt(u.temperature),
+             "dryingMinutesLeft": u.dryingMinutesLeft, "spools": u.spools.map(spool)]
+        }
+        let issues: [[String: Any]] = s.issues.map { ["id": $0.id, "severity": $0.severity.rawValue, "message": $0.message] }
+        return [
+            "state": s.state.rawValue, "stageID": opt(s.stageID), "jobName": s.jobName, "progress": s.progress,
+            "remainingMinutes": s.remainingMinutes, "layer": s.layer, "totalLayers": s.totalLayers,
+            "nozzle": temp(s.nozzle), "bed": temp(s.bed), "chamber": opt(s.chamber), "chamberTarget": opt(s.chamberTarget),
+            "secondNozzle": temp(s.secondNozzle), "leftNozzleInUse": opt(s.leftNozzleInUse), "partFan": opt(s.partFan),
+            "auxFan": opt(s.auxFan), "exhaustFan": opt(s.exhaustFan), "heatbreakFan": opt(s.heatbreakFan),
+            "leftAuxFan": opt(s.leftAuxFan), "circulationFan": opt(s.circulationFan), "speed": s.speed.rawValue,
+            "chamberLightOn": opt(s.chamberLightOn), "doorOpen": opt(s.doorOpen), "wifiSignal": opt(s.wifiSignal),
+            "ams": units, "externalSpool": spool(s.externalSpool), "activeSpoolID": opt(s.activeSpoolID), "issues": issues,
+            "controlsLocked": s.controlsLocked, "firmware": opt(s.firmware), "nozzleDiameter": opt(s.nozzleDiameter),
+            "nozzleType": opt(s.nozzleType), "liveViewEnabled": opt(s.liveViewEnabled), "hasSDCard": opt(s.hasSDCard),
+            "plateIndex": opt(s.plateIndex), "updateAvailable": s.updateAvailable, "taskID": opt(s.taskID),
+            "canceled": s.canceled, "stateTitle": s.stateTitle, "detailText": s.detailText,
+            "activeSpoolLabel": opt(s.activeSpool?.label),
+        ]
+    }
+
     // MARK: - Camera
 
     /// `--probe-camera <host> <serial> <access-code|keychain> [seconds] [--jpeg|--rtsp] [--model <name>]`: opens the camera

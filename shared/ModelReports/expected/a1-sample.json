@@ -1,0 +1,182 @@
+{
+  "activeSpoolID" : null,
+  "activeSpoolLabel" : null,
+  "ams" : [
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : null,
+      "humidityLevel" : null,
+      "id" : 0,
+      "kind" : "lite",
+      "spools" : [
+        {
+          "brand" : "Generic",
+          "color" : "F98C36FF",
+          "colorName" : null,
+          "colors" : [
+            "F98C36FF"
+          ],
+          "gramsLeft" : null,
+          "id" : 0,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "A1",
+          "material" : "PLA",
+          "name" : "",
+          "nozzleRange" : [
+            190,
+            240
+          ],
+          "preset" : "GFL99",
+          "remain" : 100,
+          "slot" : 0,
+          "unit" : 0,
+          "weight" : null
+        },
+        {
+          "brand" : "Generic",
+          "color" : "2850E0FF",
+          "colorName" : null,
+          "colors" : [
+            "2850E0FF"
+          ],
+          "gramsLeft" : null,
+          "id" : 1,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "A2",
+          "material" : "PLA",
+          "name" : "",
+          "nozzleRange" : [
+            190,
+            240
+          ],
+          "preset" : "GFL99",
+          "remain" : 100,
+          "slot" : 1,
+          "unit" : 0,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 2,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "A3",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 2,
+          "unit" : 0,
+          "weight" : null
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "000000FF",
+          "colorName" : "Black",
+          "colors" : [
+            "000000FF"
+          ],
+          "gramsLeft" : 1000,
+          "id" : 3,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A4",
+          "material" : "PLA",
+          "name" : "PLA Basic",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA00",
+          "remain" : 100,
+          "slot" : 3,
+          "unit" : 0,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : null,
+      "title" : "AMS Lite A"
+    }
+  ],
+  "auxFan" : null,
+  "bed" : {
+    "current" : 24.46875,
+    "target" : 0
+  },
+  "canceled" : false,
+  "chamber" : null,
+  "chamberLightOn" : null,
+  "chamberTarget" : null,
+  "circulationFan" : null,
+  "controlsLocked" : false,
+  "detailText" : "Finished",
+  "doorOpen" : null,
+  "exhaustFan" : null,
+  "externalSpool" : {
+    "brand" : "Bambu Lab",
+    "color" : "FFFFFFFF",
+    "colorName" : "Jade White",
+    "colors" : [
+      "FFFFFFFF"
+    ],
+    "gramsLeft" : null,
+    "id" : 254,
+    "isBambu" : false,
+    "isLoaded" : true,
+    "label" : "Ext",
+    "material" : "PLA",
+    "name" : "PLA Basic",
+    "nozzleRange" : [
+      190,
+      240
+    ],
+    "preset" : "GFA00",
+    "remain" : null,
+    "slot" : 0,
+    "unit" : 255,
+    "weight" : null
+  },
+  "firmware" : null,
+  "hasSDCard" : true,
+  "heatbreakFan" : 0,
+  "issues" : [
+    {
+      "id" : "HMS_0500_0500_0001_0007",
+      "message" : "MQTT Command verification failed. Please update Studio (including the network plugin) or Handy to the latest version, then restart the software and try again.",
+      "severity" : 1
+    }
+  ],
+  "jobName" : "Cube",
+  "layer" : 60,
+  "leftAuxFan" : null,
+  "leftNozzleInUse" : null,
+  "liveViewEnabled" : null,
+  "nozzle" : {
+    "current" : 24.8125,
+    "target" : 0
+  },
+  "nozzleDiameter" : 0.40000000000000002,
+  "nozzleType" : "stainless_steel",
+  "partFan" : 0,
+  "plateIndex" : null,
+  "progress" : 100,
+  "remainingMinutes" : 0,
+  "secondNozzle" : null,
+  "speed" : 2,
+  "stageID" : 255,
+  "state" : "finished",
+  "stateTitle" : "Finished",
+  "taskID" : null,
+  "totalLayers" : 60,
+  "updateAvailable" : false,
+  "wifiSignal" : -41
+}
