@@ -14,6 +14,7 @@ public static partial class Program
             AttachConsole(AttachParentProcess);
             return Probe.RunAsync(probe, Console.Out).GetAwaiter().GetResult();
         }
+        if (Snapshot.Folder(args) is { } folder) return Snapshot.Run(folder);
         var app = new App();
         app.InitializeComponent();
         return app.Run();

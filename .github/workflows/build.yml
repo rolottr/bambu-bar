@@ -86,6 +86,19 @@ jobs:
         run: dotnet test --solution BambuBar.slnx
       - name: Publish (self-contained)
         run: dotnet publish src/BambuBar.Windows -c Release -r ${{ matrix.rid }} -o ../build/windows/${{ matrix.rid }}
+      - name: Snapshot the UI (tray glyphs, pages)
+        if: matrix.rid == 'win-x64'
+        # A WinExe: PowerShell wouldn't wait for it on its own.
+        run: |
+          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--snapshot', "$PWD/../build/snapshots" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "snapshot exited with $($p.ExitCode)" }
+          Get-ChildItem ../build/snapshots
+      - uses: actions/upload-artifact@v7
+        if: matrix.rid == 'win-x64'
+        with:
+          name: Bambu-Bar-windows-snapshots
+          path: build/snapshots/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
           name: Bambu-Bar-windows-${{ matrix.rid }}
