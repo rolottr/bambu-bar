@@ -1,0 +1,7 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="#FFFFFF" xmlns="http://www.w3.org/2000/svg">
+<!-- Bambu Bar's own glyph: part cooling fan. -->
+<circle cx="8" cy="8" r="1.5"/>
+<path d="M8.3 6.6C7.1 4.9 7.2 2.2 9.1 2C10.8 1.9 11.2 4.1 9.7 5.6C9.2 6.1 8.8 6.4 8.3 6.6Z"/>
+<path d="M8.3 6.6C7.1 4.9 7.2 2.2 9.1 2C10.8 1.9 11.2 4.1 9.7 5.6C9.2 6.1 8.8 6.4 8.3 6.6Z" transform="rotate(120 8 8)"/>
+<path d="M8.3 6.6C7.1 4.9 7.2 2.2 9.1 2C10.8 1.9 11.2 4.1 9.7 5.6C9.2 6.1 8.8 6.4 8.3 6.6Z" transform="rotate(240 8 8)"/>
+</svg>
