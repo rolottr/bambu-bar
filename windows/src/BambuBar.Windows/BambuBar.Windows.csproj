@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Windows app: tray icon, panel, window, widgets host. Windows 10 1903+ and 11, x64 and ARM64 (ledger D9). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 19041 gives the WinRT APIs (toasts); the app still runs from 1903 (18362). -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.18362.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <!-- Lets the Mac and Linux build it too (CI runs the real build on Windows). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RootNamespace>BambuBar</RootNamespace>
+    <AssemblyName>BambuBar</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyTitle>Bambu Bar</AssemblyTitle>
+  </PropertyGroup>
+
+  <!-- dotnet publish -r win-x64|win-arm64: one self-contained folder, no .NET install needed. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BambuBar.Core\BambuBar.Core.csproj" />
+  </ItemGroup>
+</Project>

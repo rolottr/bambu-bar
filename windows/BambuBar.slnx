@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BambuBar.Core/BambuBar.Core.csproj" />
+    <Project Path="src/BambuBar.Windows/BambuBar.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BambuBar.Core.Tests/BambuBar.Core.Tests.csproj" />
+    <Project Path="tests/BambuBar.Integration.Tests/BambuBar.Integration.Tests.csproj" />
+  </Folder>
+</Solution>

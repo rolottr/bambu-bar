@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The printer layer and app logic, without Windows APIs: builds and tests on macOS and Linux too. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>BambuBar.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BambuBar.Core.Tests" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,35 @@
+<Project>
+  <!-- Settings for every project in windows/. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Product>Bambu Bar</Product>
+    <Company>NINA LABS, LLC</Company>
+    <Copyright>© 2026 NINA LABS, LLC. MIT License.</Copyright>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- Paths: the repository root and the assets the Mac app shares (shared/). -->
+  <PropertyGroup>
+    <RepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..'))</RepoRoot>
+    <SharedDir>$([MSBuild]::NormalizeDirectory('$(RepoRoot)', 'shared'))</SharedDir>
+  </PropertyGroup>
+
+  <!-- One version line with the Mac (ledger D10): MARKETING_VERSION in project.yml is the only place it's written.
+       windows/tools/version.sh and version.ps1 read it the same way for scripts and the installer. -->
+  <PropertyGroup>
+    <MacProjectSpec>$(RepoRoot)project.yml</MacProjectSpec>
+    <MarketingVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MacProjectSpec)')), '(?&lt;=\n\s*MARKETING_VERSION:\s*"?)\d+\.\d+\.\d+'))</MarketingVersion>
+    <Version>$(MarketingVersion)</Version>
+    <AssemblyVersion>$(MarketingVersion).0</AssemblyVersion>
+    <FileVersion>$(MarketingVersion).0</FileVersion>
+  </PropertyGroup>
+
+  <Target Name="CheckMarketingVersion" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(MarketingVersion)' == ''" Text="No MARKETING_VERSION (X.Y.Z) found in $(MacProjectSpec)." />
+  </Target>
+</Project>
