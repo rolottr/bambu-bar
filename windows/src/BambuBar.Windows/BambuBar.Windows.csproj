@@ -16,6 +16,7 @@
     <RootNamespace>BambuBar</RootNamespace>
     <AssemblyName>BambuBar</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\BambuBar.ico</ApplicationIcon>
     <AssemblyTitle>Bambu Bar</AssemblyTitle>
     <!-- Source-generated Win32 interop (LibraryImport): tray, WM_COPYDATA, Credential Manager. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -33,8 +34,8 @@
 
   <!-- The app icon toasts show (registered with the AppUserModelID, Notifications/AppIdentity.cs). -->
   <ItemGroup>
-    <Content Include="$(RepoRoot)Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" Link="AppIcon.png"
-             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The app icon, a tracked copy of the Mac's (Resources/Assets.xcassets is generated on the Mac and ignored). -->
+    <Content Include="Assets\AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- WinForms is only for the tray icon: keep its names out of the WPF code's global usings. -->
