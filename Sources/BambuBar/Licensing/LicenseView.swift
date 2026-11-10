@@ -55,7 +55,7 @@ struct LicenseView: View {
             HStack {
                 Link("Support for $9.99", destination: PolarConfiguration.supportURL(from: .license))
                 Spacer()
-                Link("Manage Subscription", destination: PolarConfiguration.portalURL)
+                Link("Manage Purchase", destination: PolarConfiguration.portalURL)
             }
             Text("NINA LABS, LLC").font(.caption).foregroundStyle(.secondary)
             Text("Supporter activation needs an internet connection. Supporter benefits stay active for up to seven days offline after validation. Printer monitoring always remains available.")

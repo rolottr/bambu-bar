@@ -202,7 +202,7 @@ struct SmallWidgetView: View {
                     }
                     .padding(.bottom, 4)
                 }
-                Text(snapshot.lastJob.map { "Last: \($0.name)" } ?? snapshot.printerName)
+                Text(snapshot.lastJob.map { String(localized: "Last: \($0.name)") } ?? snapshot.printerName)
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
             } else {
                 Text(s.jobName.isEmpty ? snapshot.printerName : s.jobName)

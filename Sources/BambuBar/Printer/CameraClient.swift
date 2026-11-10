@@ -48,13 +48,13 @@ enum CameraFailure: Error, Equatable {
 
     var message: String {
         switch self {
-        case .unauthorized: return "The printer didn't accept the access code for the camera."
-        case .certificate(let reason): return "The camera's certificate couldn't be verified: \(reason)"
+        case .unauthorized: return String(localized: "The printer didn't accept the access code for the camera.")
+        case .certificate(let reason): return String(localized: "The camera's certificate couldn't be verified: \(reason)", comment: "A technical reason, in English")
         case .unreachable(let reason): return reason
-        case .timedOut: return "The camera stopped sending video."
-        case .closed: return "The printer closed the camera connection."
+        case .timedOut: return String(localized: "The camera stopped sending video.")
+        case .closed: return String(localized: "The printer closed the camera connection.")
         case .unsupported(let reason): return reason
-        case .malformed(let reason): return "The camera sent something unexpected (\(reason))."
+        case .malformed(let reason): return String(localized: "The camera sent something unexpected (\(reason)).", comment: "A technical detail, in English")
         }
     }
 }

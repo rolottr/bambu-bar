@@ -39,7 +39,7 @@ final class JPEGCameraClient: CameraClient {
             guard let self else { return }
             // The printer hangs up without a word when it doesn't like the login (or is busy with other viewers).
             if failure == .closed && self.frames == 0 {
-                self.finish(.unreachable("The printer closed the camera connection before sending a picture. Check the access code, or close other apps that show this camera."))
+                self.finish(.unreachable(String(localized: "The printer closed the camera connection before sending a picture. Check the access code, or close other apps that show this camera.")))
             } else {
                 self.finish(failure)
             }

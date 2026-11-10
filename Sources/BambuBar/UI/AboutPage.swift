@@ -62,7 +62,7 @@ struct AboutPage: View {
                         link("Release Notes", symbol: "doc.text", Website.changelog)
                     }
                     #if !APP_STORE
-                    link("Manage Subscription", symbol: "person.crop.circle", PolarConfiguration.portalURL)
+                    link("Manage Purchase", symbol: "person.crop.circle", PolarConfiguration.portalURL)
                     #endif
                     link("Report an Issue", symbol: "exclamationmark.bubble", AppInfo.project.appendingPathComponent("issues/new"))
                 }

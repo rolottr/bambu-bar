@@ -115,8 +115,8 @@ final class LicenseStore {
             } catch LicenseError.unavailable {
                 setAccess(saved.permitsOfflineUse(at: now()))
                 message = hasAccess
-                    ? "The licensing service is temporarily unreachable. Supporter benefits remain active for up to seven days after your last successful license check."
-                    : "Connect to the internet to restore supporter benefits. Printer monitoring remains available."
+                    ? String(localized: "The licensing service is temporarily unreachable. Supporter benefits remain active for up to seven days after your last successful license check.")
+                    : String(localized: "Connect to the internet to restore supporter benefits. Printer monitoring remains available.")
             } catch {
                 // Retain the activation so a refusal never silently claims a new slot.
                 saved.validatedAt = nil
@@ -143,7 +143,7 @@ final class LicenseStore {
         do {
             if !storageReady { record = try persistence.load(); storageReady = true }
             guard record == nil else {
-                message = "Deactivate this installation before entering a different license. Use Check License to retry your saved activation."
+                message = String(localized: "Deactivate this installation before entering a different license. Use Check License to retry your saved activation.")
                 return
             }
             let installationID = UUID().uuidString.lowercased()
@@ -163,7 +163,7 @@ final class LicenseStore {
             message = nil
             setAccess(true)
         } catch {
-            message = error.localizedDescription + " If an activation appeared in your account, remove it there before retrying."
+            message = String(localized: "\(error.localizedDescription) If an activation appeared in your account, remove it there before retrying.", comment: "A licensing error message, then advice")
         }
     }
 

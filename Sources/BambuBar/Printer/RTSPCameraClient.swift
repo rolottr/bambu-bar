@@ -137,7 +137,7 @@ final class RTSPCameraClient: CameraClient {
         }
         guard response.status == 200 else {
             if response.status == 404 || response.status == 454 || response.status == 503 {
-                return finish(.unreachable("The camera isn't streaming (\(response.statusLine)). Is LAN Only Liveview on?"))
+                return finish(.unreachable(String(localized: "The camera isn't streaming (\(response.statusLine)). Is LAN Only Liveview on?", comment: "The camera's RTSP status line, such as 454 Session Not Found")))
             }
             return finish(.malformed("\(request.method) answered \(response.statusLine)"))
         }
@@ -145,7 +145,7 @@ final class RTSPCameraClient: CameraClient {
         case "DESCRIBE":
             log?("SDP:\n" + body)
             guard let video = SDP.video(in: body) else {
-                return finish(.unsupported("The camera offers no H.264 or H.265 video."))
+                return finish(.unsupported(String(localized: "The camera offers no H.264 or H.265 video.")))
             }
             log?("video: \(video.codec.rawValue), payload type \(video.payloadType), control \(video.control ?? "-")")
             depacketizer = VideoDepacketizer(codec: video.codec, parameterSets: video.parameterSets)

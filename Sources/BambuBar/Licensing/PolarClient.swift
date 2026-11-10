@@ -24,11 +24,11 @@ enum LicenseError: LocalizedError {
     case rejected, activationLimit, unavailable, invalidResponse, storage(OSStatus)
     var errorDescription: String? {
         switch self {
-        case .rejected: return "This license or activation is no longer valid. Check your license in your account, then deactivate this installation before activating again."
-        case .activationLimit: return "This license could not be activated. If all installations are in use, deactivate one in your account, then try again."
-        case .unavailable: return "Cannot reach the licensing service right now. Check your internet connection and try again."
-        case .invalidResponse: return "The licensing service returned an unexpected response. Please try again later."
-        case .storage: return "The license could not be saved in your Mac’s Keychain. Check Keychain access and try again."
+        case .rejected: return String(localized: "This license or activation is no longer valid. Check your license in your account, then deactivate this installation before activating again.")
+        case .activationLimit: return String(localized: "This license could not be activated. If all installations are in use, deactivate one in your account, then try again.")
+        case .unavailable: return String(localized: "Cannot reach the licensing service right now. Check your internet connection and try again.")
+        case .invalidResponse: return String(localized: "The licensing service returned an unexpected response. Please try again later.")
+        case .storage: return String(localized: "The license could not be saved in your Mac’s Keychain. Check Keychain access and try again.")
         }
     }
 }

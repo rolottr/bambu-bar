@@ -139,13 +139,13 @@ final class CameraFeed {
 
     /// Why the camera can't be tried now, if it can't.
     private func availability() -> String? {
-        guard let session else { return "No printer." }
-        if session.isDemo { return "The demo printer has no camera." }
-        guard session.showsCamera else { return "The camera is off." }
+        guard let session else { return String(localized: "No printer.") }
+        if session.isDemo { return String(localized: "The demo printer has no camera.") }
+        guard session.showsCamera else { return String(localized: "The camera is off.") }
         if PrinterStore.emulatorSettings != nil { return "The mock fleet's printers have no camera." }
-        guard session.isOnline else { return "The camera starts when the printer is connected." }
+        guard session.isOnline else { return String(localized: "The camera starts when the printer is connected.") }
         if session.cameraTransport == .rtsps && session.status?.liveViewEnabled == false {
-            return "Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here."
+            return String(localized: "Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here.")
         }
         return nil
     }
@@ -157,7 +157,7 @@ final class CameraFeed {
             return
         }
         guard let session, let code = session.cameraAccessCode else {
-            state = .unavailable("The access code isn't available.")
+            state = .unavailable(String(localized: "The access code isn't available."))
             return
         }
         let client = makeCameraClient(CameraConfig(host: session.config.host, serial: session.config.serial, accessCode: code,

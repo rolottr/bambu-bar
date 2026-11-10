@@ -38,9 +38,9 @@ enum GitHubReleaseError: LocalizedError {
     case invalidVersion, unavailable, missingUpdateFeed
     var errorDescription: String? {
         switch self {
-        case .invalidVersion: return "GitHub returned an unrecognized release version."
-        case .unavailable: return "Couldn’t reach GitHub. Check your connection and try again."
-        case .missingUpdateFeed: return "A newer version is available, but its signed update feed is not ready yet. Please try again later."
+        case .invalidVersion: return String(localized: "GitHub returned an unrecognized release version.")
+        case .unavailable: return String(localized: "Couldn’t reach GitHub. Check your connection and try again.")
+        case .missingUpdateFeed: return String(localized: "A newer version is available, but its signed update feed is not ready yet. Please try again later.")
         }
     }
 }

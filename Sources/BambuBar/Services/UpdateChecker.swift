@@ -260,7 +260,7 @@ final class UpdateChecker: NSObject {
         private func requireSupporter() throws {
             if !supportsAutomaticUpdates {
                 throw NSError(domain: "BambuBar.Updates", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "In-app update checks require an active website supporter license."])
+                              userInfo: [NSLocalizedDescriptionKey: String(localized: "In-app update checks require an active website supporter license.")])
             }
         }
 

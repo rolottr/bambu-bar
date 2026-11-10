@@ -212,7 +212,7 @@ struct CameraPlayer: View {
         case .live:
             EmptyView()
         case .idle, .connecting:
-            message(symbol: nil, text: "Connecting to the camera…", busy: true)
+            message(symbol: nil, text: String(localized: "Connecting to the camera…"), busy: true)
         case .unavailable(let reason):
             message(symbol: "video.slash", text: reason)
         case .failed(let reason, let retrying):
