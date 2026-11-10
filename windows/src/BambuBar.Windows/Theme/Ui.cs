@@ -95,26 +95,40 @@ public static class Ui
         return card;
     }
 
-    /// <summary>"● Printing": the state in its colour on a 14 % capsule.</summary>
+    /// <summary>"● Printing": the state in its colour on a tinted capsule with a hairline edge. The dot's glow is a
+    /// drawn halo, not an effect: effects render through a bitmap and blur the pill at small sizes.</summary>
     public static Border Pill(out Ellipse dot, out TextBlock label)
     {
-        dot = new Ellipse { Width = 6, Height = 6, VerticalAlignment = VerticalAlignment.Center };
+        var halo = new Ellipse { Width = 10, Height = 10 };
+        dot = new Ellipse { Width = 6, Height = 6, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var mark = new Grid { Width = 10, Height = 10, VerticalAlignment = VerticalAlignment.Center, Children = { halo, dot } };
         label = Text("", Ramp.Caption, FontWeights.SemiBold);
-        label.Margin = new Thickness(5, 0, 0, 0);
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { dot, label } };
+        label.Margin = new Thickness(4, 0, 0, 0);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { mark, label } };
         return new Border
         {
-            Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(7, 2, 8, 3), HorizontalAlignment = HorizontalAlignment.Left,
+            Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(6, 2, 9, 3), BorderThickness = new Thickness(1),
+            HorizontalAlignment = HorizontalAlignment.Left,
         };
     }
 
     public static void SetPill(Border pill, Ellipse dot, TextBlock label, Color color, string text, bool dark)
     {
-        pill.Background = Palette.Brush(Palette.WithAlpha(color, 0.14));
+        Tint(pill, color, dark);
         dot.Fill = Palette.Brush(color);
-        dot.Effect = new DropShadowEffect { Color = color, BlurRadius = 6, ShadowDepth = 0, Opacity = 0.8 };
+        if (dot.Parent is Grid { Children: [Ellipse halo, ..] }) halo.Fill = Palette.Brush(Palette.WithAlpha(color, dark ? 0.30 : 0.22));
         label.Foreground = Palette.Brush(Palette.Ink(color, dark));
         label.Text = text;
+    }
+
+    /// <summary>A capsule tinted with a state colour: a soft fill and a hairline edge in the same colour, so it holds
+    /// its shape on light cards as well as dark ones.</summary>
+    public static void Tint(Border capsule, Color color, bool dark)
+    {
+        capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.16 : 0.10));
+        capsule.BorderBrush = Palette.Brush(Palette.WithAlpha(color, dark ? 0.30 : 0.28));
+        capsule.BorderThickness = new Thickness(1);
     }
 
     /// <summary>Small uppercase heading above a group, with an optional note on the right (the Mac's SectionLabel).</summary>

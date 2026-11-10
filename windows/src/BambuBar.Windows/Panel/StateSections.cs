@@ -174,7 +174,7 @@ internal sealed class FleetSection : PanelSection
             ArtImage.Show(_art, ArtImage.Scene(s, session.Config.ModelName, s?.ChamberLightOn ?? false, dimmed: !online));
             _name.Text = session.Config.Name;
             var color = online ? Palette.For(s!) : session.Phase is PrinterConnection.Phase.Connecting ? Palette.Paused : Palette.Idle;
-            _chip.Background = Palette.Brush(Palette.WithAlpha(color, 0.14));
+            Ui.Tint(_chip, color, _ctx.Dark);
             _chipText.Foreground = online || session.Phase is PrinterConnection.Phase.Connecting ? _ctx.Ink(color) : _ctx.Brush(ThemeKeys.TextSecondary);
             _chipText.Text = PanelText.ChipText(session);
             var showsProgress = online && (s!.State.IsActive() || s.State == JobState.Finished);

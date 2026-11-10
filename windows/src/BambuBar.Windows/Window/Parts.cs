@@ -244,11 +244,12 @@ internal static class StateChip
         var color = online ? Palette.For(session.Status!) : connecting ? Palette.Paused : Palette.Idle;
         var text = Ui.Text(PanelText.ChipText(session), 12, FontWeights.SemiBold);
         text.Foreground = online || connecting ? ctx.Ink(color) : ctx.Brush(ThemeKeys.TextSecondary);
-        return new Border
+        var chip = new Border
         {
             Child = text, CornerRadius = Metrics.Pill, Padding = new Thickness(8, 1, 8, 2), VerticalAlignment = VerticalAlignment.Center,
-            Background = Palette.Brush(Palette.WithAlpha(color, 0.14)),
         };
+        Ui.Tint(chip, color, ctx.Dark);
+        return chip;
     }
 }
 

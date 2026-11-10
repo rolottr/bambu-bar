@@ -110,7 +110,6 @@ internal sealed class JobSection : PanelSection
     private void FillLight(bool on)
     {
         var icon = Icons.Draw(on ? Icons.Vector.BulbLit : Icons.Vector.Bulb, 13, on ? Palette.Brush(Palette.Lamp) : Ctx.Brush(ThemeKeys.TextSecondary));
-        if (on) icon.Effect = new DropShadowEffect { Color = Palette.Lamp, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.8 };
         var label = Ui.Text(Loc.T("Light"), Ramp.Caption, FontWeights.SemiBold, on ? ThemeKeys.TextPrimary : ThemeKeys.TextSecondary);
         label.Margin = new Thickness(5, 0, 0, 0);
         _light.Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } };

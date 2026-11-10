@@ -104,7 +104,8 @@ public sealed class PanelView : Border, IDisposable
         Width = Metrics.PanelWidth;
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
-        TextOptions.SetTextFormattingMode(this, TextFormattingMode.Ideal);
+        // Display: glyphs snapped to the pixel grid, as Windows' own apps draw small text (Ideal blurs 11–13 px text).
+        TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
         Variant = variant;
         Build();
 

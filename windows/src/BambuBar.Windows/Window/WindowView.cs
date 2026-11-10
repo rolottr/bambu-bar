@@ -64,7 +64,8 @@ public sealed class WindowView : Border, IDisposable
         _animate = animate;
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
-        TextOptions.SetTextFormattingMode(this, TextFormattingMode.Ideal);
+        // Display: glyphs snapped to the pixel grid, as Windows' own apps draw small text (Ideal blurs 11–13 px text).
+        TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
         Variant = variant;
         Build();
         store.PropertyChanged += OnChanged;

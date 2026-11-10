@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Windows;
 using System.Windows.Media;
 using HelixToolkit.SharpDX;
 using Microsoft.Extensions.Logging;
@@ -73,6 +74,14 @@ public static class Renderer3D
             if (mode == Mode.Off)
             {
                 TurnOff("turned off (--no-3d or BAMBUBAR_3D=off)");
+                return null;
+            }
+            // WPF composing in software (Remote Desktop, a basic display driver) copies the Direct3D picture without
+            // its alpha: the printer would sit on a white box. The drawing is transparent, so it stays. BAMBUBAR_3D=warp
+            // still forces 3D.
+            if (mode == Mode.Auto && (RenderCapability.Tier >> 16 == 0 || SystemParameters.IsRemoteSession))
+            {
+                TurnOff(SystemParameters.IsRemoteSession ? "a Remote Desktop session (WPF draws in software)" : "WPF draws in software (render tier 0)");
                 return null;
             }
             // Helix's own warnings (a D3D9 interop surface that failed, a lost device) go to the same log.

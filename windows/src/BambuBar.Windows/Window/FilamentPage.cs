@@ -113,17 +113,8 @@ internal sealed class FilamentPage(WindowContext ctx) : Page(ctx)
     private FrameworkElement SpoolCard(Spool spool, bool active)
     {
         var swatch = new Grid { Width = 58, Height = 58, HorizontalAlignment = HorizontalAlignment.Left };
-        swatch.Children.Add(new SpoolSwatch(spool, active, 58));
-        if (spool.IsLoaded && spool.Weight is { } weight)
-        {
-            var hub = new Border
-            {
-                Background = Palette.Brush(Color.FromArgb(0x99, 0, 0, 0)), CornerRadius = Metrics.Pill, Padding = new Thickness(4, 0, 4, 1),
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = Format.Grams(weight, approximate: false), FontSize = 9, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White },
-            };
-            swatch.Children.Add(hub);
-        }
+        var hubText = spool.IsLoaded && spool.Weight is { } weight ? Format.Grams(weight, approximate: false) : null;
+        swatch.Children.Add(new SpoolSwatch(spool, active, 58, hubText));
         var label = new Border
         {
             CornerRadius = Metrics.Pill, Padding = new Thickness(7, 1, 7, 2), HorizontalAlignment = HorizontalAlignment.Right,

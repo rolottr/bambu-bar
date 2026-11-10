@@ -73,8 +73,9 @@ public sealed class ProgressCapsule : FrameworkElement
     }
 }
 
-/// <summary>A filament spool seen from the side (the Mac's SpoolSwatch): the colour, a hub, and a ring showing how much is
-/// left; a dashed outline for an empty slot.</summary>
+/// <summary>A filament spool seen from the side (the Mac's SpoolSwatch): a ring showing how much is left, the filament
+/// in its colour with a hint of winding, and the hub in a deeper shade of that colour (with the spool's weight on it when
+/// there is one); a dashed outline for an empty slot.</summary>
 public sealed class SpoolSwatch : FrameworkElement
 {
     public static readonly DependencyProperty TrackProperty = DependencyProperty.Register(nameof(Track), typeof(Brush),
@@ -86,11 +87,14 @@ public sealed class SpoolSwatch : FrameworkElement
 
     private readonly Spool? _spool;
     private readonly bool _active;
+    private readonly string? _hubText;
 
-    public SpoolSwatch(Spool? spool, bool active, double size)
+    /// <param name="hubText">Printed on a wider hub, such as the full spool's weight.</param>
+    public SpoolSwatch(Spool? spool, bool active, double size, string? hubText = null)
     {
         _spool = spool;
         _active = active;
+        _hubText = hubText;
         Width = Height = size;
         SetResourceReference(TrackProperty, ThemeKeys.Track);
         SetResourceReference(RingProperty, ThemeKeys.TextSecondary);
@@ -125,36 +129,22 @@ public sealed class SpoolSwatch : FrameworkElement
         }
 
         var inner = size / 2 - ring - gap;
-        if (color is { } fill)
-        {
-            var colors = _spool!.Colors.Select(Palette.FromBambu).OfType<Color>().ToList();
-            if (colors.Count > 1)
-            {
-                // The Mac sweeps an angular gradient; WPF has none, so multicolour spools show as slices.
-                for (var i = 0; i < colors.Count; i++)
-                {
-                    var slice = Slice(c, inner, i / (double)colors.Count, (i + 1) / (double)colors.Count);
-                    dc.DrawGeometry(Palette.Brush(colors[i]), null, slice);
-                }
-            }
-            else dc.DrawEllipse(Palette.Brush(fill), null, c, inner, inner);
-            var gloss = new LinearGradientBrush(new GradientStopCollection
-            {
-                new(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF), 0), new(Colors.Transparent, 0.5), new(Color.FromArgb(0x38, 0, 0, 0), 1),
-            }, new Point(0, 0), new Point(1, 1));
-            gloss.Freeze();
-            dc.DrawEllipse(gloss, null, c, inner, inner);
-            var edge = Palette.Luminance(_spool.Color) > 0.85 ? 0.18 : 0.06;
-            dc.DrawEllipse(null, new Pen(Ring, 0.75) { }.CloneWithOpacity(edge), c, inner - 0.4, inner - 0.4);
-            var hub = size * 0.1;
-            dc.DrawEllipse(Palette.Brush(Color.FromArgb(0x8C, 0, 0, 0)), new Pen(Palette.Brush(Color.FromArgb(0x2E, 0xFF, 0xFF, 0xFF)), 0.5), c, hub, hub);
-        }
-        else
+        if (color is not { } fill)
         {
             var dashed = new Pen(Outline, 1) { DashStyle = new DashStyle([2.5, 2.5], 0) };
             dashed.Freeze();
             dc.DrawEllipse(null, dashed, c, inner - 0.5, inner - 0.5);
+            return;
         }
+        var colors = _spool!.Colors.Select(Palette.FromBambu).OfType<Color>().ToList();
+        if (colors.Count > 1)
+        {
+            // The Mac sweeps an angular gradient; WPF has none, so multicolour spools show as slices.
+            for (var i = 0; i < colors.Count; i++)
+                dc.DrawGeometry(Palette.Brush(colors[i]), null, Slice(c, inner, i / (double)colors.Count, (i + 1) / (double)colors.Count));
+        }
+        else dc.DrawEllipse(Palette.Brush(fill), null, c, inner, inner);
+        SpoolArt.Finish(dc, c, inner, size, fill, Palette.Luminance(_spool.Color), _hubText, VisualTreeHelper.GetDpi(this).PixelsPerDip);
     }
 
     private static void DrawArc(DrawingContext dc, Pen pen, Point c, double r, double fraction)
@@ -187,6 +177,72 @@ public sealed class SpoolSwatch : FrameworkElement
         g.Freeze();
         return g;
     }
+}
+
+/// <summary>The parts of a spool drawn over its filament colour, shared by the app's swatches and the widget previews:
+/// light from the top left, a few turns of winding, and the hub.</summary>
+public static class SpoolArt
+{
+    /// <summary>The hub's colour: the filament's own, deepened (more for light ones, so white text holds on it), or
+    /// lifted for near-black filament, so the core reads as part of the spool rather than a hole.</summary>
+    public static Color Hub(Color fill, double luminance) => luminance switch
+    {
+        < 0.16 => Mix(fill, Colors.White, 0.26),
+        > 0.7 => Mix(fill, Colors.Black, 0.5),
+        _ => Mix(fill, Colors.Black, 0.4),
+    };
+
+    public static void Finish(DrawingContext dc, Point c, double inner, double size, Color fill, double luminance, string? hubText, double pixelsPerDip)
+    {
+        var dark = luminance < 0.16;
+        // Light from the top left, falling off towards the rim.
+        var gloss = new LinearGradientBrush(new GradientStopCollection
+        {
+            new(Color.FromArgb(0x52, 0xFF, 0xFF, 0xFF), 0), new(Colors.Transparent, 0.48), new(Color.FromArgb(0x30, 0, 0, 0), 1),
+        }, new Point(0.15, 0.1), new Point(0.9, 1));
+        gloss.Freeze();
+        dc.DrawEllipse(gloss, null, c, inner, inner);
+        // A few turns of filament: faint rings between the hub and the rim.
+        var hub = hubText is null ? size * 0.14 : size * 0.29;
+        if (inner - hub > 6)
+        {
+            var winding = new Pen(Palette.Brush(dark ? Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x16, 0, 0, 0)), 0.75);
+            winding.Freeze();
+            for (var i = 1; i <= 3; i++)
+            {
+                var r = hub + (inner - hub) * i / 4.0;
+                dc.DrawEllipse(null, winding, c, r, r);
+            }
+        }
+        // The rim: a hairline so pale filament keeps its edge on a light card.
+        var rim = new Pen(Palette.Brush(luminance > 0.85 ? Color.FromArgb(0x30, 0, 0, 0) : Color.FromArgb(0x14, 0, 0, 0)), 0.75);
+        rim.Freeze();
+        dc.DrawEllipse(null, rim, c, inner - 0.375, inner - 0.375);
+
+        var core = Hub(fill, luminance);
+        var hubFill = new RadialGradientBrush(Mix(core, Colors.Black, 0.12), core) { GradientOrigin = new Point(0.4, 0.35), RadiusX = 0.6, RadiusY = 0.6 };
+        hubFill.Freeze();
+        var hubEdge = new Pen(Palette.Brush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)), 0.75);
+        hubEdge.Freeze();
+        dc.DrawEllipse(hubFill, hubEdge, c, hub, hub);
+        if (hubText is null)
+        {
+            // The spool's bore.
+            dc.DrawEllipse(Palette.Brush(Color.FromArgb(0x8C, 0xFF, 0xFF, 0xFF)), null, c, hub * 0.38, hub * 0.38);
+            return;
+        }
+        var typeface = new Typeface(new FontFamily("Segoe UI Variable Display, Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
+        var em = size * 0.18;
+        FormattedText Text(double em) => new(hubText, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+            typeface, em, Brushes.White, pixelsPerDip);
+        var text = Text(em);
+        var room = hub * 2 * 0.86;
+        if (text.Width > room) text = Text(Math.Max(7, em * room / text.Width));
+        dc.DrawText(text, new Point(c.X - text.Width / 2, c.Y - text.Height / 2));
+    }
+
+    public static Color Mix(Color a, Color b, double t) => Color.FromRgb(
+        (byte)Math.Round(a.R + (b.R - a.R) * t), (byte)Math.Round(a.G + (b.G - a.G) * t), (byte)Math.Round(a.B + (b.B - a.B) * t));
 }
 
 internal static class PenExtensions
