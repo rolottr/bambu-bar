@@ -25,6 +25,7 @@ public sealed partial class WidgetHost : IDisposable
     private readonly string _bambuBarExe;
     private Process? _process;
     private int _crashes;
+    private DateTime _started;
     private bool _quitting;
 
     /// <param name="installFolder">Where the installer put BambuBar.exe, <c>Rainmeter\</c> and <c>Skins\</c>.</param>
@@ -32,7 +33,7 @@ public sealed partial class WidgetHost : IDisposable
     {
         _root = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "Widgets");
         _installedSkins = Path.Combine(installFolder, "Skins", "BambuBar");
-        _rainmeterExe = Path.Combine(installFolder, "Rainmeter", "Rainmeter.exe");
+        _rainmeterExe = Path.GetFullPath(Path.Combine(installFolder, "Rainmeter", "Rainmeter.exe"));
         _bambuBarExe = Path.Combine(installFolder, "BambuBar.exe");
         State = new WidgetStateWriter(StateFolder) { Reload = () => Bang("!UpdateGroup BambuBar") };
     }
@@ -77,6 +78,12 @@ public sealed partial class WidgetHost : IDisposable
         SyncSkins();
         WriteSettings();
         if (Widgets.Count > 0) Launch();
+        // No widgets, but ours left running from before: it goes.
+        else if (Running() is { } stray)
+        {
+            Adopt(stray);
+            Quit();
+        }
     }
 
     /// <summary>Puts a new widget on the desktop, top right of the work area, staggered (Rainmeter keeps positions after).</summary>
@@ -210,13 +217,20 @@ public sealed partial class WidgetHost : IDisposable
     {
         if (!File.Exists(_rainmeterExe)) return;
         _quitting = false;
+        // Ours may still run from before (the app was ended without quitting it, or crashed). Never start a second:
+        // Rainmeter 5 started again with the same settings opens its Manage window, sends !Manage to the first
+        // Rainmeter it finds (maybe the person's own) and quits, which looked like a crash and so came back every minute.
+        if (Running() is { } running)
+        {
+            Adopt(running);
+            Bang("!RefreshApp");
+            return;
+        }
         // The settings path as the first argument: its own Rainmeter.ini, and with it its own single-instance mutex
         // (Rainmeter + MD5 of the path), so it runs beside a Rainmeter the person may have (§7).
         var process = Process.Start(new ProcessStartInfo(_rainmeterExe, $"\"{IniPath}\"") { UseShellExecute = false });
         if (process is null) return;
-        process.EnableRaisingEvents = true;
-        process.Exited += (_, _) => OnExited(process);
-        _process = process;
+        Adopt(process);
         // Our Rainmeter claims .rmskin at start (Rainmeter::EnsureSkinInstallerAssociation, settings outside its folder)
         // for a SkinInstaller.exe we don't ship: take that back once it has run.
         _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(_ => RemoveRmskinAssociation(), TaskScheduler.Default);
@@ -240,10 +254,54 @@ public sealed partial class WidgetHost : IDisposable
         catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }
     }
 
+    private void Adopt(Process process)
+    {
+        process.EnableRaisingEvents = true;
+        process.Exited += (_, _) => OnExited(process);
+        _process = process;
+        _started = DateTime.UtcNow;
+    }
+
+    /// <summary>The Rainmeter running from our folder in this session, if any (a Rainmeter installed elsewhere is
+    /// the person's own and never ours).</summary>
+    private Process? Running()
+    {
+        var session = Process.GetCurrentProcess().SessionId;
+        Process? found = null;
+        foreach (var process in Process.GetProcessesByName("Rainmeter"))
+        {
+            if (found is null && process.SessionId == session
+                && string.Equals(ImagePath(process), _rainmeterExe, StringComparison.OrdinalIgnoreCase))
+                found = process;
+            else process.Dispose();
+        }
+        return found;
+    }
+
+    /// <summary>A process's executable path; works across x64 and ARM64 (Process.MainModule doesn't).</summary>
+    private static string? ImagePath(Process process)
+    {
+        var handle = OpenProcess(QueryLimitedInformation, false, process.Id);
+        if (handle == 0) return null;
+        try
+        {
+            var buffer = new char[1024];
+            var size = buffer.Length;
+            return QueryFullProcessImageName(handle, 0, buffer, ref size) ? Path.GetFullPath(new string(buffer, 0, size)) : null;
+        }
+        finally
+        {
+            CloseHandle(handle);
+        }
+    }
+
     private void OnExited(Process process)
     {
         if (_quitting || !ReferenceEquals(process, _process)) return;
-        // A crash: back off 2, 4, 8… seconds, at most a minute, and give up after ten in a row.
+        // A run of a minute or more resets the count: only crashes in a row back off.
+        if (DateTime.UtcNow - _started > TimeSpan.FromMinutes(1)) _crashes = 0;
+        // A crash: back off 2, 4, 8… seconds, at most a minute, and give up after ten in a row. Launch adopts a
+        // Rainmeter of ours that is somehow running instead of starting another.
         if (++_crashes > 10) return;
         var delay = TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, _crashes)));
         _ = Task.Delay(delay).ContinueWith(_ => { if (!_quitting && Widgets.Count > 0) Launch(); }, TaskScheduler.Default);
@@ -317,6 +375,19 @@ public sealed partial class WidgetHost : IDisposable
 
     [LibraryImport("kernel32.dll", EntryPoint = "GetPrivateProfileIntW", StringMarshalling = StringMarshalling.Utf16)]
     private static partial int GetPrivateProfileInt(string section, string key, int fallback, string path);
+
+    private const int QueryLimitedInformation = 0x1000;
+
+    [LibraryImport("kernel32.dll")]
+    private static partial nint OpenProcess(int access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "QueryFullProcessImageNameW", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool QueryFullProcessImageName(nint process, int flags, [Out] char[] path, ref int size);
+
+    [LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool CloseHandle(nint handle);
 
     [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
     private static partial nint SendMessage(nint window, int message, nint wParam, ref CopyData lParam);
