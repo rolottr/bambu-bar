@@ -12,6 +12,7 @@ namespace BambuBar.Integration.Tests;
 /// FleetIntegrationTests.swift, plus the Windows traps (ledger §4): a full handshake on every connection, and the
 /// shared UDP port.
 /// </summary>
+[Collection(nameof(Simulators))]
 public class FleetTests
 {
     private static List<SlicerPrinter> SlicerPrinters()

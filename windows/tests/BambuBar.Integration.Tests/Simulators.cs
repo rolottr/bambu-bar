@@ -26,3 +26,8 @@ internal static class Simulators
     /// <summary>Where the fleet sends its announcements (compose.yaml).</summary>
     public const int AnnouncementPort = 2122;
 }
+
+/// <summary>Tests that listen on the fleet's announcement port run one at a time: the fleet's announcements are unicast,
+/// and a unicast datagram reaches only one of the sockets sharing a port.</summary>
+[CollectionDefinition(nameof(Simulators), DisableParallelization = true)]
+public sealed class SimulatorsCollection;

@@ -1,3 +1,7 @@
 # Texts only the Windows app shows, waiting to join shared/Localizable.xcstrings with their translations (P4.2,
 # marked "Windows" there). One catalog key per line; CatalogTests accepts these until they move.
 This PC isn't on a network.
+# Not Windows-only: the Mac shows these toasts untranslated too (PrinterStore.pause/resume pass a plain String to
+# showToast, so String Catalog extraction never sees them). Fix both apps together.
+Pausing…
+Resuming…
