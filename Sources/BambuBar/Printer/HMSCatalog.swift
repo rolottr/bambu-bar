@@ -2,7 +2,7 @@ import Foundation
 
 /// Bambu Lab's texts for HMS codes and print errors in the app's language, P2S wording where it differs; English
 /// for languages Bambu's HMS service doesn't offer and for codes a translation lacks.
-/// Generated from ha-bambulab's catalogues (MIT) by scripts/make-hms.py.
+/// Generated from ha-bambulab's catalogues (MIT) by shared/scripts/make-hms.py.
 final class HMSCatalog {
     static let shared = HMSCatalog()
 

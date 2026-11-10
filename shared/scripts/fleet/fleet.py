@@ -23,7 +23,7 @@ certificate, as Bambu Studio sometimes saves it (each was taken for two printers
          under the lowercase serial (`user_access_code`, `user_access_dev_ip`); announcements alternate between
          the two spellings. scripts/integration-test.sh runs the fleet this way.
 
-Run it with scripts/fleet/run.sh, or: docker compose -f scripts/fleet/compose.yaml up --build"""
+Run it with shared/scripts/fleet/run.sh, or: docker compose -f shared/scripts/fleet/compose.yaml up --build"""
 import copy, json, os, random, socket, subprocess, sys, threading, time, uuid
 
 try:
@@ -644,7 +644,7 @@ def load_samples():
 
 def dump(folder):
     """`fleet.py --dump <dir>`: each model's full report, mid-print, as <code>.json, without starting anything.
-    Tests/BambuBarTests/ModelReports holds them; ModelReportTests runs them through the app's parser."""
+    shared/ModelReports holds them; ModelReportTests runs them through the app's parser."""
     os.makedirs(folder, exist_ok=True)
     samples = load_samples()
     seen = set()

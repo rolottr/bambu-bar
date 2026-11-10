@@ -53,19 +53,21 @@ targetTemplates:
     sources:
       - path: Sources/BambuBar
       - path: Sources/Shared
-      - path: Resources/Certificates
+      - path: shared/Certificates
         type: folder
         buildPhase: resources
-      - path: Resources/HMS
+      - path: shared/HMS
         buildPhase: resources
-      - path: Resources/filaments.json
+      - path: shared/filaments.json
         buildPhase: resources
-      - path: Resources/Localizable.xcstrings
+      - path: shared/Localizable.xcstrings
         buildPhase: resources
       - path: Resources/InfoPlist.xcstrings
         buildPhase: resources
-      - path: Resources/Printers
+      - path: shared/Printers
         buildPhase: resources
+        excludes:
+          - "*.glb" # the Windows app's 3D models
       - path: Resources/Assets.xcassets
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
@@ -102,12 +104,13 @@ targets:
     sources:
       - path: Sources/BambuBarWidget
       - path: Sources/Shared
-      - path: Resources/Localizable.xcstrings
+      - path: shared/Localizable.xcstrings
         buildPhase: resources
-      - path: Resources/Printers
+      - path: shared/Printers
         buildPhase: resources
         excludes:
           - "*.usdz"
+          - "*.glb"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.rolottr.BambuBar.Widget
@@ -128,8 +131,6 @@ targets:
     platform: macOS
     sources:
       - path: Tests/BambuBarTests
-        excludes:
-          - "ModelReports/**"
       - path: Sources/Shared
       - path: Sources/BambuBar/Printer/ReportParser.swift
       - path: Sources/BambuBar/Printer/HMSCatalog.swift

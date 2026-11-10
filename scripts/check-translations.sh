@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Checks Resources/Localizable.xcstrings against the code: scripts/check-translations.sh
+# Checks shared/Localizable.xcstrings against the code: scripts/check-translations.sh
 # Builds both editions (GitHub and App Store) so the compiler lists every localizable string, then fails if a
 # string is missing from the catalog, if the catalog keeps strings no code uses, or if a string lacks one of the
 # app's languages. Command-line builds don't update the catalog, so without this new text ships in English.
@@ -27,14 +27,14 @@ done
 # The catalog's file name is its table name, so the copy keeps it.
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
-cp Resources/Localizable.xcstrings "$WORK/"
+cp shared/Localizable.xcstrings "$WORK/"
 find "$DERIVED/Build/Intermediates.noindex" -name '*.stringsdata' -path '*/Objects-normal/arm64/*' \
   -not -path '*Tests.build*' > "$WORK/stringsdata.txt"
 [[ -s "$WORK/stringsdata.txt" ]] || { echo "No .stringsdata found; is SWIFT_EMIT_LOC_STRINGS on?" >&2; exit 1; }
 xcrun xcstringstool sync "$WORK/Localizable.xcstrings" --stringsdata ${(f)"$(<"$WORK/stringsdata.txt")"} \
   2>&1 | grep -v '^notice:' || true
 
-python3 -I - Resources/Localizable.xcstrings "$WORK/Localizable.xcstrings" <<'EOF'
+python3 -I - shared/Localizable.xcstrings "$WORK/Localizable.xcstrings" <<'EOF'
 import json, sys
 catalog = json.load(open(sys.argv[1], encoding="utf-8"))["strings"]
 synced = json.load(open(sys.argv[2], encoding="utf-8"))["strings"]

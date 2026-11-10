@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Builds Resources/filaments.json from Bambu Studio's filament profiles (AGPL-3.0, data only):
+"""Builds shared/filaments.json from Bambu Studio's filament profiles (AGPL-3.0, data only):
   presets: preset id (tray_info_idx) -> [vendor, product], from resources/profiles/BBL/filament/* @base.json
   colors:  "<preset id>-<colour code>" -> English colour name, and "<preset id>-<RRGGBB>" -> name,
            from resources/profiles/BBL/filament/filaments_color_codes.json
-Usage: scripts/make-filaments.py Resources/filaments.json [git ref, default master]"""
+Usage: shared/scripts/make-filaments.py shared/filaments.json [git ref, default master]"""
 import json, sys, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 

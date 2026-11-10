@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Builds Resources/HMS/hms_<lang>.json.deflate from ha-bambulab's hms_error_text/hms_<lang>.json.gz (MIT), which
+"""Builds shared/HMS/hms_<lang>.json.deflate from ha-bambulab's hms_error_text/hms_<lang>.json.gz (MIT), which
 hold Bambu Lab's own HMS and print error texts in each language their HMS service offers.
 Keeps, for each code, the P2S-specific text or else the generic one. Stored as raw deflate (what
 NSData.decompressed(using: .zlib) reads): about 100 KB per language instead of 700.
-Usage: scripts/make-hms.py <folder with hms_*.json.gz> Resources/HMS"""
+Usage: shared/scripts/make-hms.py <folder with hms_*.json.gz> shared/HMS"""
 import gzip, json, os, sys, zlib
 
 # ha-bambulab's file names → the app's localization codes.

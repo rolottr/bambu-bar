@@ -14,7 +14,7 @@ visual approximations of Bambu Lab's printer families at their published outer d
     bedSlinger  A1, A2L                    385 x 410 x 445 mm, AMS Lite on top
     mini        A1 mini                    312 x 296 x 365 mm, AMS Lite on top
 
-For every shape it writes, under Resources/Printers:
+For every shape it writes, under shared/Printers:
     <shape>.usdz            the model for the app's interactive view. Nodes the app drives by name:
                             Part_00…Part_NN (print slices, bottom up), Filament_i / Reel_i (spools), Lamp,
                             Toolhead, BedCarriage (CoreXY: bed and print move down together), Gantry (bed slingers:
@@ -35,7 +35,7 @@ from mathutils import Vector
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent if '__file__' in globals() else Path(globals().get('ROOT_DIR', '.'))
-OUT = ROOT / 'Resources/Printers'
+OUT = ROOT / 'shared/Printers'
 SLICES = 32
 RES = (480, 576)  # 100 x 120 like the vector drawing
 

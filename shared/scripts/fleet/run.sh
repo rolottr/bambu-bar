@@ -1,16 +1,16 @@
 #!/bin/zsh
 # Starts the mock fleet in Docker and opens Bambu Bar against it. Nothing is saved: not the printers, their
 # access codes, the history or the widgets' data.
-#   scripts/fleet/run.sh            fleet + app with the printers already added
-#   scripts/fleet/run.sh --import   fleet + app on the Add Printer page, to try "Add All"
-#   SSDP=1 scripts/fleet/run.sh     the printers also announce themselves, with names and models
-#   SERIAL_CASE=mixed scripts/fleet/run.sh
-#                                   serials in another case in the settings file and announcements (fleet.py)
-#   scripts/fleet/run.sh --stop     stops the fleet
+#   shared/scripts/fleet/run.sh            fleet + app with the printers already added
+#   shared/scripts/fleet/run.sh --import   fleet + app on the Add Printer page, to try "Add All"
+#   SSDP=1 shared/scripts/fleet/run.sh     the printers also announce themselves, with names and models
+#   SERIAL_CASE=mixed shared/scripts/fleet/run.sh
+#                                          serials in another case in the settings file and announcements (fleet.py)
+#   shared/scripts/fleet/run.sh --stop     stops the fleet
 set -euo pipefail
 
 HERE=${0:A:h}
-ROOT=${HERE:h:h}
+ROOT=${HERE:h:h:h}
 APP="$ROOT/build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar"
 if [[ "${1:-}" == "--stop" ]]; then
   docker compose -f "$HERE/compose.yaml" down

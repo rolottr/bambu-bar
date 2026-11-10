@@ -3,7 +3,7 @@ import Metal
 import SceneKit
 import SwiftUI
 
-/// The printer as a live 3D model (`Resources/Printers/<shape>.usdz`, built in Blender): the print grows slice by
+/// The printer as a live 3D model (`shared/Printers/<shape>.usdz`, built in Blender): the print grows slice by
 /// slice in the active filament, the bed (CoreXY) or gantry (bed slingers) follows the layers, the toolhead moves
 /// while printing, spools take their filament colours and the chamber light follows the printer's. Drag to turn
 /// it; double-click to reset. Falls back to the rendered drawing when the model can't load.

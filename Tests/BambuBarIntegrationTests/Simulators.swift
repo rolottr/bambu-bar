@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-/// The Docker simulators in scripts/integration/compose.yaml, which scripts/integration-test.sh starts and
+/// The Docker simulators in shared/scripts/integration/compose.yaml, which scripts/integration-test.sh starts and
 /// describes to the tests through the environment. Without them every test skips.
 enum Simulators {
     private static var environment: [String: String] { ProcessInfo.processInfo.environment }
@@ -12,12 +12,13 @@ enum Simulators {
         }
     }
 
-    // MARK: - Fleet (scripts/fleet, SERIAL_CASE=mixed)
+    // MARK: - Fleet (shared/scripts/fleet, SERIAL_CASE=mixed)
 
     /// The Bambu Studio settings the fleet wrote: a stale code under each uppercase serial, the working code and
     /// the scrambled address under the lowercase one.
     static var fleetSettings: URL {
-        URL(fileURLWithPath: environment["BAMBUBAR_FLEET_SETTINGS"] ?? "scripts/integration/out/BambuStudio.conf")
+        URL(fileURLWithPath: environment["BAMBUBAR_FLEET_SETTINGS"]
+            ?? "shared/scripts/integration/out/BambuStudio.conf")
     }
 
     static let fleetSize = 17
@@ -33,7 +34,7 @@ enum Simulators {
     static let cameraSerial = "01P00C000000001"
     private static let control = URL(string: "http://127.0.0.1:18080")!
 
-    /// What the camera does for the next connections (the list is in scripts/camera/camera.py).
+    /// What the camera does for the next connections (the list is in shared/scripts/camera/camera.py).
     static func setCameraScenario(_ name: String) async throws {
         var request = URLRequest(url: control.appendingPathComponent("scenario/\(name)"))
         request.httpMethod = "PUT"

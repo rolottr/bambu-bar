@@ -1,5 +1,5 @@
-# docker compose -f scripts/fleet/compose.yaml up --build
-# Then: "build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --emulator scripts/fleet/out/BambuStudio.conf
+# docker compose -f shared/scripts/fleet/compose.yaml up --build
+# Then: "build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --emulator shared/scripts/fleet/out/BambuStudio.conf
 services:
   fleet:
     build:

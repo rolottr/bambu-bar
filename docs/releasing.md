@@ -19,7 +19,7 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 ## Cutting a release
 
 1. Raise `MARKETING_VERSION` in `project.yml`. Run `scripts/test.sh` and `scripts/integration-test.sh` (Docker).
-   Run `scripts/check-translations.sh`: command-line builds don't update `Resources/Localizable.xcstrings`, so new
+   Run `scripts/check-translations.sh`: command-line builds don't update `shared/Localizable.xcstrings`, so new
    text would otherwise ship in English. It fails on strings missing from the catalog, unused, or not in every
    language. Text built as a plain `String` doesn't reach it; give it `String(localized:)`.
 2. **GitHub:**

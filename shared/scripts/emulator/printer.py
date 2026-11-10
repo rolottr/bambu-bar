@@ -6,7 +6,7 @@ Runs a TLS MQTT broker (mosquitto) on 127.0.0.1:8883 that accepts user `bblp` wi
 streams deltas like the printer does: progress, layers, temperatures, fans. Pause, resume, stop,
 speed and the chamber light work.
 
-    scripts/emulator/printer.py            # then:
+    shared/scripts/emulator/printer.py            # then:
     "build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --connect 127.0.0.1 22E00EMULATOR0 12345678 --insecure-tls
 
 Needs mosquitto (brew install mosquitto) and openssl."""
