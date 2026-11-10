@@ -247,9 +247,10 @@ public partial class App : Application
         CrashLog.Step("cameras", CameraWindow.CloseAll);
         CrashLog.Step("window", () => _window?.Close());
         CrashLog.Step("panel", () => _panel?.Quit());
-        CrashLog.Step("tray", () => _tray?.Dispose());
         CrashLog.Step("license", () => _license?.Stop());
+        // The printers before the tray icon, which shows their state to the end.
         CrashLog.Step("printers", () => _store?.Dispose());
+        CrashLog.Step("tray", () => _tray?.Dispose());
         // Widgets close with the app (O5).
         CrashLog.Step("widgets", () => _widgets?.Dispose());
         CrashLog.Step("single instance", () => _instance?.Dispose());

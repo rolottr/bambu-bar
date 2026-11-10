@@ -19,6 +19,7 @@ public sealed partial class TrayIcon : IDisposable
     private readonly Forms.NotifyIcon _icon = new() { Visible = false };
     private System.Drawing.Icon? _current;
     private string _lastKey = "";
+    private bool _disposed;
 
     public event Action? OpenPanel;
     public event Action? OpenWindow;
@@ -39,36 +40,52 @@ public sealed partial class TrayIcon : IDisposable
         _icon.ContextMenuStrip = Menu();
         store.PropertyChanged += OnStoreChanged;
         foreach (var session in store.Sessions) session.PropertyChanged += OnStoreChanged;
-        ((System.Collections.Specialized.INotifyCollectionChanged)store.Sessions).CollectionChanged += (_, e) =>
-        {
-            foreach (PrinterSession s in e.NewItems ?? Array.Empty<PrinterSession>()) s.PropertyChanged += OnStoreChanged;
-            Update();
-        };
-        SystemEvents.UserPreferenceChanged += (_, _) => { _lastKey = ""; Update(); };
+        ((System.Collections.Specialized.INotifyCollectionChanged)store.Sessions).CollectionChanged += OnSessionsChanged;
+        SystemEvents.UserPreferenceChanged += OnPreferenceChanged;
         Update();
         _icon.Visible = true;
     }
 
+    /// <summary>The right-click menu. Each item acts once the menu has closed (posted to the dispatcher): Quit
+    /// disposes the icon and this menu, and doing that inside the item's own click left WinForms' menu code running on
+    /// a disposed menu (a NullReferenceException in WinForms' error dialog).</summary>
     private Forms.ContextMenuStrip Menu()
     {
+        var dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        EventHandler Later(Action action) => (_, _) => dispatcher.BeginInvoke(action);
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add(Loc.T("Open Bambu Bar"), null, (_, _) => OpenWindow?.Invoke());
-        menu.Items.Add(Loc.T("Refresh"), null, (_, _) => _store.Refresh());
-        var camera = new Forms.ToolStripMenuItem(Loc.T("Show Camera"), null, (_, _) =>
+        menu.Items.Add(Loc.T("Open Bambu Bar"), null, Later(() => OpenWindow?.Invoke()));
+        menu.Items.Add(Loc.T("Refresh"), null, Later(() => _store.Refresh()));
+        var camera = new Forms.ToolStripMenuItem(Loc.T("Show Camera"), null, Later(() =>
         {
             if (_store.Current is { ShowsCamera: true } session) ShowCamera?.Invoke(session);
-        }) { ShortcutKeyDisplayString = "Ctrl+K" };
+        })) { ShortcutKeyDisplayString = "Ctrl+K" };
         menu.Items.Add(camera);
         menu.Opening += (_, _) => camera.Visible = _store.Current?.ShowsCamera == true;
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add(Loc.T("Quit"), null, (_, _) => Quit?.Invoke());
+        menu.Items.Add(Loc.T("Quit"), null, Later(() => Quit?.Invoke()));
         return menu;
     }
 
     private void OnStoreChanged(object? sender, PropertyChangedEventArgs e) => Update();
 
+    private void OnSessionsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        foreach (PrinterSession s in e.NewItems ?? Array.Empty<PrinterSession>()) s.PropertyChanged += OnStoreChanged;
+        foreach (PrinterSession s in e.OldItems ?? Array.Empty<PrinterSession>()) s.PropertyChanged -= OnStoreChanged;
+        Update();
+    }
+
+    private void OnPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+    {
+        _lastKey = "";
+        Update();
+    }
+
     private void Update()
     {
+        // Gone: quitting stops the printers after the icon, and their last changes still come in.
+        if (_disposed) return;
         var session = _store.MenuBarSession;
         var look = TrayGlyph.For(session, _store.IsConfigured, ShowPercent);
         var light = TaskbarIsLight();
@@ -136,8 +153,17 @@ public sealed partial class TrayIcon : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        _store.PropertyChanged -= OnStoreChanged;
+        foreach (var session in _store.Sessions) session.PropertyChanged -= OnStoreChanged;
+        ((System.Collections.Specialized.INotifyCollectionChanged)_store.Sessions).CollectionChanged -= OnSessionsChanged;
+        SystemEvents.UserPreferenceChanged -= OnPreferenceChanged;
         _icon.Visible = false;
+        var menu = _icon.ContextMenuStrip;
+        _icon.ContextMenuStrip = null;
         _icon.Dispose();
+        menu?.Dispose();
         _current?.Dispose();
     }
 }

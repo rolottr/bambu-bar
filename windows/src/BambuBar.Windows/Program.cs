@@ -24,6 +24,9 @@ public static partial class Program
         // Ended outright: a thread the checks leave behind (a printer's connection, UI Automation's) mustn't keep
         // the process, and with it CI, waiting.
         if (A11yCheck.Folder(args) is { } report) Environment.Exit(A11yCheck.Run(report));
+        // WinForms (the tray icon and its menu) would show its own "Unhandled exception… Continue" dialog: let its
+        // exceptions through to the app's handlers and the crash log instead.
+        System.Windows.Forms.Application.SetUnhandledExceptionMode(System.Windows.Forms.UnhandledExceptionMode.ThrowException);
         var app = new App();
         app.InitializeComponent();
         return app.Run();
