@@ -128,3 +128,38 @@ public sealed class WidgetStateTests : IDisposable
         Assert.Equal(1, reloads);
     }
 }
+
+/// <summary>Writes a state file per scene for the skins' development (BAMBUBAR_STATE_OUT=folder).</summary>
+public class WidgetStateSamples
+{
+    [Fact]
+    public void WritesSamplesWhenAsked()
+    {
+        var folder = Environment.GetEnvironmentVariable("BAMBUBAR_STATE_OUT");
+        Assert.SkipWhen(folder is null, "Set BAMBUBAR_STATE_OUT to write sample state files");
+        Directory.CreateDirectory(folder!);
+        var now = DateTimeOffset.Now;
+        var last = new JobRecord { Name = "Benchy", StartedAt = now.AddHours(-3), EndedAt = now.AddHours(-2), Outcome = JobOutcome.Finished };
+        void Save(string name, PrinterSnapshot snapshot) =>
+            File.WriteAllText(Path.Combine(folder!, name + ".json"),
+                System.Text.Json.JsonSerializer.Serialize(WidgetStateWriter.Build(snapshot, now, folder, motion: true), WidgetState.Json));
+        PrinterSnapshot Snap(string scenario, PrinterSnapshot.LinkState link = PrinterSnapshot.LinkState.Online, string model = "P2S", int variant = 0)
+        {
+            PrinterStatus? status = null;
+            if (Enum.TryParse<DemoDriver.Scenario>(scenario, true, out var s))
+            {
+                var driver = new DemoDriver(s, variant) { OnStatus = (st, _) => status = st };
+                driver.Start(animate: false);
+            }
+            return new PrinterSnapshot { Serial = "22E00A000000000", PrinterName = "P2S Workshop", Model = model, Link = link,
+                Status = status, LastJob = last, SavedAt = now };
+        }
+        foreach (var scenario in new[] { "printing", "preparing", "paused", "finished", "failed", "idle" }) Save(scenario, Snap(scenario));
+        Save("a1-multicolour", Snap("printing", model: "A1", variant: 2));
+        Save("h2d-two-nozzles", Snap("printing", model: "H2D", variant: 3));
+        Save("offline", Snap("printing", PrinterSnapshot.LinkState.Offline));
+        Save("connecting", Snap("none", PrinterSnapshot.LinkState.Connecting));
+        Save("unauthorized", Snap("none", PrinterSnapshot.LinkState.Unauthorized));
+        Save("unconfigured", PrinterSnapshot.Unconfigured(now));
+    }
+}
