@@ -8,7 +8,13 @@ namespace BambuBar.Core.App;
 /// context it's started on, like a connection.</summary>
 public sealed class DemoDriver : IDisposable
 {
-    public enum Scenario { Printing, Preparing, Paused, Finished, Failed, Idle, Offline, Unconfigured }
+    public enum Scenario
+    {
+        Printing, Preparing, Paused, Finished, Failed, Idle, Offline, Unconfigured,
+        /// <summary>The connection cards (Windows additions, so screenshots can show them): still connecting, the
+        /// access code refused, the certificate not Bambu Lab's.</summary>
+        Connecting, Unauthorized, Certificate,
+    }
 
     public static Scenario? RequestedScenario(IReadOnlyList<string> args)
     {
@@ -140,6 +146,15 @@ public sealed class DemoDriver : IDisposable
                 return;
             case Scenario.Offline:
                 OnPhase?.Invoke(new PrinterConnection.Phase.Offline(Loc.T("The printer isn't reachable on the network.")));
+                return;
+            case Scenario.Connecting:
+                OnPhase?.Invoke(new PrinterConnection.Phase.Connecting());
+                return;
+            case Scenario.Unauthorized:
+                OnPhase?.Invoke(new PrinterConnection.Phase.Unauthorized());
+                return;
+            case Scenario.Certificate:
+                OnPhase?.Invoke(new PrinterConnection.Phase.Certificate(Loc.F("The certificate belongs to another device (%@).", "01P00A000000001")));
                 return;
         }
         OnPhase?.Invoke(new PrinterConnection.Phase.Online());

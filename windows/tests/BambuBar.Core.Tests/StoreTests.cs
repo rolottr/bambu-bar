@@ -249,3 +249,26 @@ public sealed class StoreTests : IDisposable
     public void NaturalOrder() =>
         Assert.Equal(["P2S 2", "p2s 10", "X1C"], new[] { "X1C", "p2s 10", "P2S 2" }.Order(NaturalComparer.Instance));
 }
+
+public sealed class DemoConnectionScenes : IDisposable
+{
+    private readonly SerialContext _context = new("DemoConnectionScenes");
+    public void Dispose() => _context.Dispose();
+
+    [Theory]
+    [InlineData("connecting", typeof(BambuBar.Core.Protocol.PrinterConnection.Phase.Connecting))]
+    [InlineData("unauthorized", typeof(BambuBar.Core.Protocol.PrinterConnection.Phase.Unauthorized))]
+    [InlineData("certificate", typeof(BambuBar.Core.Protocol.PrinterConnection.Phase.Certificate))]
+    public void ConnectionCardsHaveDemoScenes(string scene, Type phase)
+    {
+        var store = _context.Invoke(() => new PrinterStore(new PrinterStore.Services
+        {
+            Settings = new AppSettings(null), History = new HistoryStore(null), Secrets = new MemorySecretStore(),
+            Arguments = ["--demo", scene], DiscoveryPorts = [],
+        }));
+        _context.Send(_ => store.Start(), null);
+        Assert.IsType(phase, _context.Invoke(() => store.Current!.Phase));
+        Assert.Null(_context.Invoke(() => store.Current!.Status));
+        _context.Send(_ => store.Dispose(), null);
+    }
+}
