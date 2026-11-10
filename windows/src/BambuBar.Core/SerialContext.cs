@@ -19,7 +19,9 @@ public sealed class SerialContext : SynchronizationContext, IDisposable
 
     public override void Post(SendOrPostCallback d, object? state)
     {
-        if (!_queue.IsAddingCompleted) _queue.TryAdd((d, state));
+        // A timer may fire after Dispose: dropping its work is right, throwing from a thread-pool callback isn't.
+        try { _queue.TryAdd((d, state)); }
+        catch (InvalidOperationException) { } // also ObjectDisposedException
     }
 
     public override void Send(SendOrPostCallback d, object? state)
