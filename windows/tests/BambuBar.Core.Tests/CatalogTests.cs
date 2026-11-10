@@ -68,6 +68,55 @@ public partial class CatalogTests
         Assert.Null(FilamentCatalog.Preset("nonexistent"));
     }
 
+    /// <summary>The catalog read at run time: translations, English fallback, plural forms.</summary>
+    [Fact]
+    public void TranslationsAndPluralsComeFromTheSharedCatalog()
+    {
+        var strings = Strings.Load();
+        Assert.Contains("de", strings.Languages);
+        Assert.Equal(18, strings.Languages.Count);
+        Assert.Equal("Schicht 170 von 305", Loc.Apply(strings.Text("Layer %lld of %lld", "de")!, 170, 305));
+        // English values may be positional ("Layer %1$lld of %2$lld").
+        Assert.Equal("Layer 170 of 305", Loc.Apply(strings.Text("Layer %lld of %lld", "en")!, 170, 305));
+        Assert.Null(strings.Text("Not a key", "de"));
+        Assert.Equal("%lld stupeň", strings.Plural("%lld degrees", 1, "cs"));
+        Assert.Equal("%lld stupně", strings.Plural("%lld degrees", 3, "cs"));
+        Assert.Equal("%lld stupňů", strings.Plural("%lld degrees", 5, "cs"));
+        Assert.Equal("many", Strings.PluralCategory("ru", 11));
+        Assert.Equal("one", Strings.PluralCategory("ru", 21));
+        Assert.Equal("few", Strings.PluralCategory("pl", 22));
+        Assert.Equal("one", Strings.PluralCategory("fr", 0));
+        Assert.Equal("pt-BR", strings.Match(new System.Globalization.CultureInfo("pt-PT")));
+        Assert.Equal("zh-Hant", strings.Match(new System.Globalization.CultureInfo("zh-TW")));
+        Assert.Equal("de", strings.Match(new System.Globalization.CultureInfo("de-AT")));
+        Assert.Equal("en", strings.Match(new System.Globalization.CultureInfo("fi-FI")));
+    }
+
+    /// <summary>Every language the catalog has, every key with an argument: the placeholders survive translation, so
+    /// <see cref="Loc.Apply"/> fills them all (a translation that drops or mangles one would show "%@").</summary>
+    [Fact]
+    public void TranslationsKeepTheirPlaceholders()
+    {
+        var strings = Strings.Load();
+        var bad = new List<string>();
+        using var catalog = JsonDocument.Parse(File.ReadAllBytes(Repo.Shared("Localizable.xcstrings")));
+        foreach (var key in catalog.RootElement.GetProperty("strings").EnumerateObject().Select(p => p.Name))
+        {
+            var expected = Placeholder().Matches(key).Count;
+            if (expected == 0) continue;
+            foreach (var lang in strings.Languages)
+            {
+                var text = strings.Text(key, lang) ?? key;
+                var filled = Loc.Apply(text, Enumerable.Repeat<object?>("X", expected).ToArray());
+                if (Placeholder().IsMatch(filled)) bad.Add($"{lang}: {key} → {text}");
+            }
+        }
+        Assert.Empty(bad);
+    }
+
+    [GeneratedRegex(@"%(?:[1-9]\$)?(?:lld|ld|d|@|lf|f)")]
+    private static partial Regex Placeholder();
+
     [GeneratedRegex(@"Loc\.[TF]\(""(?<key>(?:[^""\\]|\\.)*)""")]
     private static partial Regex LocCall();
 }

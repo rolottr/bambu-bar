@@ -18,6 +18,14 @@ public static partial class Loc
     /// <summary>Finds a key's text in <see cref="Language"/>; null falls back to the key (English).</summary>
     public static Func<string, string?>? Lookup { get; set; }
 
+    /// <summary>Finds a plural key's form for a count in <see cref="Language"/>; null falls back to the key.</summary>
+    public static Func<string, long, string?>? PluralLookup { get; set; }
+
+    /// <summary>A text whose catalog entry has plural forms ("%lld degrees"), filled with <paramref name="count"/> and
+    /// any further arguments.</summary>
+    public static string P(string key, long count, params object?[] more) =>
+        Apply(PluralLookup?.Invoke(key, count) ?? key, [count, .. more]);
+
     /// <summary>A text without arguments. <paramref name="comment"/> documents the key, as in the catalog.</summary>
     public static string T(string key, string? comment = null) => Lookup?.Invoke(key) ?? key;
 

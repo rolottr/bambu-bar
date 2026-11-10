@@ -15,5 +15,6 @@
     <None Include="$(SharedDir)Certificates\*.pem" Link="Assets\Certificates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(SharedDir)Printers\*.png;$(SharedDir)Printers\*.json;$(SharedDir)Printers\*.glb" Link="Assets\Printers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(SharedDir)filaments.json" Link="Assets\filaments.json" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)Localizable.xcstrings" Link="Assets\Localizable.xcstrings" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 </Project>
