@@ -215,7 +215,7 @@ public sealed class WidgetStateWriter(string folder, Func<bool>? motion = null) 
         var notLiveDetail = snapshot.Link switch
         {
             PrinterSnapshot.LinkState.Unconfigured => Loc.T("Open the app"),
-            PrinterSnapshot.LinkState.Unauthorized => Loc.T("Access code rejected"),
+            // The caption already says the code was rejected; stateLine says what to do.
             _ => Loc.T("No connection"),
         };
         var info = status is not null ? null : snapshot.Link switch
