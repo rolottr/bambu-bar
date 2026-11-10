@@ -12,27 +12,55 @@ public partial class CatalogTests
     [Fact]
     public void EveryCoreTextIsInTheCatalog()
     {
-        using var catalog = JsonDocument.Parse(File.ReadAllBytes(Repo.Shared("Localizable.xcstrings")));
-        var keys = catalog.RootElement.GetProperty("strings").EnumerateObject().Select(p => p.Name).ToHashSet();
-        // Windows-only texts waiting to join the catalog with their translations (P4.2).
-        keys.UnionWith(File.ReadAllLines(Path.Combine(Repo.Root, "windows", "tools", "windows-strings.txt"))
-            .Where(line => line.Length > 0 && !line.StartsWith('#')));
-        // Core and the Windows app.
-        var sources = Directory.GetFiles(Path.Combine(Repo.Root, "windows", "src"), "*.cs", SearchOption.AllDirectories)
-            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")).ToArray();
+        var keys = CatalogKeys().Keys.ToHashSet();
+        // Windows-only texts waiting to join the catalog with their translations (P4.2); a key that has joined
+        // leaves the list.
+        var waiting = File.ReadAllLines(Path.Combine(Repo.Root, "windows", "tools", "windows-strings.txt"))
+            .Where(line => line.Length > 0 && !line.StartsWith('#')).ToArray();
+        var joined = waiting.Where(keys.Contains).ToList();
+        Assert.Empty(joined);
+        keys.UnionWith(waiting);
         var missing = new List<string>();
         var count = 0;
-        foreach (var file in sources)
+        foreach (var (file, key) in SourceTexts())
         {
-            foreach (Match m in LocCall().Matches(File.ReadAllText(file)))
-            {
-                count++;
-                var key = Regex.Unescape(m.Groups["key"].Value);
-                if (!keys.Contains(key)) missing.Add($"{Path.GetFileName(file)}: {key}");
-            }
+            count++;
+            if (!keys.Contains(key)) missing.Add($"{Path.GetFileName(file)}: {key}");
         }
         Assert.True(count > 40, $"only {count} texts found: is the pattern still right?");
         Assert.Empty(missing);
+    }
+
+    /// <summary>The catalog's Windows-only keys (comment "Windows: …", which scripts/check-translations.sh lets the
+    /// Mac leave unused) are ones the Windows app still uses, so a text the app dropped leaves the catalog too.</summary>
+    [Fact]
+    public void WindowsOnlyTextsAreUsed()
+    {
+        var used = SourceTexts().Select(t => t.Key).ToHashSet();
+        var windowsOnly = CatalogKeys().Where(k => k.Value?.StartsWith("Windows:", StringComparison.Ordinal) == true)
+            .Select(k => k.Key).ToArray();
+        Assert.True(windowsOnly.Length > 40, $"only {windowsOnly.Length} Windows-only texts: are they still marked?");
+        var unused = windowsOnly.Where(k => !used.Contains(k)).ToList();
+        Assert.Empty(unused);
+    }
+
+    /// <summary>The catalog's keys and their comments.</summary>
+    private static Dictionary<string, string?> CatalogKeys()
+    {
+        using var catalog = JsonDocument.Parse(File.ReadAllBytes(Repo.Shared("Localizable.xcstrings")));
+        return catalog.RootElement.GetProperty("strings").EnumerateObject().ToDictionary(p => p.Name,
+            p => p.Value.TryGetProperty("comment", out var comment) ? comment.GetString() : null);
+    }
+
+    /// <summary>Every <c>Loc.T("…")</c> and <c>Loc.F("…")</c> key in Core and the Windows app, with its file.</summary>
+    private static IEnumerable<(string File, string Key)> SourceTexts()
+    {
+        var sources = Directory.GetFiles(Path.Combine(Repo.Root, "windows", "src"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"));
+        foreach (var file in sources)
+        {
+            foreach (Match m in LocCall().Matches(File.ReadAllText(file))) yield return (file, Regex.Unescape(m.Groups["key"].Value));
+        }
     }
 
     /// <summary>Keys inside arrays and dictionaries that Loc.T reads later (stage names, pause reasons).</summary>

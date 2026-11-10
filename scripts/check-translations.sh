@@ -3,6 +3,8 @@
 # Builds both editions (GitHub and App Store) so the compiler lists every localizable string, then fails if a
 # string is missing from the catalog, if the catalog keeps strings no code uses, or if a string lacks one of the
 # app's languages. Command-line builds don't update the catalog, so without this new text ships in English.
+# Strings whose comment starts with "Windows:" are the Windows app's own: the Mac may leave them unused, but they
+# still need every language (and a Mac string must not carry that mark).
 # Text built as a plain String (not String(localized:), Text("…") and the like) never reaches the compiler's
 # list; this check can't see it.
 set -euo pipefail
@@ -47,21 +49,28 @@ def done(entry):
 
 missing = sorted(k for k in synced if k not in catalog)
 # The sync marks unused translated strings stale and drops unused untranslated ones.
-unused = sorted({k for k, v in synced.items() if v.get("extractionState") == "stale"} | (set(catalog) - set(synced)))
+stale = {k for k, v in synced.items() if v.get("extractionState") == "stale"} | (set(catalog) - set(synced))
+# Texts only the Windows app shows carry a comment starting "Windows:"; the Mac doesn't use them (the Windows tests
+# check that Windows does), but they need every language all the same.
+windows = {k for k, v in catalog.items() if v.get("comment", "").startswith("Windows:")}
+unused = sorted(stale - windows)
+mac_used = sorted(windows - stale)
 partial = sorted(
     (k, sorted(l for l in langs if not done(v.get("localizations", {}).get(l, {}))))
     for k, v in catalog.items()
     if v.get("shouldTranslate", True) and k.strip() and k not in unused
     and any(not done(v.get("localizations", {}).get(l, {})) for l in langs))
 
-for title, items in (("Missing from the catalog", missing), ("In the catalog but unused", unused)):
+for title, items in (("Missing from the catalog", missing), ("In the catalog but unused", unused),
+                     ("Marked Windows-only but used by the Mac (drop the comment's Windows: prefix)", mac_used)):
     if items:
         print(f"{title} ({len(items)}):")
         for k in items: print(f"  {k!r}")
 if partial:
     print(f"Not translated into every language ({len(partial)}):")
     for k, ls in partial: print(f"  {k!r}: {' '.join(ls)}")
-if missing or unused or partial:
+if missing or unused or mac_used or partial:
     sys.exit(1)
-print(f"All {len(catalog)} strings are in the catalog, used, and translated into {len(langs)} languages")
+print(f"All {len(catalog)} strings are in the catalog, used ({len(windows)} by Windows only), "
+      f"and translated into {len(langs)} languages")
 EOF
