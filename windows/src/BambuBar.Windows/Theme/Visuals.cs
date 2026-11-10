@@ -183,7 +183,7 @@ public sealed class SpoolSwatch : FrameworkElement
 /// light from the top left, a few turns of winding, and the hub.</summary>
 public static class SpoolArt
 {
-    /// <summary>The hub's colour: the filament's own, deepened (more for light ones, so white text holds on it), or
+    /// <summary>The hub's colour (the widgets' too: widget.lua's BB.hubColor): the filament's own, deepened (more for light ones, so white text holds on it), or
     /// lifted for near-black filament, so the core reads as part of the spool rather than a hole.</summary>
     public static Color Hub(Color fill, double luminance) => luminance switch
     {
@@ -192,7 +192,8 @@ public static class SpoolArt
         _ => Mix(fill, Colors.Black, 0.4),
     };
 
-    public static void Finish(DrawingContext dc, Point c, double inner, double size, Color fill, double luminance, string? hubText, double pixelsPerDip)
+    public static void Finish(DrawingContext dc, Point c, double inner, double size, Color fill, double luminance, string? hubText,
+        double pixelsPerDip)
     {
         var dark = luminance < 0.16;
         // Light from the top left, falling off towards the rim.
@@ -203,7 +204,7 @@ public static class SpoolArt
         gloss.Freeze();
         dc.DrawEllipse(gloss, null, c, inner, inner);
         // A few turns of filament: faint rings between the hub and the rim.
-        var hub = hubText is null ? size * 0.14 : size * 0.29;
+        var hub = hubText is not null ? size * 0.29 : size * 0.14;
         if (inner - hub > 6)
         {
             var winding = new Pen(Palette.Brush(dark ? Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x16, 0, 0, 0)), 0.75);
@@ -242,7 +243,9 @@ public static class SpoolArt
     }
 
     public static Color Mix(Color a, Color b, double t) => Color.FromRgb(
-        (byte)Math.Round(a.R + (b.R - a.R) * t), (byte)Math.Round(a.G + (b.G - a.G) * t), (byte)Math.Round(a.B + (b.B - a.B) * t));
+        R(a.R, b.R, t), R(a.G, b.G, t), R(a.B, b.B, t));
+
+    private static byte R(byte a, byte b, double t) => (byte)Math.Round(a + (b - a) * t, MidpointRounding.AwayFromZero);
 }
 
 internal static class PenExtensions

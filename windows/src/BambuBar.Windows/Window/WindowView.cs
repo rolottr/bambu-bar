@@ -44,10 +44,8 @@ public sealed class WindowView : Border, IDisposable
     private Region _picker = null!;
     private Region _footer = null!;
     private Region _supporter = null!;
-    private Rectangle _wash = null!;
     private AccessibleGroup _layer = null!;
     private FrameworkElement _appName = null!;
-    private Color? _washColor;
     private bool _showsAppName = true;
     private Page? _page;
     private string _route = "";
@@ -235,15 +233,10 @@ public sealed class WindowView : Border, IDisposable
         return dock;
     }
 
-    /// <summary>The page on Windows 11's content layer, with the Mac's faint wash of the state colour behind it.</summary>
+    /// <summary>The page on Windows 11's content layer. No wash of the state colour behind the whole page (on a light
+    /// layer it tinted everything pink or green): the printer card carries the state, with a glow behind the printer.</summary>
     private FrameworkElement Layer()
     {
-        _wash = new Rectangle { IsHitTestVisible = false };
-        var accentWash = new Rectangle
-        {
-            IsHitTestVisible = false,
-            Fill = Radial(Palette.WithAlpha(Palette.Accent, 0.05), new Point(1, 1)),
-        };
         _pageHost = new Border { MaxWidth = 860, HorizontalAlignment = HorizontalAlignment.Stretch };
         _scroller = new ScrollViewer
         {
@@ -251,9 +244,7 @@ public sealed class WindowView : Border, IDisposable
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,
         };
-        var content = new Grid { Children = { _wash, accentWash, _scroller } };
-        // The washes would square off the layer's rounded corner.
-        content.SizeChanged += (_, e) => content.Clip = new RectangleGeometry(new Rect(e.NewSize), 7, 7);
+        var content = new Grid { Children = { _scroller } };
         // A group named after the page, so screen readers say where they are on the way in, and the page's buttons
         // aren't mistaken for the sidebar's (the printer picker and an All Printers card share the printer's name).
         var layer = new AccessibleGroup
@@ -264,23 +255,6 @@ public sealed class WindowView : Border, IDisposable
         layer.SetResourceReference(BackgroundProperty, WindowKeys.LayerFill);
         layer.SetResourceReference(BorderBrushProperty, WindowKeys.LayerStroke);
         return layer;
-    }
-
-    private static RadialGradientBrush Radial(Color color, Point center)
-    {
-        var brush = new RadialGradientBrush(color, Palette.WithAlpha(color, 0))
-        {
-            MappingMode = BrushMappingMode.Absolute, Center = new Point(0, 0), GradientOrigin = new Point(0, 0), RadiusX = 700, RadiusY = 700,
-        };
-        if (center.X > 0)
-        {
-            // Bottom right: relative, since the layer's size isn't known here.
-            brush.MappingMode = BrushMappingMode.RelativeToBoundingBox;
-            brush.Center = brush.GradientOrigin = center;
-            brush.RadiusX = brush.RadiusY = 0.8;
-        }
-        brush.Freeze();
-        return brush;
     }
 
     // MARK: Routing
@@ -340,13 +314,6 @@ public sealed class WindowView : Border, IDisposable
         }
         FillSidebar();
         FillSupporter();
-        var status = _store.Current?.Status;
-        var wash = status is null ? (Color?)null : Palette.For(status);
-        if (wash != _washColor || _wash.Fill is null)
-        {
-            _washColor = wash;
-            _wash.Fill = wash is { } c ? Radial(Palette.WithAlpha(c, 0.10), new Point(0, 0)) : Brushes.Transparent;
-        }
         _page.Refresh();
     }
 
@@ -514,8 +481,8 @@ public sealed class WindowView : Border, IDisposable
         {
             _indicator = new Border { Width = 3, Height = 16, CornerRadius = new CornerRadius(1.5), VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Hidden };
             _indicator.SetResourceReference(BackgroundProperty, ThemeKeys.AccentFill);
-            var icon = Icons.Glyph(page.Glyph(), 16, ThemeKeys.TextPrimary);
-            icon.Margin = new Thickness(10, 0, 14, 0);
+            var icon = Tile(page);
+            icon.Margin = new Thickness(8, 0, 12, 0);
             var label = Ui.Text(page.Title(), WRamp.Body);
             var grid = Ui.Columns("Auto", "Auto", "*");
             grid.Children.Add(Ui.At(_indicator, 0));
@@ -533,6 +500,21 @@ public sealed class WindowView : Border, IDisposable
             // A list item screen readers call selected when it's the page on show (NavigationView's items).
             Role = AutomationControlType.ListItem;
             Paint(false);
+        }
+
+        /// <summary>The page's icon, white on a rounded tile of its colour lit from above.</summary>
+        private static Border Tile(AppPage page)
+        {
+            var tint = page.Tint();
+            var fill = new LinearGradientBrush(SpoolArt.Mix(tint, Colors.White, 0.16), SpoolArt.Mix(tint, Colors.Black, 0.10), 90);
+            fill.Freeze();
+            var glyph = Icons.Glyph(page.Glyph(), 13, null, Brushes.White);
+            return new Border
+            {
+                Width = 24, Height = 24, CornerRadius = new CornerRadius(6), Background = fill, Child = glyph,
+                BorderBrush = Palette.Brush(Color.FromArgb(0x26, 0, 0, 0)), BorderThickness = new Thickness(0.5),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
         }
 
         public bool Showing

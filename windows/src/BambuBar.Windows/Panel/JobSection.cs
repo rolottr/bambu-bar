@@ -39,6 +39,8 @@ internal sealed class JobSection : PanelSection
     private readonly Stack _idle;
     private readonly ChromeToggle _light;
     private bool _lightShown;
+    private readonly Ellipse _stage;
+    private Color? _glow;
 
     /// <param name="modelScale">The scale the card is shown at (the Printer page's hero), so the model renders sharp.</param>
     public JobSection(PanelContext ctx, double modelScale = 1) : base(ctx)
@@ -82,8 +84,16 @@ internal sealed class JobSection : PanelSection
         var details = new Stack { Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
         foreach (var e in new UIElement[] { _pill, _jobTitles, _preparing, _numbers, _bar, _timing, _idle }) details.Children.Add(e);
 
+        // The printer on a stage: a soft glow of the filament (or the state) behind it.
+        _stage = new Ellipse
+        {
+            Width = Metrics.ArtWidth * 1.3, Height = Metrics.ArtHeight * 1.05, IsHitTestVisible = false,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(-Metrics.ArtWidth * 0.15, 0, -Metrics.ArtWidth * 0.15, 0),
+        };
+        var stage = new Grid { Children = { _stage, _model } };
         var grid = Ui.Columns(Metrics.ArtWidth.ToString(System.Globalization.CultureInfo.InvariantCulture), "12", "*");
-        grid.Children.Add(Ui.At(_model, 0));
+        grid.Children.Add(Ui.At(stage, 0));
         grid.Children.Add(Ui.At(details, 2));
 
         _light = LightToggle();
@@ -132,6 +142,7 @@ internal sealed class JobSection : PanelSection
         }
 
         Ui.SetPill(_pill, _pillDot, _pillText, Palette.For(s), PillText(s), Ctx.Dark);
+        Glow(s.State.IsActive() ? Tint(s) : Palette.For(s));
         // Leaves room for the light switch beside the pill.
         _pill.Margin = new Thickness(0, 0, s.ChamberLightOn is null ? 0 : 70, 0);
 
@@ -158,6 +169,18 @@ internal sealed class JobSection : PanelSection
         _bar.Tint = Tint(s);
         _bar.SetProgress(s.Progress / 100.0, Ctx.Animate && _root.IsVisible);
         FillTiming(s);
+    }
+
+    private void Glow(Color color)
+    {
+        if (_glow == color && _stage.Fill is not null) return;
+        _glow = color;
+        var brush = new RadialGradientBrush(new GradientStopCollection
+        {
+            new(Palette.WithAlpha(color, Ctx.Dark ? 0.34 : 0.26), 0), new(Palette.WithAlpha(color, Ctx.Dark ? 0.12 : 0.08), 0.55), new(Palette.WithAlpha(color, 0), 1),
+        });
+        brush.Freeze();
+        _stage.Fill = brush;
     }
 
     private string PillText(PrinterStatus s)

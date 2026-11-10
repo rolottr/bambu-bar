@@ -246,6 +246,8 @@ internal sealed class TemperatureSection : PanelSection
         /// <summary>Still on its way to the target.</summary>
         public bool Changing => Temp is { Target: > 0 } t && !t.IsAtTarget;
         public string Key => $"{Title}|{Current?.ToString("0") ?? "-"}|{Temp?.Target}|{InUse}|{Changing}";
+        /// <summary>The top of the tile's bar: about what the part reaches on Bambu's printers.</summary>
+        public double Scale => Icon switch { Icons.Vector.Flame => 300, Icons.Vector.HeatWaves => 110, _ => 65 };
     }
 
     protected override void Fill()
@@ -290,9 +292,18 @@ internal sealed class TemperatureSection : PanelSection
     private FrameworkElement Build(Tile t)
     {
         var header = new StackPanel { Orientation = Orientation.Horizontal };
-        header.Children.Add(Icons.Draw(t.Icon, 11, t.Heating ? Palette.Brush(t.Tint) : Ctx.Brush(ThemeKeys.TextSecondary)));
+        // The icon on a round badge of its colour: lit while heating, quiet otherwise.
+        var lit = t.Heating || (t.Current ?? 0) >= 40;
+        var badge = new Border
+        {
+            Width = 20, Height = 20, CornerRadius = new CornerRadius(10),
+            Background = Palette.Brush(Palette.WithAlpha(t.Tint, lit ? (Ctx.Dark ? 0.24 : 0.18) : 0.10)),
+            Child = Icons.Draw(t.Icon, 11, lit ? Ctx.Ink(t.Tint) : Ctx.Brush(ThemeKeys.TextSecondary)),
+        };
+        header.Children.Add(badge);
         var title = Ui.Text(t.Title, Ramp.Footnote, FontWeights.Medium, ThemeKeys.TextSecondary);
-        title.Margin = new Thickness(4, 0, 0, 0);
+        title.Margin = new Thickness(6, 0, 0, 0);
+        title.VerticalAlignment = VerticalAlignment.Center;
         header.Children.Add(title);
         if (t.InUse)
         {
@@ -311,12 +322,34 @@ internal sealed class TemperatureSection : PanelSection
         // Four tiles (two nozzles and a chamber) leave little room: the reading shrinks rather than clips.
         var fit = new Viewbox { Child = reading, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, HorizontalAlignment = HorizontalAlignment.Left };
 
+        // How hot, against what the part can reach: a thin bar in the tile's colour, with the target as a tick.
+        var heat = new ProgressCapsule(3) { Tint = t.Tint, Margin = new Thickness(0, 2, 0, 0) };
+        heat.SetProgress((t.Current ?? 0) / t.Scale, animate: false);
+        var gauge = new Grid { Children = { heat } };
+        if (t.Temp is { Target: > 0 } target)
+        {
+            var tick = new Border
+            {
+                Width = 2, Height = 7, CornerRadius = new CornerRadius(1), HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center, Background = Ctx.Ink(t.Tint), Margin = new Thickness(0, 2, 0, 0),
+            };
+            gauge.SizeChanged += (_, e) => tick.Margin = new Thickness(Math.Clamp(target.Target / t.Scale, 0, 1) * (e.NewSize.Width - 2), 2, 0, 0);
+            gauge.Children.Add(tick);
+        }
+
         var tile = new AccessibleCard
         {
-            Child = new Stack { Spacing = 6, Children = { header, fit } }, CornerRadius = Metrics.Tile, Padding = new Thickness(11),
+            Child = new Stack { Spacing = 6, Children = { header, fit, gauge } }, CornerRadius = Metrics.Tile, Padding = new Thickness(11, 10, 11, 11),
             BorderThickness = new Thickness(1),
         };
         Ui.Tint(tile, null);
+        if (lit)
+        {
+            // A warm tile glows faintly from below in its colour.
+            var glow = new LinearGradientBrush(Palette.WithAlpha(t.Tint, 0), Palette.WithAlpha(t.Tint, Ctx.Dark ? 0.12 : 0.08), 90);
+            glow.Freeze();
+            tile.Child = new Grid { Children = { new Border { Background = glow, Margin = new Thickness(-11, -10, -11, -11), CornerRadius = Metrics.Tile }, tile.Child } };
+        }
         AutomationProperties.SetName(tile, Loc.F("%@, %@", t.Title, Spoken(t)));
         return tile;
     }

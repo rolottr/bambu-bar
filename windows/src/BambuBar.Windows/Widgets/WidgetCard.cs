@@ -688,7 +688,8 @@ public sealed class WidgetCard : FrameworkElement
         dc.DrawEllipse(gloss, null, c, ir, ir);
         var light = Luminance(sp.Color) > 0.85;
         dc.DrawEllipse(null, new Pen(Brush(Color.FromArgb((byte)(light ? 0x2E : 0x0F), 255, 255, 255)), 0.75), c, ir - 0.375, ir - 0.375);
-        dc.DrawEllipse(Brush(Color.FromArgb(0x8C, 0, 0, 0)), new Pen(Brush(Color.FromArgb(0x2E, 255, 255, 255)), 0.5), c, d * 0.1, d * 0.1);
+        // The hub in a deeper shade of the filament (the app's SpoolArt.Hub; widget.lua's BB.hubColor).
+        dc.DrawEllipse(Brush(SpoolArt.Hub(Hex(sp.Color), Luminance(sp.Color))), new Pen(Brush(Color.FromArgb(0x40, 255, 255, 255)), 0.5), c, d * 0.1, d * 0.1);
     }
 
     /// <summary>The status dot: 6 px with a 2 px halo at 18 %.</summary>

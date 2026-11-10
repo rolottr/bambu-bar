@@ -153,6 +153,17 @@ function BB.luminance(hex)
 	return (0.299 * r + 0.587 * g + 0.114 * b) / 255
 end
 
+-- The spool's hub (the app's SpoolArt.Hub): the filament colour deepened (more for light ones), or lifted for
+-- near-black filament, so the core reads as part of the spool rather than a black hole. RRGGBBFF.
+function BB.hubColor(hex)
+	local r, g, b = BB.rgb(hex)
+	local l = BB.luminance(hex)
+	local target, t = 0, 0.4
+	if l < 0.16 then target, t = 255, 0.26 elseif l > 0.7 then t = 0.5 end
+	local function mix(v) return floor(v + (target - v) * t + 0.5) end
+	return fmt("%02X%02X%02XFF", mix(r), mix(g), mix(b))
+end
+
 -- Text from the state file can hold "#" or "[", which Rainmeter would read as variables when the option is
 -- parsed. Character references ([\xHH], ConfigParser.cpp "Always process escaped character references") are
 -- not parsed again.
@@ -373,7 +384,7 @@ function BB.barOptions(w, f, tint)
 end
 
 -- A spool swatch of diameter d (mockup spoolSVG): track, amount-left arc (accent when active), the filament
--- colour (a 135° multi-stop gradient for multicolour spools), a gloss, a rim and the hub. Empty slot: a dashed
+-- colour (a 135° multi-stop gradient for multicolour spools), a gloss, a rim and the hub (BB.hubColor). Empty slot: a dashed
 -- ring. Local coordinates, so the meter's rectangle is the tooltip's hit area.
 function BB.spoolOptions(sp, d, active)
 	local rw = max(2, d * 0.075)
@@ -414,8 +425,8 @@ function BB.spoolOptions(sp, d, active)
 		shapes[#shapes + 1] = fmt("Ellipse %s,%s,%s | Fill LinearGradient SpoolGloss | StrokeWidth 0", n2(c), n2(c), n2(ir))
 		shapes[#shapes + 1] = fmt("Ellipse %s,%s,%s | Fill Color 00000000 | StrokeWidth 0.75 | Stroke Color %s",
 			n2(c), n2(c), n2(ir - 0.375), BB.luminance(sp.color) > 0.85 and "FFFFFF2E" or "FFFFFF0F")
-		shapes[#shapes + 1] = fmt("Ellipse %s,%s,%s | Fill Color 0000008C | StrokeWidth 0.5 | Stroke Color FFFFFF2E",
-			n2(c), n2(c), n2(d * 0.1))
+		shapes[#shapes + 1] = fmt("Ellipse %s,%s,%s | Fill Color %s | StrokeWidth 0.5 | Stroke Color FFFFFF40",
+			n2(c), n2(c), n2(d * 0.1), BB.hubColor(sp.color))
 	else
 		-- StrokeDashes are in stroke widths (Direct2D custom dashes); the stroke is 1, so these are px.
 		shapes[#shapes + 1] = fmt("Ellipse %s,%s,%s | Fill Color 00000000 | StrokeWidth 1 | Stroke Color FFFFFF38 | StrokeDashes 2.5,2.5",

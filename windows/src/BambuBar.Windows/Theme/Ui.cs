@@ -115,7 +115,7 @@ public static class Ui
 
     public static void SetPill(Border pill, Ellipse dot, TextBlock label, Color color, string text, bool dark)
     {
-        Tint(pill, color, dark);
+        TintCapsule(pill, color, dark);
         dot.Fill = Palette.Brush(color);
         if (dot.Parent is Grid { Children: [Ellipse halo, ..] }) halo.Fill = Palette.Brush(Palette.WithAlpha(color, dark ? 0.30 : 0.22));
         label.Foreground = Palette.Brush(Palette.Ink(color, dark));
@@ -124,7 +124,7 @@ public static class Ui
 
     /// <summary>A capsule tinted with a state colour: a soft fill and a hairline edge in the same colour, so it holds
     /// its shape on light cards as well as dark ones.</summary>
-    public static void Tint(Border capsule, Color color, bool dark)
+    public static void TintCapsule(Border capsule, Color color, bool dark)
     {
         capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.16 : 0.10));
         capsule.BorderBrush = Palette.Brush(Palette.WithAlpha(color, dark ? 0.30 : 0.28));

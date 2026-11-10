@@ -10,7 +10,7 @@ namespace BambuBar.Tray;
 /// The tray icon: a small printer whose chamber fills with the print, a pause or alert mark when needed, a dashed
 /// outline while offline. The Mac's MenuBarIcon geometry (18 × 18 units, y down), drawn in one colour for the
 /// taskbar's theme. In "show %" mode the percentage is drawn instead of the printer, as Windows can't put text beside
-/// a tray icon (ledger D2).
+/// a tray icon (ledger D2), inside a ring that fills with the print in Bambu green.
 /// </summary>
 public static class TrayGlyph
 {
@@ -45,7 +45,7 @@ public static class TrayGlyph
         using (var dc = visual.RenderOpen())
         {
             dc.PushTransform(new ScaleTransform(pixels / 18.0, pixels / 18.0));
-            if (look.Percent is { } percent) DrawPercent(dc, percent, ink);
+            if (look.Percent is { } percent) DrawPercent(dc, percent, step / 20.0, ink, lightTaskbar);
             else Draw(dc, look.State, step / 20.0, look.Alert, look.Offline, ink);
             dc.Pop();
         }
@@ -120,15 +120,37 @@ public static class TrayGlyph
         dc.DrawEllipse(ink, null, new Point(9.0, 12.7), 0.9, 0.9);
     }
 
-    /// <summary>The percentage filling the icon: two digits as large as fit, "100" a little smaller.</summary>
-    private static void DrawPercent(DrawingContext dc, string percent, Brush ink)
+    /// <summary>The percentage inside a progress ring: a faint track all round, the done part in Bambu green from
+    /// the top, clockwise; two digits as large as fit inside, "100" a little smaller.</summary>
+    private static void DrawPercent(DrawingContext dc, string percent, double fraction, Brush ink, bool lightTaskbar)
     {
+        const double stroke = 1.9;
+        var c = new Point(9, 9);
+        var r = 9 - stroke / 2 - 0.1;
+        var track = new Pen(new SolidColorBrush(lightTaskbar ? Color.FromArgb(0x40, 0, 0, 0) : Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)), stroke);
+        dc.DrawEllipse(null, track, c, r, r);
+        var green = lightTaskbar ? Color.FromRgb(0x00, 0x99, 0x4A) : Color.FromRgb(0x21, 0xCC, 0x6B);
+        var arc = new Pen(new SolidColorBrush(green), stroke) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+        if (fraction >= 0.999) dc.DrawEllipse(null, arc, c, r, r);
+        else if (fraction > 0)
+        {
+            var angle = Math.Max(fraction, 0.03) * 2 * Math.PI;
+            var g = new StreamGeometry();
+            using (var ctx = g.Open())
+            {
+                ctx.BeginFigure(new Point(c.X, c.Y - r), false, false);
+                ctx.ArcTo(new Point(c.X + r * Math.Sin(angle), c.Y - r * Math.Cos(angle)), new Size(r, r), 0, angle > Math.PI, SweepDirection.Clockwise, true, false);
+            }
+            dc.DrawGeometry(null, arc, g);
+        }
         var face = new Typeface(new FontFamily("Segoe UI Variable Display, Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Condensed);
-        var size = percent.Length >= 3 ? 9.5 : 13.0;
+        var size = percent.Length >= 3 ? 7.0 : 9.6;
         var text = new FormattedText(percent, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, ink, 1.0)
         {
             TextAlignment = TextAlignment.Center,
         };
-        dc.DrawText(text, new Point(9, (18 - text.Height) / 2));
+        // Centred on the digits' ink (the line box has room for descenders below them): the ink ends OverhangAfter
+        // from the line's bottom and is Extent tall.
+        dc.DrawText(text, new Point(9, c.Y - text.Height - text.OverhangAfter + text.Extent / 2));
     }
 }

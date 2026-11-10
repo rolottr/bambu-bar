@@ -47,6 +47,20 @@ public static class AppPages
     };
 
     /// <summary>Segoe Fluent Icons for the Mac's SF Symbols.</summary>
+    /// <summary>Each page's colour in the sidebar: its icon sits white on a tile of it, as in Windows' Settings.</summary>
+    public static Color Tint(this AppPage page) => page switch
+    {
+        AppPage.Fleet => Color.FromRgb(0x5B, 0x6C, 0xFF),
+        AppPage.Printer => Color.FromRgb(0x1F, 0xBF, 0x63),
+        AppPage.Filament => Color.FromRgb(0xFF, 0x8A, 0x3D),
+        AppPage.Tray => Color.FromRgb(0x14, 0xB0, 0xC4),
+        AppPage.Notifications => Color.FromRgb(0xFF, 0x4F, 0x5E),
+        AppPage.Printers => Color.FromRgb(0x3B, 0x82, 0xF6),
+        AppPage.Widgets => Color.FromRgb(0xA2, 0x5C, 0xFF),
+        AppPage.Settings => Color.FromRgb(0x7D, 0x87, 0x96),
+        _ => Color.FromRgb(0x2E, 0xA3, 0xF2),
+    };
+
     public static string Glyph(this AppPage page) => page switch
     {
         AppPage.Fleet => "",          // ViewAll (square.grid.2x2)
