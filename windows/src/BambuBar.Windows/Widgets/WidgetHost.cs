@@ -217,6 +217,27 @@ public sealed partial class WidgetHost : IDisposable
         process.EnableRaisingEvents = true;
         process.Exited += (_, _) => OnExited(process);
         _process = process;
+        // Our Rainmeter claims .rmskin at start (Rainmeter::EnsureSkinInstallerAssociation, settings outside its folder)
+        // for a SkinInstaller.exe we don't ship: take that back once it has run.
+        _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(_ => RemoveRmskinAssociation(), TaskScheduler.Default);
+    }
+
+    /// <summary>Removes the .rmskin association when it points into our Rainmeter folder (a user's own Rainmeter, which
+    /// registers its real SkinInstaller.exe, is left alone). The uninstaller does the same.</summary>
+    private void RemoveRmskinAssociation()
+    {
+        try
+        {
+            const string Handler = @"Software\Classes\Rainmeter.SkinInstaller";
+            var folder = Path.GetDirectoryName(_rainmeterExe)!;
+            using var command = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Handler + @"\shell\open\command");
+            if (command?.GetValue("") is not string line || !line.Contains(folder, StringComparison.OrdinalIgnoreCase)) return;
+            Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(Handler, throwOnMissingSubKey: false);
+            using var extension = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes\.rmskin");
+            if (extension?.GetValue("") as string == "Rainmeter.SkinInstaller")
+                Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(@"Software\Classes\.rmskin", throwOnMissingSubKey: false);
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException or IOException) { }
     }
 
     private void OnExited(Process process)
