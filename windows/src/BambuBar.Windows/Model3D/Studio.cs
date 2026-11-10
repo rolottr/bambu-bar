@@ -30,7 +30,7 @@ internal static class Studio
 
     /// <summary>The chamber light: warm, wide, from the ceiling (the Mac's spot, 50° inner, 120° outer). Far brighter
     /// than the Mac's numbers: without the Mac's tone mapping and exposure, 0.55 barely changed the picture.</summary>
-    public static readonly Color4 LampLight = new(1.0f * 2.4f, 0.93f * 2.4f, 0.82f * 2.4f, 1);
+    public static readonly Color4 LampLight = new(1.0f * 1.9f, 0.93f * 1.9f, 0.82f * 1.9f, 1);
 
     /// <summary>The warm light the lamp fills the chamber with (walls, bed, part), so a lit printer reads as lit.</summary>
     public static readonly Color4 ChamberFill = new(1.0f * 0.9f, 0.82f * 0.9f, 0.62f * 0.9f, 1);
