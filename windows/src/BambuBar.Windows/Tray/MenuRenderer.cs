@@ -91,7 +91,7 @@ internal sealed partial class MenuRenderer : Forms.ToolStripRenderer
         // Centred on the row (the image rectangle sits a little low with the rows' padding).
         var r = e.ImageRectangle;
         var cx = r.X + r.Width / 2f;
-        var cy = e.Item.Height / 2f;
+        var cy = TextMiddle(e.Item);
         using var pen = new Pen(Text, 1.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
         g.DrawLines(pen, [new PointF(cx - 5, cy), new PointF(cx - 1.5f, cy + 3.5f), new PointF(cx + 5, cy - 4)]);
     }
@@ -102,10 +102,14 @@ internal sealed partial class MenuRenderer : Forms.ToolStripRenderer
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         var x = e.ArrowRectangle.X + e.ArrowRectangle.Width / 2f;
-        var y = (e.Item?.Height ?? e.ArrowRectangle.Bottom) / 2f;
+        var y = e.Item is { } item ? TextMiddle(item) : e.ArrowRectangle.Top + e.ArrowRectangle.Height / 2f;
         using var pen = new Pen(Dim, 1.3f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
         g.DrawLines(pen, [new PointF(x - 1.5f, y - 3.5f), new PointF(x + 2, y), new PointF(x - 1.5f, y + 3.5f)]);
     }
+
+    /// <summary>The middle of the item's letters, where marks beside them line up: the row's middle less the room the
+    /// font keeps for descenders (about a sixth of its height).</summary>
+    private static float TextMiddle(Forms.ToolStripItem item) => item.Height / 2f - item.Font.GetHeight() / 6f + 0.5f;
 
     private static GraphicsPath RoundedRect(Rectangle r, int radius)
     {
