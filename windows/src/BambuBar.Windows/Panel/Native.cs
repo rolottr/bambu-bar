@@ -58,6 +58,15 @@ internal static partial class Native
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetCursorPos(out POINT point);
 
+    /// <summary>The window's frame in screen pixels (the camera window keeps its picture's shape while resized).</summary>
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetWindowRect(nint hwnd, out RECT rect);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetClientRect(nint hwnd, out RECT rect);
+
     [LibraryImport("user32.dll")]
     public static partial nint MonitorFromPoint(POINT point, uint flags);
 

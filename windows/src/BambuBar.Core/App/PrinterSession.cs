@@ -1,3 +1,4 @@
+using BambuBar.Core.Camera;
 using BambuBar.Core.Model;
 using BambuBar.Core.Protocol;
 
@@ -73,7 +74,11 @@ public sealed class PrinterSession : Observable, IDisposable
             if (LastHeard is not { } heard || DateTimeOffset.Now - heard >= TimeSpan.FromSeconds(1)) LastHeard = DateTimeOffset.Now;
             OnHeartbeat?.Invoke(this);
         };
+        Camera = new CameraFeed(CameraSituation, store.CameraServices);
     }
+
+    /// <summary>The printer's camera; streams only while a view shows it (or a print runs, if Settings say so).</summary>
+    public CameraFeed Camera { get; }
 
     // MARK: Lifecycle
 
@@ -101,6 +106,7 @@ public sealed class PrinterSession : Observable, IDisposable
 
     public void Stop()
     {
+        Camera.Stop();
         _demo?.Dispose();
         _connection.Stop();
         Phase = new PrinterConnection.Phase.Idle();
@@ -121,6 +127,7 @@ public sealed class PrinterSession : Observable, IDisposable
         if (_demo is not null || _store.Secrets.AccessCode(Config.Serial) is not { } code) return;
         _activeCode = code;
         _connection.Start(Config, code, _insecure);
+        Camera.Restart();
     }
 
     /// <summary>The computer sleeps or wakes (Windows' PowerModeChanged).</summary>
@@ -139,6 +146,17 @@ public sealed class PrinterSession : Observable, IDisposable
     public string? CameraAccessCode => _activeCode ?? AccessCode;
     /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printers page.</summary>
     public bool ShowsCamera => !IsDemo && _store.CameraEnabled && Config.CameraEnabled == true;
+    /// <summary>RTSPS or the JPEG stream, by model.</summary>
+    public CameraTransport CameraTransport => CameraTransports.ForModel(Config.ModelName);
+
+    /// <summary>What the camera feed needs to know, as of now.</summary>
+    private CameraSituation CameraSituation() => new()
+    {
+        IsDemo = IsDemo, ShowsCamera = ShowsCamera, IsMockFleet = _store.IsMockFleet, IsOnline = IsOnline,
+        Transport = CameraTransport, LiveViewEnabled = Status?.LiveViewEnabled, IsPrinting = Status?.State.IsActive() == true,
+        StaysOnWhilePrinting = _store.CameraStaysOnWhilePrinting, Host = Config.Endpoint.Host, Serial = Config.Serial,
+        AccessCode = CameraAccessCode, Insecure = _insecure,
+    };
 
     public string LinkSummary => Phase switch
     {
@@ -225,6 +243,7 @@ public sealed class PrinterSession : Observable, IDisposable
         if (phase is PrinterConnection.Phase.Online) FallbackCodes = [];
         Phase = phase;
         OnPhase?.Invoke(this, phase);
+        Camera.Update();
     }
 
     // MARK: Dismissed issues
@@ -292,5 +311,8 @@ public sealed class PrinterSession : Observable, IDisposable
         if (_pendingSpeed is { } level && fresh.Speed == level) _pendingSpeed = null;
         OnStatus?.Invoke(this, old, fresh, canceled);
         HasBaseline = true;
+        // The camera follows the connection, the Liveview switch and (Settings → Camera) the print. The Mac's views
+        // watch the first two; here the session does, so a feed with no view on screen hears of them too.
+        if (old is null || old.State.IsActive() != fresh.State.IsActive() || old.LiveViewEnabled != fresh.LiveViewEnabled) Camera.Update();
     }
 }

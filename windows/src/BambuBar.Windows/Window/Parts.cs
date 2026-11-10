@@ -10,6 +10,7 @@ using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Model;
 using BambuBar.Core.Protocol;
+using BambuBar.CameraViews;
 using BambuBar.Theme;
 using BambuBar.TrayPanel;
 
@@ -247,36 +248,47 @@ internal static class StateChip
     }
 }
 
-/// <summary>Where the camera shows on the Printer page (the Mac's CameraCard): a heading with the pop-out button and
-/// Hide/Show, and a 16:9 frame. The picture itself comes with P3.9; the frame holds the camera glyph until then.</summary>
+/// <summary>The camera on the Printer page (the Mac's CameraCard): a heading with the stream's details, the pop-out
+/// button (Ctrl+K) and Hide/Show, then the picture at the page's width, as tall as its shape makes it.</summary>
 internal static class CameraCard
 {
-    public static FrameworkElement Build(WindowContext ctx, Action changed)
+    public static FrameworkElement Build(WindowContext ctx, PrinterSession session, Action changed)
     {
         var shown = ctx.Settings.Get(WindowSettings.CameraOnPrinterPage, true);
-        var header = Ui.Columns("*", "Auto", "Auto");
+        var feed = session.Camera;
+        var header = Ui.Columns("*", "Auto", "Auto", "Auto");
         header.Children.Add(Ui.At(Ui.SectionLabel(Loc.T("Camera"), null), 0));
+        var detail = Ui.Text("", Ramp.Caption, null, ThemeKeys.TextTertiary);
+        detail.Margin = new Thickness(6, 0, 4, 0);
+        header.Children.Add(Ui.At(detail, 1));
         var popOut = new ChromeButton { Width = 28, Height = 28, Padding = new Thickness(0), Content = Icons.Glyph(Icons.OpenWindow, 12) };
         AutomationProperties.SetName(popOut, Loc.T("Open the camera in its own window"));
         AutomationProperties.SetAcceleratorKey(popOut, "Ctrl+K");
         Ui.Tip(popOut, Loc.T("Open the camera in its own window"));
-        header.Children.Add(Ui.At(popOut, 1));
+        popOut.Click += (_, _) => CameraWindow.Show(session);
+        header.Children.Add(Ui.At(popOut, 2));
         var toggle = W.Link(shown ? Loc.T("Hide") : Loc.T("Show"), () =>
         {
             ctx.Settings.Set(WindowSettings.CameraOnPrinterPage, !shown);
             changed();
         }, size: 12);
-        header.Children.Add(Ui.At(toggle, 2));
+        header.Children.Add(Ui.At(toggle, 3));
         var stack = new Stack { Spacing = 8, Children = { header } };
+        AspectBox? box = null;
         if (shown)
         {
-            var frame = new Border { CornerRadius = Metrics.Hero, BorderThickness = new Thickness(1), Child = Icons.Glyph(Icons.Camera, 36, ThemeKeys.TextTertiary) };
-            frame.SetResourceReference(Border.BackgroundProperty, ThemeKeys.CardFill);
-            frame.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.CardStroke);
-            // 16:9 of whatever width the page gives it.
-            frame.SizeChanged += (_, e) => { if (e.WidthChanged) frame.Height = e.NewSize.Width * 9 / 16; };
-            stack.Children.Add(frame);
+            box = new AspectBox { Ratio = feed.AspectRatio, Child = new CameraPlayer(compact: false, cornerRadius: Metrics.Hero.TopLeft) { Session = session } };
+            stack.Children.Add(box);
         }
+        void Update()
+        {
+            detail.Text = shown ? feed.Detail ?? "" : "";
+            if (box is not null) box.Ratio = feed.AspectRatio;
+        }
+        void OnChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Update();
+        stack.Loaded += (_, _) => { feed.PropertyChanged += OnChanged; Update(); };
+        stack.Unloaded += (_, _) => feed.PropertyChanged -= OnChanged;
+        Update();
         return stack;
     }
 }

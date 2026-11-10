@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Model;
+using BambuBar.CameraViews;
 using BambuBar.Theme;
 
 namespace BambuBar.TrayPanel;
@@ -131,15 +132,19 @@ internal sealed class IssueSection : PanelSection, IDisposable
     public void Dispose() => _copiedTimer.Stop();
 }
 
-/// <summary>Where the camera shows (the Mac's CameraPreview): a header that folds it away and a 16:9 frame. The video
-/// itself comes with P3.9; until then the frame holds a placeholder. Never shown for demo printers, as on the Mac.</summary>
+/// <summary>The camera in the panel (the Mac's CameraPreview): a header that folds it away, with the pop-out button, and
+/// the picture at the panel's width. Folded, it's one line and nothing streams; it starts folded, so opening the panel
+/// doesn't reach for the printer's few camera connections until asked. Never shown for demo printers, as on the Mac.</summary>
 internal sealed class CameraSection : PanelSection
 {
     private const string ExpandedKey = "cameraInMenuBar";
     private readonly Stack _root;
     private readonly ChromeButton _header;
+    private readonly ChromeButton _popOut;
     private readonly RotateTransform _chevron = new();
-    private readonly Border _frame;
+    private readonly AspectBox _frame;
+    private CameraPlayer? _player;
+    private CameraFeed? _feed;
 
     public CameraSection(PanelContext ctx) : base(ctx)
     {
@@ -160,22 +165,61 @@ internal sealed class CameraSection : PanelSection
             Ctx.Settings.Set(ExpandedKey, !Ctx.Setting(ExpandedKey, true));
             Fill();
         };
-        _frame = new Border { Height = (Metrics.PanelWidth - 2 * Metrics.PanelPadding) * 9 / 16, CornerRadius = Metrics.Tile, BorderThickness = new Thickness(1) };
-        _frame.SetResourceReference(Border.BackgroundProperty, ThemeKeys.CardFill);
-        _frame.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.CardStroke);
-        _frame.Child = Icons.Glyph(Icons.Camera, 28, ThemeKeys.TextTertiary);
-        _root = new Stack { Spacing = 6, Children = { _header, _frame } };
+        _popOut = new ChromeButton { Width = 26, Height = 22, Padding = new Thickness(0), Content = Icons.Glyph(Icons.OpenWindow, 11) };
+        AutomationProperties.SetName(_popOut, Loc.T("Open the camera in its own window"));
+        Ui.Tip(_popOut, Loc.T("Open the camera in its own window"));
+        _popOut.Click += (_, _) =>
+        {
+            if (Store.Current is { } session) CameraWindow.Show(session);
+        };
+        var row = Ui.Columns("*", "Auto");
+        row.Children.Add(Ui.At(_header, 0));
+        row.Children.Add(Ui.At(_popOut, 1));
+        _frame = new AspectBox();
+        _root = new Stack { Spacing = 6, Children = { row, _frame } };
+        _root.SizeChanged += (_, e) => { if (e.HeightChanged) Ctx.Relayout?.Invoke(); };
     }
 
     public override FrameworkElement Root => _root;
 
     protected override void Fill()
     {
-        var expanded = Ctx.Setting(ExpandedKey, true);
+        var expanded = Ctx.Setting(ExpandedKey, true); // unfolded until folded, as on the Mac (@AppStorage default true)
+        var session = Root.Visibility == Visibility.Visible ? Store.Current : null;
         _frame.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
         _chevron.Angle = expanded ? 90 : 0;
         Ui.Tip(_header, expanded ? Loc.T("Hide the camera") : Loc.T("Show the camera"));
         AutomationProperties.SetItemStatus(_header, expanded ? Loc.T("On") : Loc.T("Off"));
+        // Folded, the player goes: it's no longer one of the feed's viewers.
+        if (expanded && session is not null)
+        {
+            _player ??= new CameraPlayer(compact: true, cornerRadius: Metrics.Tile.TopLeft);
+            _player.Session = session;
+            _frame.Child = _player;
+            Follow(session.Camera);
+        }
+        else
+        {
+            if (_player is not null) _player.Session = null;
+            _frame.Child = null;
+            Follow(null);
+        }
+    }
+
+    /// <summary>The frame takes the picture's shape once the stream says what it is.</summary>
+    private void Follow(CameraFeed? feed)
+    {
+        if (ReferenceEquals(feed, _feed)) return;
+        if (_feed is not null) _feed.PropertyChanged -= OnFeedChanged;
+        _feed = feed;
+        if (feed is null) return;
+        feed.PropertyChanged += OnFeedChanged;
+        _frame.Ratio = feed.AspectRatio;
+    }
+
+    private void OnFeedChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_feed is not null && e.PropertyName is null or nameof(CameraFeed.AspectRatio)) _frame.Ratio = _feed.AspectRatio;
     }
 }
 

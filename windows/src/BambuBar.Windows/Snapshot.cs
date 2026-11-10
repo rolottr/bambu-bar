@@ -5,6 +5,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BambuBar.AppWindow;
+using BambuBar.CameraViews;
+using BambuBar.Core.Camera;
+using BambuBar.Core.Camera.Decoding;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Model;
@@ -22,7 +25,7 @@ namespace BambuBar;
 /// and review without a screen: the tray glyphs, the panel in every demo state, light and dark
 /// (<c>panel-&lt;scene&gt;-&lt;light|dark&gt;.png</c> at 2×), and every page of the window over the demo fleet
 /// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×), and the widgets as the Widgets page draws them, every
-/// state in every size (<c>widgets-cards.png</c>). Problems are written to <c>panel-errors.txt</c>
+/// state in every size (<c>widgets-cards.png</c>), and the camera over a picture FFmpeg decoded (<c>camera.png</c>). Problems are written to <c>panel-errors.txt</c>
 /// and <c>window-errors.txt</c> rather than failing the run, so the images that did render still reach the CI artifact.
 /// </summary>
 public static class Snapshot
@@ -40,6 +43,16 @@ public static class Snapshot
         var errors = RenderPanels(folder);
         errors.AddRange(ThemeResources.Errors);
         Report(Path.Combine(folder, "panel-errors.txt"), errors);
+        var cameraErrors = new List<string>();
+        try
+        {
+            cameraErrors.AddRange(RenderCamera(folder));
+        }
+        catch (Exception e)
+        {
+            cameraErrors.Add($"camera.png: {e}");
+        }
+        Report(Path.Combine(folder, "camera-errors.txt"), cameraErrors);
         var windowErrors = RenderWindows(folder);
         try
         {
@@ -306,6 +319,109 @@ public static class Snapshot
             view.Dispose();
             store.Stop();
         }
+    }
+
+    /// <summary>A camera that sends what it's given (a JPEG still, or a failure) and nothing else.</summary>
+    private sealed class StillCamera(byte[]? jpeg, (int Width, int Height) size, CameraFailure? failure) : ICameraClient
+    {
+        public Action<CameraEvent>? OnEvent { get; set; }
+        public Action<string>? Log { get; set; }
+
+        public void Start()
+        {
+            var context = SynchronizationContext.Current;
+            void Send()
+            {
+                if (jpeg is not null)
+                {
+                    OnEvent?.Invoke(new CameraEvent.Started($"JPEG · {size.Width}×{size.Height}", size.Width, size.Height));
+                    OnEvent?.Invoke(new CameraEvent.Image(jpeg, size.Width, size.Height));
+                }
+                if (failure is not null) OnEvent?.Invoke(new CameraEvent.Failed(failure));
+            }
+            if (context is null) Send(); else context.Post(_ => Send(), null);
+        }
+
+        public void Stop() { }
+    }
+
+    /// <summary>
+    /// The camera as the app draws it, over a picture that went through the real decoder: a JPEG of the printer art
+    /// "streamed" by a stand-in camera, decoded by FFmpeg from the app's <c>ffmpeg\</c> folder (so CI proves the bundled
+    /// libraries load and decode), shown in the camera window's view with its bar, and in the panel's size in each state:
+    /// live, connecting, unavailable, failed. <c>camera.png</c>; problems (FFmpeg missing, nothing decoded) go to
+    /// <c>camera-errors.txt</c>.
+    /// </summary>
+    private static List<string> RenderCamera(string folder)
+    {
+        var errors = new List<string>();
+        var ffmpeg = FFmpeg.Status;
+        if (!ffmpeg.IsAvailable) errors.Add($"FFmpeg: {ffmpeg.Problem}");
+        const int width = 1280, height = 720;
+        var jpeg = PrinterJpeg(width, height);
+        CameraFeed Feed(CameraSituation situation, ICameraClient client) =>
+            new(() => situation, new CameraServices { Client = _ => client });
+        var online = new CameraSituation { ShowsCamera = true, IsOnline = true, Transport = CameraTransport.Jpeg, AccessCode = "12345678", Host = "192.0.2.1", Serial = "01P00A000000001" };
+        var live = Feed(online, new StillCamera(jpeg, (width, height), null));
+        var feeds = new (string Name, CameraFeed Feed)[]
+        {
+            ("live", live),
+            ("connecting", Feed(online, new StillCamera(null, default, null))),
+            ("unavailable", Feed(online with { IsOnline = false }, new StillCamera(null, default, null))),
+            ("failed", Feed(online, new StillCamera(null, default, new CameraFailure.Unauthorized()))),
+        };
+        CameraPlayer.ForceOnScreen = true;
+        try
+        {
+            var window = new CameraWindowView(live, "P1S", () => "Printing · 64% · 1h 20m left", null, () => true, _ => { }) { Width = 800, Height = 450 };
+            window.ShowBar(true);
+            var row = new System.Windows.Controls.StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(16) };
+            foreach (var (_, feed) in feeds)
+            {
+                var player = new CameraPlayer(compact: true, cornerRadius: Metrics.Tile.TopLeft) { Width = 348, Height = 196, Margin = new Thickness(0, 0, 16, 0) };
+                player.Show(feed, "P1S");
+                row.Children.Add(player);
+            }
+            Pump(TimeSpan.FromSeconds(5), () => live.Frame is not null && feeds.All(f => f.Feed.State is not CameraFeed.FeedState.Idle));
+            if (live.Frame is null) errors.Add($"camera.png: no picture was decoded ({live.State})");
+            else if (live.Frame.Width != width || live.Frame.Height != height) errors.Add($"camera.png: decoded {live.Frame.Width}×{live.Frame.Height}, sent {width}×{height}");
+            var sheet = new System.Windows.Controls.StackPanel { Background = new SolidColorBrush(Color.FromRgb(0xF3, 0xF3, 0xF3)) };
+            sheet.Children.Add(new System.Windows.Controls.Border { Child = window, Margin = new Thickness(16, 16, 16, 0), HorizontalAlignment = HorizontalAlignment.Left });
+            sheet.Children.Add(row);
+            sheet.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            sheet.Arrange(new Rect(sheet.DesiredSize));
+            sheet.UpdateLayout();
+            Pump(TimeSpan.FromMilliseconds(100), () => false);
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(sheet.ActualWidth), (int)Math.Ceiling(sheet.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(sheet);
+            bitmap.Freeze();
+            Save(bitmap, Path.Combine(folder, "camera.png"));
+        }
+        finally
+        {
+            CameraPlayer.ForceOnScreen = false;
+            foreach (var (_, feed) in feeds) feed.Stop();
+        }
+        return errors;
+    }
+
+    /// <summary>The printer art on a dark backdrop, as a JPEG: something recognisable for the camera to show.</summary>
+    private static byte[] PrinterJpeg(int width, int height)
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(new LinearGradientBrush(Color.FromRgb(0x2A, 0x2D, 0x34), Color.FromRgb(0x0E, 0x0F, 0x12), 90), null, new Rect(0, 0, width, height));
+            if (ArtImage.For(ArtImage.Scene(null, "P1S", lightOn: true, dimmed: false), height * 0.75, height * 0.9) is { } art)
+                dc.DrawImage(art, new Rect((width - height * 0.75) / 2, height * 0.05, height * 0.75, height * 0.9));
+        }
+        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var encoder = new JpegBitmapEncoder { QualityLevel = 85 };
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = new MemoryStream();
+        encoder.Save(stream);
+        return stream.ToArray();
     }
 
     /// <summary>Runs the dispatcher (the demo's posted reports, layout) until <paramref name="done"/> or the time is up.</summary>

@@ -123,7 +123,7 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
                 return list;
             });
             var camera = session.ShowsCamera;
-            _camera.Show($"{camera}|{Ctx.Settings.Get(WindowSettings.CameraOnPrinterPage, true)}", () => camera ? CameraCard.Build(Ctx, Refresh) : null);
+            _camera.Show($"{camera}|{Ctx.Settings.Get(WindowSettings.CameraOnPrinterPage, true)}|{session.Id}", () => camera ? CameraCard.Build(Ctx, session, Refresh) : null);
             var model = session.Config.Model;
             _metricsLabel.Text = (status.Chamber is null && model?.IsEnclosed == false ? Loc.T("Temperatures & cooling") : Loc.T("Temperatures & airflow")).ToUpperInvariant();
             _fans.Show(FanTile.Key(status), () => FanTile.Build(Ctx, status));

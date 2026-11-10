@@ -81,18 +81,58 @@ jobs:
           $built = dotnet msbuild src/BambuBar.Windows/BambuBar.Windows.csproj -getProperty:Version
           if ($built -ne $expected) { throw "Build version '$built' isn't project.yml's '$expected'" }
           "Version $built"
+      - name: Fetch FFmpeg (the camera's decoder, LGPL)
+        # windows/ffmpeg/version.txt pins the build and its SHA-256 per arch (ledger D17).
+        run: |
+          $pin = @{}
+          Get-Content ffmpeg/version.txt | Where-Object { $_ -match '^([\w-]+)=(.+)$' } | ForEach-Object { $pin[$Matches[1]] = $Matches[2].Trim() }
+          $rid = '${{ matrix.rid }}'
+          $zip = Join-Path $env:RUNNER_TEMP "ffmpeg-$rid.zip"
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri $pin["url-$rid"] -OutFile $zip
+          $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
+          if ($hash -ne $pin["sha256-$rid"]) { throw "FFmpeg for $rid has SHA-256 $hash, expected $($pin["sha256-$rid"])" }
+          $unpacked = Join-Path $env:RUNNER_TEMP "ffmpeg-$rid"
+          Expand-Archive $zip -DestinationPath $unpacked -Force
+          $root = (Get-ChildItem $unpacked -Directory | Select-Object -First 1).FullName
+          "FFMPEG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Test
         if: matrix.rid == 'win-x64'
-        run: dotnet test --solution BambuBar.slnx
+        # With the pinned FFmpeg, so the decoder tests run on Windows too (they skip without it).
+        run: |
+          $env:BAMBUBAR_FFMPEG = Join-Path $env:FFMPEG_ROOT bin
+          dotnet test --solution BambuBar.slnx
       - name: Publish (self-contained)
         run: dotnet publish src/BambuBar.Windows -c Release -r ${{ matrix.rid }} -o ../build/windows/${{ matrix.rid }}
-      - name: Snapshot the UI (tray glyphs, pages)
+      - name: Bundle FFmpeg into ffmpeg\
+        # Only what the camera loads: avcodec, avutil, swscale and swresample (avcodec links it), with FFmpeg's license
+        # and where its source is (the LGPL's source offer; P5 attaches the source to releases).
+        run: |
+          $pin = @{}
+          Get-Content ffmpeg/version.txt | Where-Object { $_ -match '^([\w-]+)=(.+)$' } | ForEach-Object { $pin[$Matches[1]] = $Matches[2].Trim() }
+          $target = '../build/windows/${{ matrix.rid }}/ffmpeg'
+          New-Item -ItemType Directory -Force $target | Out-Null
+          foreach ($dll in $pin['dlls'] -split '\s+') { Copy-Item (Join-Path $env:FFMPEG_ROOT "bin/$dll") $target }
+          Copy-Item (Join-Path $env:FFMPEG_ROOT 'LICENSE.txt') $target
+          @(
+            "Bambu Bar decodes its camera with FFmpeg $($pin['version']), unmodified, under the GNU Lesser General Public",
+            "License version 3 (LICENSE.txt). These libraries are loaded at run time; you may replace them with your own build",
+            "of the same major versions (avcodec-63, avutil-61, swscale-10, swresample-7).",
+            "",
+            "Build: $($pin['release'])",
+            "Source: $($pin['source'])",
+            "Build scripts and the libraries they link: $($pin['build-scripts'])"
+          ) | Set-Content -Encoding utf8 (Join-Path $target 'SOURCE.txt')
+          Get-ChildItem $target | Format-Table Name, Length
+      - name: Snapshot the UI (tray glyphs, pages, camera)
         if: matrix.rid == 'win-x64'
-        # A WinExe: PowerShell wouldn't wait for it on its own.
+        # A WinExe: PowerShell wouldn't wait for it on its own. camera.png goes through the bundled FFmpeg; a problem
+        # there (it didn't load or decode) fails the job.
         run: |
           $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--snapshot', "$PWD/../build/snapshots" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "snapshot exited with $($p.ExitCode)" }
           Get-ChildItem ../build/snapshots
+          if (Test-Path ../build/snapshots/camera-errors.txt) { Get-Content ../build/snapshots/camera-errors.txt; throw "The camera snapshot failed" }
       - name: Run the demo and screenshot the desktop
         if: matrix.rid == 'win-x64'
         run: |

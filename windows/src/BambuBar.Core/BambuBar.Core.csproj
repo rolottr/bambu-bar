@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>BambuBar.Core</RootNamespace>
+    <!-- The FFmpeg bindings (Camera/Decoding) use function pointers and touch a few struct fields. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="BambuBar.Core.Tests" />

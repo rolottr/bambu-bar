@@ -476,8 +476,9 @@ public sealed class WindowView : Border, IDisposable
                 if (_store.Current is { IsOnline: true, Status.ChamberLightOn: not null }) _store.ToggleLight();
                 return true;
             case Key.K:
-                // The camera window comes with P3.9.
-                return _store.Current?.ShowsCamera == true;
+                if (_store.Current is not { ShowsCamera: true } session) return false;
+                if (!_services.Offscreen) CameraViews.CameraWindow.Show(session);
+                return true;
             case Key.W:
                 CloseRequested?.Invoke();
                 return true;

@@ -22,6 +22,8 @@ public sealed partial class TrayIcon : IDisposable
 
     public event Action? OpenPanel;
     public event Action? OpenWindow;
+    /// <summary>"Show Camera" (the Mac's Printer menu, ⌘K): only while the selected printer's camera is on.</summary>
+    public event Action<PrinterSession>? ShowCamera;
     public event Action? Quit;
 
     /// <summary>Draw the percentage instead of the printer while printing (Tray page, P3.5).</summary>
@@ -52,6 +54,12 @@ public sealed partial class TrayIcon : IDisposable
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(Loc.T("Open Bambu Bar"), null, (_, _) => OpenWindow?.Invoke());
         menu.Items.Add(Loc.T("Refresh"), null, (_, _) => _store.Refresh());
+        var camera = new Forms.ToolStripMenuItem(Loc.T("Show Camera"), null, (_, _) =>
+        {
+            if (_store.Current is { ShowsCamera: true } session) ShowCamera?.Invoke(session);
+        }) { ShortcutKeyDisplayString = "Ctrl+K" };
+        menu.Items.Add(camera);
+        menu.Opening += (_, _) => camera.Visible = _store.Current?.ShowsCamera == true;
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Loc.T("Quit"), null, (_, _) => Quit?.Invoke());
         return menu;

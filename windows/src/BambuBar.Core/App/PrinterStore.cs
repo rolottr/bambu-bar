@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using BambuBar.Core.Camera;
 using BambuBar.Core.Model;
 using BambuBar.Core.Protocol;
 
@@ -25,6 +26,8 @@ public sealed class PrinterStore : Observable, IDisposable
         public IReadOnlyList<string> Arguments { get; init; } = [];
         /// <summary>Extra UDP ports to listen on for announcements (the mock fleet's).</summary>
         public IReadOnlyList<int>? DiscoveryPorts { get; init; }
+        /// <summary>How the camera feeds connect and decode; null for the real ones.</summary>
+        public CameraServices? Camera { get; init; }
     }
 
     public sealed record ToastMessage(string Message, bool IsError)
@@ -70,6 +73,9 @@ public sealed class PrinterStore : Observable, IDisposable
     }
 
     internal AppSettings Settings => _services.Settings;
+    internal CameraServices? CameraServices => _services.Camera;
+    /// <summary>A run against the mock fleet (<c>--emulator</c>): its printers have no camera.</summary>
+    internal bool IsMockFleet => EmulatorSettings(_services.Arguments) is not null;
     internal ISecretStore Secrets => _services.Secrets;
 
     public ReadOnlyObservableCollection<PrinterSession> Sessions { get; }
@@ -138,7 +144,7 @@ public sealed class PrinterStore : Observable, IDisposable
     public bool CameraEnabled
     {
         get => _cameraEnabled;
-        set { if (Set(ref _cameraEnabled, value)) { Settings.Set(AppSettings.Keys.CameraEnabled, value); CameraSettingsChanged?.Invoke(); } }
+        set { if (Set(ref _cameraEnabled, value)) { Settings.Set(AppSettings.Keys.CameraEnabled, value); CameraSwitchesChanged(); } }
     }
 
     private bool _cameraStaysOnWhilePrinting;
@@ -146,11 +152,25 @@ public sealed class PrinterStore : Observable, IDisposable
     public bool CameraStaysOnWhilePrinting
     {
         get => _cameraStaysOnWhilePrinting;
-        set { if (Set(ref _cameraStaysOnWhilePrinting, value)) { Settings.Set(AppSettings.Keys.CameraStaysOnWhilePrinting, value); CameraSettingsChanged?.Invoke(); } }
+        set
+        {
+            if (!Set(ref _cameraStaysOnWhilePrinting, value)) return;
+            Settings.Set(AppSettings.Keys.CameraStaysOnWhilePrinting, value);
+            foreach (var session in _sessions) session.Camera.ViewersChanged();
+            CameraSettingsChanged?.Invoke();
+        }
     }
 
-    /// <summary>A camera switch changed (the camera feeds, P3.9, listen).</summary>
+    /// <summary>A camera switch changed, after the feeds heard of it: the app closes the camera windows of printers whose
+    /// camera is now off.</summary>
     public Action? CameraSettingsChanged { get; set; }
+
+    /// <summary>A camera now off stops streaming (the Mac's cameraSettingsChanged).</summary>
+    private void CameraSwitchesChanged()
+    {
+        foreach (var session in _sessions) session.Camera.Update();
+        CameraSettingsChanged?.Invoke();
+    }
 
     // MARK: Lifecycle
 
@@ -426,7 +446,7 @@ public sealed class PrinterStore : Observable, IDisposable
         if (Session(serial) is not { } session || session.Config.CameraEnabled == on) return;
         session.Config = session.Config with { CameraEnabled = on };
         SaveConfigs();
-        CameraSettingsChanged?.Invoke();
+        CameraSwitchesChanged();
     }
 
     public void Forget(string serial)

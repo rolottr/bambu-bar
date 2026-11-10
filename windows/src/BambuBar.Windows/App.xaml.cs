@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using BambuBar.AppWindow;
+using BambuBar.CameraViews;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Licensing;
@@ -92,6 +93,10 @@ public partial class App : Application
             Firewall.Prime();
             _store.InboundBlocked = Firewall.InboundBlocked;
         }
+        // The camera windows keep their frames in the settings; a camera turned off or a printer forgotten closes its window.
+        CameraWindow.Settings = _settings;
+        _store.CameraSettingsChanged = () => CameraWindow.CloseWhereHidden(_store);
+        ((System.Collections.Specialized.INotifyCollectionChanged)_store.Sessions).CollectionChanged += (_, _) => CameraWindow.CloseWhereHidden(_store);
         _store.Start();
 
         // The supporter license (P5.3): validated now and every 15 minutes while a key is saved; demo runs have none.
@@ -103,8 +108,10 @@ public partial class App : Application
         _tray.OpenWindow += () => ShowWindow();
         _tray.OpenPanel += TogglePanel;
         _tray.Quit += Quit;
+        _tray.ShowCamera += CameraWindow.Show;
 
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        SystemEvents.SessionSwitch += OnSessionSwitch;
         // A first launch from a link (a widget, bambubar://printer/…, a toast) goes where the link says; one from a
         // widget's right-click shows that widget's menu.
         if (args.Any(IsLink)) Handle(args);
@@ -196,6 +203,15 @@ public partial class App : Application
         else if (e.Mode == PowerModes.Resume) _store?.OnWake();
     }
 
+    /// <summary>A locked screen shows nobody the camera: its streams stop 4 s later, and come back on unlocking.</summary>
+    private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+    {
+        if (e.Reason is SessionSwitchReason.SessionLock or SessionSwitchReason.ConsoleDisconnect or SessionSwitchReason.RemoteDisconnect)
+            Dispatcher.BeginInvoke(() => CameraPlayer.SessionLocked(true));
+        else if (e.Reason is SessionSwitchReason.SessionUnlock or SessionSwitchReason.ConsoleConnect or SessionSwitchReason.RemoteConnect)
+            Dispatcher.BeginInvoke(() => CameraPlayer.SessionLocked(false));
+    }
+
     private void Quit()
     {
         Release();
@@ -224,6 +240,8 @@ public partial class App : Application
     private void Release()
     {
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.SessionSwitch -= OnSessionSwitch;
+        CameraWindow.CloseAll();
         _window?.Close();
         _panel?.Quit();
         _tray?.Dispose();

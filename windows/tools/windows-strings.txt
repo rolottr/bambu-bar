@@ -64,3 +64,8 @@ No widgets on your desktop yet.
 Widgets aren't available in this run of Bambu Bar.
 Keep on Top
 Remove
+# The camera (P3.9): Windows decodes with FFmpeg, bundled beside the app (D17); the Mac uses the system's decoder, which
+# can't go missing or lack a codec. The camera window's pin (the Mac's always floats).
+The camera needs FFmpeg, which Bambu Bar couldn't load. Reinstall Bambu Bar to repair it.
+Bambu Bar can't decode this camera's video (%@).
+Keep on top

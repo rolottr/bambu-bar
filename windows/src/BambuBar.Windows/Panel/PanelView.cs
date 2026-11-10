@@ -32,6 +32,8 @@ internal sealed class PanelContext
     public required Action Quit { get; init; }
     public required Func<bool> ShowsAll { get; init; }
     public required Action<bool> SetShowsAll { get; init; }
+    /// <summary>A section changed its height on its own (the camera unfolding): the panel window re-anchors.</summary>
+    public Action? Relayout { get; init; }
 
     public Brush Brush(string key) => (Brush?)Theme[key] ?? Brushes.Gray;
 
@@ -153,6 +155,14 @@ public sealed class PanelView : Border, IDisposable
 
     public void Quit() => QuitRequested?.Invoke();
 
+    /// <summary>Ctrl+K: the selected printer's camera window, when its camera is on.</summary>
+    public bool ShowCamera()
+    {
+        if (_store.Current is not { ShowsCamera: true } session) return false;
+        CameraViews.CameraWindow.Show(session);
+        return true;
+    }
+
     private bool ShowsAll => ShowsAllOverride ?? _settings.Get(ShowsAllKey, false);
 
     /// <summary>The panel opens on the printer the tray icon shows (the Mac's onAppear).</summary>
@@ -192,6 +202,7 @@ public sealed class PanelView : Border, IDisposable
                 else _settings.Set(ShowsAllKey, on);
                 Refresh();
             },
+            Relayout = () => ContentChanged?.Invoke(),
         };
         _header = new HeaderSection(_ctx);
         _setup = new SetupSection(_ctx);

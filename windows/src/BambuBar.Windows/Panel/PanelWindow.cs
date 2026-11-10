@@ -150,6 +150,10 @@ public sealed class PanelWindow : Window
             _view.Go(PanelDestination.Overview);
             e.Handled = true;
         }
+        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.K)
+        {
+            e.Handled = _view.ShowCamera();
+        }
         else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Q)
         {
             _view.Quit();

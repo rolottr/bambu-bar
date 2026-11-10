@@ -11,6 +11,7 @@ It needs Windows 10 1903 or later, or Windows 11, on x64 or ARM64.
 | `windows/src/BambuBar.Windows` | The WPF app (`BambuBar.exe`): tray icon, panel, window, widgets host |
 | `windows/tests/BambuBar.Core.Tests` | Unit tests, against the fixtures in `shared/ModelReports` |
 | `windows/tests/BambuBar.Integration.Tests` | Tests against the Docker simulators in `shared/scripts/integration`; they skip without them |
+| `windows/ffmpeg/version.txt` | The FFmpeg build the camera decodes with (pinned URLs and SHA-256 per arch; CI bundles it) |
 | `windows/tools` | `version.sh`/`version.ps1` (the shared version), `integration-test.sh`, `BambuBar.Cli` (Core's commands on any platform), `windows-strings.txt` (Windows texts waiting for translation) |
 | `shared/` | Printer art and models, HMS texts, certificates, filament names, `Localizable.xcstrings`, fixtures, simulators |
 
@@ -34,6 +35,21 @@ app and prints the Mac probe's summary, line for line: `BambuBar.exe --probe …
 printer store also handles the Mac's `--demo [scenario] [--fleet]`, `--connect <host> <serial> <code>` and
 `--emulator <BambuStudio.conf> [--add-all]` (none of them saves anything); the app passes them on once its shell
 exists (P3.1).
+
+`--probe-camera <host> <serial> <access-code> [seconds] [--jpeg|--rtsp] [--model <name>] [--insecure-tls] [--out <file.png>]`
+opens the camera like the app, logs the handshake and the frames, decodes them with FFmpeg and saves the first picture
+as a PNG (`bambubar-camera.png` in the temporary folder). Against the mock camera of `tools/integration-test.sh --keep`:
+`dotnet run --project tools/BambuBar.Cli -- --probe-camera 127.0.0.1 01P00C000000001 12345678 5 --rtsp --insecure-tls`.
+
+## Camera decoding (FFmpeg)
+
+The camera is decoded with FFmpeg 9 (ledger D17: LGPL, dynamically linked, unmodified): libavcodec 63, libavutil 61
+and libswscale 10, bound by hand in `Core/Camera/Decoding`. The app loads them from `ffmpeg\` beside `BambuBar.exe`;
+CI downloads the build pinned in `windows/ffmpeg/version.txt`, checks its hash and copies only those DLLs (and
+swresample, which avcodec links) with FFmpeg's license and source links. Elsewhere it uses Homebrew's FFmpeg on a Mac
+(`brew install ffmpeg`) or the system's on Linux; `BAMBUBAR_FFMPEG=<folder>` points anywhere else and
+`BAMBUBAR_FFMPEG_LOG=1` lets FFmpeg's warnings through. Without FFmpeg 9 the decoder tests skip and the camera says
+it needs FFmpeg.
 
 The app only runs on Windows. CI (`.github/workflows/build.yml`) tests Core on Linux and builds and publishes
 both architectures on Windows.

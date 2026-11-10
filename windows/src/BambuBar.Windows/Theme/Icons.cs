@@ -60,6 +60,9 @@ public static class Icons
     public const string Printer = "";
     /// <summary>video</summary>
     public const string Camera = "";
+    /// <summary>Pin and Pinned: the camera window's "keep on top".</summary>
+    public const string Pin = "";
+    public const string Pinned = "";
 
     public enum Vector { Flame, HeatWaves, Thermometer, Fan, Bulb, BulbLit }
 
