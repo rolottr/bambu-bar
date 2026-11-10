@@ -6,6 +6,10 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.18362.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
+    <!-- NotifyIcon for the tray (WPF has none). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- WFO0003 wants WinForms' DPI API; this is a WPF app, whose per-monitor DPI belongs in app.manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <!-- Lets the Mac and Linux build it too (CI runs the real build on Windows). -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
@@ -25,6 +29,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BambuBar.Core\BambuBar.Core.csproj" />
+  </ItemGroup>
+
+  <!-- WinForms is only for the tray icon: keep its names out of the WPF code's global usings. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <!-- Program.cs has the Main: command-line runs (probe) never start WPF. -->

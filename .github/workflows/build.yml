@@ -93,6 +93,18 @@ jobs:
           $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--snapshot', "$PWD/../build/snapshots" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "snapshot exited with $($p.ExitCode)" }
           Get-ChildItem ../build/snapshots
+      - name: Run the demo and screenshot the desktop
+        if: matrix.rid == 'win-x64'
+        run: |
+          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--demo', 'printing', '--fleet' -PassThru
+          Start-Sleep -Seconds 10
+          if ($p.HasExited) { throw "BambuBar.exe exited early with $($p.ExitCode)" }
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("$PWD/../build/snapshots/desktop-demo.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          Stop-Process $p
       - uses: actions/upload-artifact@v7
         if: matrix.rid == 'win-x64'
         with:

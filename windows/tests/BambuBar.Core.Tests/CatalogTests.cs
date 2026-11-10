@@ -17,7 +17,9 @@ public partial class CatalogTests
         // Windows-only texts waiting to join the catalog with their translations (P4.2).
         keys.UnionWith(File.ReadAllLines(Path.Combine(Repo.Root, "windows", "tools", "windows-strings.txt"))
             .Where(line => line.Length > 0 && !line.StartsWith('#')));
-        var sources = Directory.GetFiles(Path.Combine(Repo.Root, "windows", "src", "BambuBar.Core"), "*.cs", SearchOption.AllDirectories);
+        // Core and the Windows app.
+        var sources = Directory.GetFiles(Path.Combine(Repo.Root, "windows", "src"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")).ToArray();
         var missing = new List<string>();
         var count = 0;
         foreach (var file in sources)
