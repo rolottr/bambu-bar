@@ -142,8 +142,10 @@ for rid in "${rids[@]}"; do
     while read -r library function; do
         file="$(printf '%s\n' "${dlls[@]}" | grep "^$library-" || true)"
         [ -n "$file" ] || { echo "version.txt's dlls lack $library" >&2; exit 1; }
-        llvm-objdump -p "$dest/$file" | awk '/^Export Table:/ { e = 1 } e && NF == 3 { print $3 }' | grep -q -x -F "$function" ||
-            missing+=("$file:$function")
+        # The table is read whole first: `objdump | grep -q` would let grep exit at the first match, objdump die of
+        # SIGPIPE on large tables (avutil) and pipefail report the function missing.
+        table="$(llvm-objdump -p "$dest/$file" | awk '/^Export Table:/ { e = 1 } e && NF == 3 { print $3 }')"
+        grep -x -F -- "$function" <<<"$table" >/dev/null || missing+=("$file:$function")
     done <<<"$exports"
     [ ${#missing[@]} -eq 0 ] || { echo "Missing exports: ${missing[*]}" >&2; exit 1; }
 
