@@ -7,4 +7,13 @@
   <ItemGroup>
     <InternalsVisibleTo Include="BambuBar.Core.Tests" />
   </ItemGroup>
+
+  <!-- The files the Mac app bundles too, copied to Assets\ beside every program that references Core (Assets.cs).
+       The Mac's 3D models (.usdz) stay out; Windows gets its own (.glb, P3.10). -->
+  <ItemGroup>
+    <None Include="$(SharedDir)HMS\*.json.deflate" Link="Assets\HMS\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)Certificates\*.pem" Link="Assets\Certificates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)Printers\*.png;$(SharedDir)Printers\*.json;$(SharedDir)Printers\*.glb" Link="Assets\Printers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)filaments.json" Link="Assets\filaments.json" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
 </Project>
