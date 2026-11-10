@@ -7,6 +7,10 @@
   <ItemGroup>
     <InternalsVisibleTo Include="BambuBar.Core.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Verifies updates' Ed25519 signatures (Updates/UpdateSignature.cs). -->
+    <PackageReference Include="BouncyCastle.Cryptography" />
+  </ItemGroup>
 
   <!-- The files the Mac app bundles too, copied to Assets\ beside every program that references Core (Assets.cs).
        The Mac's 3D models (.usdz) stay out; Windows gets its own (.glb, P3.10). -->

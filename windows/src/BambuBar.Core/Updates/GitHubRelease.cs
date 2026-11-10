@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 
 namespace BambuBar.Core.Updates;
@@ -22,30 +21,11 @@ public sealed record GitHubRelease(string TagName, bool Draft, bool Prerelease, 
         var version = TagName.StartsWith('v') ? TagName[1..] : TagName;
         var latest = Components(version);
         var installed = Components(current);
-        for (var i = 0; i < 3; i++)
-        {
-            if (installed[i] != latest[i]) return installed[i] < latest[i] ? version : null;
-        }
-        return null;
+        return installed < latest ? version : null;
     }
 
-    private static int[] Components(string version)
-    {
-        var parts = version.Split('.');
-        if (parts.Length != 3 || !parts.All(p => p.Length > 0 && p.All(char.IsAsciiDigit)))
-        {
-            throw new GitHubReleaseException(GitHubReleaseFailure.InvalidVersion);
-        }
-        var values = new int[3];
-        for (var i = 0; i < 3; i++)
-        {
-            if (!int.TryParse(parts[i], NumberStyles.None, CultureInfo.InvariantCulture, out values[i]))
-            {
-                throw new GitHubReleaseException(GitHubReleaseFailure.InvalidVersion);
-            }
-        }
-        return values;
-    }
+    private static ReleaseVersion Components(string version) =>
+        ReleaseVersion.TryParse(version, out var parsed) ? parsed : throw new GitHubReleaseException(GitHubReleaseFailure.InvalidVersion);
 
     /// <summary>Decodes GitHub's release JSON: tag_name, draft, prerelease and the assets' names are required, as in
     /// the Mac's Decodable. Throws <see cref="JsonException"/> when they're missing or of the wrong type.</summary>

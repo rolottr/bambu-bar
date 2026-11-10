@@ -5,3 +5,8 @@ This PC isn't on a network.
 # showToast, so String Catalog extraction never sees them). Fix both apps together.
 Pausing…
 Resuming…
+# The Windows updater (Core/Updates/UpdateFeed.cs): the Mac leaves reading the feed, downloading and verifying to
+# Sparkle, which brings its own texts.
+The update feed couldn’t be read. Please try again later.
+The downloaded update couldn’t be verified, so it won’t be installed. Please try again later.
+The update couldn’t be saved. Check that your disk has free space and try again.
