@@ -337,19 +337,19 @@ internal sealed class TemperatureSection : PanelSection
             gauge.Children.Add(tick);
         }
 
-        var tile = new AccessibleCard
-        {
-            Child = new Stack { Spacing = 6, Children = { header, fit, gauge } }, CornerRadius = Metrics.Tile, Padding = new Thickness(11, 10, 11, 11),
-            BorderThickness = new Thickness(1),
-        };
-        Ui.Tint(tile, null);
+        UIElement content = new Stack { Spacing = 6, Children = { header, fit, gauge } };
         if (lit)
         {
             // A warm tile glows faintly from below in its colour.
             var glow = new LinearGradientBrush(Palette.WithAlpha(t.Tint, 0), Palette.WithAlpha(t.Tint, Ctx.Dark ? 0.12 : 0.08), 90);
             glow.Freeze();
-            tile.Child = new Grid { Children = { new Border { Background = glow, Margin = new Thickness(-11, -10, -11, -11), CornerRadius = Metrics.Tile }, tile.Child } };
+            content = new Grid { Children = { new Border { Background = glow, Margin = new Thickness(-11, -10, -11, -11), CornerRadius = Metrics.Tile }, content } };
         }
+        var tile = new AccessibleCard
+        {
+            Child = content, CornerRadius = Metrics.Tile, Padding = new Thickness(11, 10, 11, 11), BorderThickness = new Thickness(1),
+        };
+        Ui.Tint(tile, null);
         AutomationProperties.SetName(tile, Loc.F("%@, %@", t.Title, Spoken(t)));
         return tile;
     }

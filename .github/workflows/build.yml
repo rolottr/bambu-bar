@@ -159,6 +159,9 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "snapshot exited with $($p.ExitCode)" }
           Get-ChildItem ../build/snapshots
           if (Test-Path ../build/snapshots/camera-errors.txt) { Get-Content ../build/snapshots/camera-errors.txt; throw "The camera snapshot failed" }
+          # A scene that threw (panel-errors.txt, window-errors.txt…) is a crash waiting in the real app.
+          $errors = Get-ChildItem ../build/snapshots -Filter '*-errors.txt' | Where-Object Name -ne 'camera-errors.txt'
+          if ($errors) { $errors | ForEach-Object { "== $($_.Name)"; Get-Content $_ -TotalCount 40 }; throw "Snapshot scenes threw: $($errors.Name -join ', ')" }
       - name: Run the demo and screenshot the desktop
         if: matrix.rid == 'win-x64'
         run: |
@@ -204,11 +207,12 @@ jobs:
           path: build/release/
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
-        if: matrix.rid == 'win-x64'
+        # Even when a step failed: the errors files and what did render say why.
+        if: always() && matrix.rid == 'win-x64'
         with:
           name: Bambu-Bar-windows-snapshots
           path: build/snapshots/
-          if-no-files-found: error
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v7
         with:
           name: Bambu-Bar-windows-${{ matrix.rid }}
