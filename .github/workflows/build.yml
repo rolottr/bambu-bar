@@ -53,8 +53,39 @@ jobs:
       - name: Test
         run: dotnet test --solution BambuBar.slnx
 
+  # The camera's decoder (ledger D17): the minimal LGPL FFmpeg that windows/ffmpeg/build.sh cross-compiles for both
+  # arches from the source and toolchain pinned in windows/ffmpeg/version.txt (it checks their SHA-256, and that the
+  # DLLs export every function FFmpeg.cs binds). Cached until one of those three files changes.
+  ffmpeg:
+    name: FFmpeg for Windows (minimal, LGPL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v5
+        id: cache
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-windows-${{ hashFiles('windows/ffmpeg/version.txt', 'windows/ffmpeg/build.sh', 'windows/src/BambuBar.Core/Camera/Decoding/FFmpeg.cs') }}
+      - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: bash windows/ffmpeg/build.sh "$RUNNER_TEMP/ffmpeg-work" build/ffmpeg win-x64 win-arm64
+      - name: List
+        working-directory: build/ffmpeg
+        run: |
+          ls -l ./*/
+          sha256sum ./*/*.dll
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-windows
+          path: build/ffmpeg/
+          if-no-files-found: error
+
   windows:
     name: Windows (${{ matrix.rid }})
+    needs: ffmpeg
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
@@ -81,48 +112,35 @@ jobs:
           $built = dotnet msbuild src/BambuBar.Windows/BambuBar.Windows.csproj -getProperty:Version
           if ($built -ne $expected) { throw "Build version '$built' isn't project.yml's '$expected'" }
           "Version $built"
-      - name: Fetch FFmpeg (the camera's decoder, LGPL)
-        # windows/ffmpeg/version.txt pins the build and its SHA-256 per arch (ledger D17).
+      - uses: actions/download-artifact@v8
+        with:
+          name: ffmpeg-windows
+          path: build/ffmpeg
+      - name: Check the FFmpeg build
+        # Exactly the DLLs windows/ffmpeg/version.txt lists, with FFmpeg's license and the source offer.
         run: |
           $pin = @{}
           Get-Content ffmpeg/version.txt | Where-Object { $_ -match '^([\w-]+)=(.+)$' } | ForEach-Object { $pin[$Matches[1]] = $Matches[2].Trim() }
-          $rid = '${{ matrix.rid }}'
-          $zip = Join-Path $env:RUNNER_TEMP "ffmpeg-$rid.zip"
-          $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri $pin["url-$rid"] -OutFile $zip
-          $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
-          if ($hash -ne $pin["sha256-$rid"]) { throw "FFmpeg for $rid has SHA-256 $hash, expected $($pin["sha256-$rid"])" }
-          $unpacked = Join-Path $env:RUNNER_TEMP "ffmpeg-$rid"
-          Expand-Archive $zip -DestinationPath $unpacked -Force
-          $root = (Get-ChildItem $unpacked -Directory | Select-Object -First 1).FullName
+          $root = (Resolve-Path '../build/ffmpeg/${{ matrix.rid }}').Path
+          $expected = @($pin['dlls'] -split '\s+') + 'LICENSE.txt', 'SOURCE.txt' | Sort-Object
+          $found = Get-ChildItem $root -File | ForEach-Object Name | Sort-Object
+          if (Compare-Object $expected $found) { throw "FFmpeg for ${{ matrix.rid }} has $($found -join ', '), expected $($expected -join ', ')" }
+          Get-ChildItem $root | Format-Table Name, Length
           "FFMPEG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Test
         if: matrix.rid == 'win-x64'
         # With the pinned FFmpeg, so the decoder tests run on Windows too (they skip without it).
         run: |
-          $env:BAMBUBAR_FFMPEG = Join-Path $env:FFMPEG_ROOT bin
+          $env:BAMBUBAR_FFMPEG = $env:FFMPEG_ROOT
           dotnet test --solution BambuBar.slnx
       - name: Publish (self-contained)
         run: dotnet publish src/BambuBar.Windows -c Release -r ${{ matrix.rid }} -o ../build/windows/${{ matrix.rid }}
       - name: Bundle FFmpeg into ffmpeg\
-        # Only what the camera loads: avcodec, avutil, swscale and swresample (avcodec links it), with FFmpeg's license
-        # and where its source is (the LGPL's source offer; P5 attaches the source to releases).
+        # The three DLLs the camera loads (avcodec, avutil, swscale), FFmpeg's license and the source offer.
         run: |
-          $pin = @{}
-          Get-Content ffmpeg/version.txt | Where-Object { $_ -match '^([\w-]+)=(.+)$' } | ForEach-Object { $pin[$Matches[1]] = $Matches[2].Trim() }
           $target = '../build/windows/${{ matrix.rid }}/ffmpeg'
           New-Item -ItemType Directory -Force $target | Out-Null
-          foreach ($dll in $pin['dlls'] -split '\s+') { Copy-Item (Join-Path $env:FFMPEG_ROOT "bin/$dll") $target }
-          Copy-Item (Join-Path $env:FFMPEG_ROOT 'LICENSE.txt') $target
-          @(
-            "Bambu Bar decodes its camera with FFmpeg $($pin['version']), unmodified, under the GNU Lesser General Public",
-            "License version 3 (LICENSE.txt). These libraries are loaded at run time; you may replace them with your own build",
-            "of the same major versions (avcodec-63, avutil-61, swscale-10, swresample-7).",
-            "",
-            "Build: $($pin['release'])",
-            "Source: $($pin['source'])",
-            "Build scripts and the libraries they link: $($pin['build-scripts'])"
-          ) | Set-Content -Encoding utf8 (Join-Path $target 'SOURCE.txt')
+          Copy-Item (Join-Path $env:FFMPEG_ROOT '*') $target
           Get-ChildItem $target | Format-Table Name, Length
       - name: Snapshot the UI (tray glyphs, pages, camera)
         if: matrix.rid == 'win-x64'

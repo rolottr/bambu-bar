@@ -1,19 +1,29 @@
-# The FFmpeg the camera decodes with (ledger D17): FFmpeg 9 (libavcodec 63, libavutil 61, libswscale 10), LGPL
-# (version 3: the build uses --enable-version3), shared libraries loaded at run time from the app's ffmpeg\ folder,
-# shipped unmodified. Builds by FFmpeg-Builds (formerly BtbN/FFmpeg-Builds), "lgpl-shared" variant. CI
-# (.github/workflows/build.yml) downloads exactly these files, checks their SHA-256 and copies only the libraries the
-# camera loads (dlls, swresample because avcodec links it) with LICENSE.txt and a SOURCE.txt into ffmpeg\.
-# Pinned to a month-end build: FFmpeg-Builds keeps those, and deletes the daily ones after about two weeks.
-# To update: pick a newer month-end autobuild with an n9.x lgpl-shared zip per arch, download both, put their
-# SHA-256 here, and run the decoder tests against them (BAMBUBAR_FFMPEG=<unzipped>\bin).
-version=n9.0.2-39-g7adfbe40dc
-release=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/tag/autobuild-2026-10-31-12-59
-url-win-x64=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n9.0.2-39-g7adfbe40dc-win64-lgpl-shared-9.0.zip
-sha256-win-x64=e907b01fa4783913151237e37df2a10fa97d99a1598a021bf59d4ae62ffed4c0
-url-win-arm64=https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n9.0.2-39-g7adfbe40dc-winarm64-lgpl-shared-9.0.zip
-sha256-win-arm64=68664c6af3dc41384f983d5f6d33eb8cc7540eaced8c8d02fb0dd34ffbcdbbf6
-dlls=avcodec-63.dll avutil-61.dll swscale-10.dll swresample-7.dll
-# The corresponding source, for the LGPL's source offer (P5: attach these to every release, as with Rainmeter):
-# FFmpeg itself, and the build scripts that pin every library the build links into avcodec.
-source=https://github.com/FFmpeg/FFmpeg/archive/7adfbe40dcde598f93a6963d2f7b22cd75202ccc.zip
-build-scripts=https://github.com/FFmpeg-Builds/FFmpeg-Builds/archive/5031c6f1082414e53688d39e521849905071070d.zip
+# The FFmpeg the camera decodes with (ledger D17): a minimal build of FFmpeg 9 (libavcodec 63, libavutil 61,
+# libswscale 10) with only the h264, hevc and mjpeg decoders and swscale, LGPL version 2.1 or later (no external
+# libraries, no --enable-version3/gpl/nonfree), shared libraries loaded at run time from the app's ffmpeg\ folder,
+# built from FFmpeg's source tarball, unmodified. build.sh (beside this file) downloads exactly these files, checks
+# their SHA-256, cross-compiles for win-x64 and win-arm64 with llvm-mingw, and writes the DLLs below with
+# LICENSE.txt and SOURCE.txt. CI (.github/workflows/build.yml) runs it on Linux, cached by this file and build.sh.
+# To update: change a version, its URLs and SHA-256 (and dlls on a new major version), run build.sh on a Mac, then
+# run the decoder tests against its output (BAMBUBAR_FFMPEG=<out>/win-x64 on Windows).
+ffmpeg-version=9.0.2
+ffmpeg-url=https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+ffmpeg-sha256=8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
+# The cross-compiler (clang, lld, mingw-w64 with the UCRT), for the host that runs build.sh.
+llvm-mingw-version=20261020
+llvm-mingw-url-macos=https://github.com/mstorsjo/llvm-mingw/releases/download/20261020/llvm-mingw-20261020-ucrt-macos-universal.tar.xz
+llvm-mingw-sha256-macos=e9c13e4ede38e715003ffc674d4d00a1088df8235439d1f0c16188ff0704c17e
+llvm-mingw-url-linux-x86_64=https://github.com/mstorsjo/llvm-mingw/releases/download/20261020/llvm-mingw-20261020-ucrt-ubuntu-22.04-x86_64.tar.xz
+llvm-mingw-sha256-linux-x86_64=55064b60b991a1e1e8090b8c2f84e82b22cfe5903d12c159d65064cf5e8ae335
+# The assembler for FFmpeg's x86 SIMD code (x64 only), built from source.
+nasm-version=2.16.03
+nasm-url=https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/nasm-2.16.03.tar.xz
+nasm-sha256=1412a1c760bbd05db026b6c0d1657affd6631cd0a63cddb6f73cc6d4aa616148
+# FFmpeg's configure flags for both arches (build.sh adds the target: --arch, --cross-prefix, --cc and so on).
+# --disable-autodetect turns threads off too, hence --enable-w32threads (Windows' own: no libwinpthread DLL).
+# --enable-small (-Os, fewer specialised code paths) halves the DLLs, and costs 10-15% decode time per frame
+# (measured on Apple silicon with 1080p H.264 and HEVC: 2.4 ms instead of 2.1 ms, BGRA conversion included).
+# --no-insert-timestamp (and build.sh's paths) make the DLLs the same from any folder on the same kind of host.
+configure=--enable-small --disable-everything --disable-autodetect --enable-w32threads --enable-shared --disable-static --disable-debug --extra-ldflags=-Wl,--no-insert-timestamp --disable-programs --disable-doc --disable-network --disable-avformat --disable-avdevice --disable-avfilter --disable-swresample --enable-decoder=h264,hevc,mjpeg
+# What the app ships in ffmpeg\ (FFmpeg.cs loads swresample-7.dll too if it's there, but needn't: no audio).
+dlls=avcodec-63.dll avutil-61.dll swscale-10.dll

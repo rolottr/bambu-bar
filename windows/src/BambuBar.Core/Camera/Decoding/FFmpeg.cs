@@ -14,8 +14,9 @@ public sealed record FFmpegStatus(string? Version, string? Problem, string? Fold
 
 /// <summary>
 /// Finds and loads FFmpeg's shared libraries (ledger D17: LGPL, dynamically linked): libavcodec 63, libavutil 61 and
-/// libswscale 10, which FFmpeg 9 ships, and libswresample 7, which libavcodec links. On Windows they come with the
-/// app in <c>&lt;app&gt;\ffmpeg\</c> (windows/ffmpeg/version.txt pins the build); on a Mac, for development,
+/// libswscale 10, which FFmpeg 9 ships; libswresample 7 is loaded only when present (general builds link it into
+/// libavcodec; ours, with audio off, doesn't). On Windows they come with the app in <c>&lt;app&gt;\ffmpeg\</c>, our
+/// minimal build (windows/ffmpeg/build.sh, pins in version.txt); on a Mac, for development,
 /// Homebrew's; on Linux the system's. <c>BAMBUBAR_FFMPEG</c> or <see cref="Folder"/> picks another folder. Loading
 /// happens once, on first use, from any thread; libraries that are missing or of another major version leave
 /// <see cref="Status"/> with the problem, so the camera can say so instead of crashing.
