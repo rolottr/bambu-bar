@@ -10,3 +10,33 @@ Resuming…
 The update feed couldn’t be read. Please try again later.
 The downloaded update couldn’t be verified, so it won’t be installed. Please try again later.
 The update couldn’t be saved. Check that your disk has free space and try again.
+# The main window (P3.5): the Mac's texts that name the menu bar, the Dock, the Keychain or "this Mac", in Windows'
+# words (tray, notification area, Credential Manager, Startup apps, "this PC"), and the Tray page's Windows-only
+# settings (the percentage in the icon; the style is what the tooltip says, as a tray icon has no text beside it).
+Tray
+Tray icon
+Printer in the tray
+Shown in the tray
+What the tray icon shows while you print, and what you see when you click it.
+Windows has no room for text beside a tray icon, so this is what the icon's tooltip says.
+Show the percentage in the icon
+While printing, the icon shows the percentage in place of the printer.
+What the panel above the tray icon shows below the print. The chamber temperature appears only for printers with a chamber sensor (not the P1 and A series).
+Show pause, resume, stop and print speed controls in the tray panel and the main window, and print actions in the tray icon's menu.
+Preview of the tray icon and its panel
+Only in Bambu Bar, for the tray, window and widgets. The printer keeps its own name.
+Bambu Bar disconnects and removes the access code from Credential Manager. Print history stays.
+Notifications for Bambu Bar are turned off in Windows Settings.
+Open at sign-in
+At sign-in Bambu Bar starts in the notification area only. Open it from the Start menu or the tray icon to see this window.
+Bambu Bar is turned off in Startup apps, so it won't open at sign-in.
+Open Startup Apps
+Bambu Bar follows the language of Windows unless you pick another one here.
+Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the tray panel and the menus.
+Your Bambu Lab printer, one click away in the tray.
+The printer streams its status about once a second. Bambu Bar shows it in the tray, keeps a short history of your prints, and writes a snapshot for its desktop widgets on this PC.
+Printer data stays on your local network. No app analytics. Printer access codes are stored in Windows Credential Manager.
+Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. In-app update checks use the latest GitHub release feed and require an active website supporter license. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.
+Desktop widgets are drawn by Rainmeter (GPL-2.0), shipped unmodified with its license and source.
+Your supporter license enables automatic updates on this PC.
+Installation: Windows · %@

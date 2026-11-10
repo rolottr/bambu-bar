@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using BambuBar.AppWindow;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Model;
@@ -15,9 +16,10 @@ namespace BambuBar;
 
 /// <summary>
 /// <c>BambuBar.exe --snapshot &lt;dir&gt;</c> (P3.13): renders the app's pieces offscreen to PNGs, for CI artifacts
-/// and review without a screen: the tray glyphs, and the panel in every demo state, light and dark
-/// (<c>panel-&lt;scene&gt;-&lt;light|dark&gt;.png</c> at 2×). Problems are written to <c>panel-errors.txt</c> rather than
-/// failing the run, so the images that did render still reach the CI artifact.
+/// and review without a screen: the tray glyphs, the panel in every demo state, light and dark
+/// (<c>panel-&lt;scene&gt;-&lt;light|dark&gt;.png</c> at 2×), and every page of the window over the demo fleet
+/// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×). Problems are written to <c>panel-errors.txt</c>
+/// and <c>window-errors.txt</c> rather than failing the run, so the images that did render still reach the CI artifact.
 /// </summary>
 public static class Snapshot
 {
@@ -33,10 +35,85 @@ public static class Snapshot
         Save(TraySheet(), Path.Combine(folder, "tray-glyphs.png"));
         var errors = RenderPanels(folder);
         errors.AddRange(ThemeResources.Errors);
-        var report = Path.Combine(folder, "panel-errors.txt");
-        if (errors.Count > 0) File.WriteAllLines(report, errors);
-        else if (File.Exists(report)) File.Delete(report);
+        Report(Path.Combine(folder, "panel-errors.txt"), errors);
+        Report(Path.Combine(folder, "window-errors.txt"), RenderWindows(folder));
         return 0;
+    }
+
+    private static void Report(string path, List<string> errors)
+    {
+        if (errors.Count > 0) File.WriteAllLines(path, errors);
+        else if (File.Exists(path)) File.Delete(path);
+    }
+
+    /// <summary>A page of the window to render: its file name, the demo's command line, and the page.</summary>
+    private sealed record WindowScene(string Name, string[] Args, AppPage Page, bool AddPrinter = false);
+
+    private static readonly WindowScene[] WindowScenes =
+    [
+        .. AppPages.Order.Select(page => new WindowScene(page.ToString().ToLowerInvariant(), ["--demo", "printing", "--fleet"], page)),
+        // One printer: the sidebar's footer instead of the picker, and no All Printers.
+        new("printer-single", ["--demo", "printing"], AppPage.Printer),
+        new("printer-offline", ["--demo", "offline"], AppPage.Printer),
+        new("setup", ["--demo", "unconfigured"], AppPage.Printer),
+        new("add-printer", ["--demo", "printing", "--fleet"], AppPage.Printer, AddPrinter: true),
+    ];
+
+    /// <summary>Every page of the main window, light and dark, as the window shows it at 1100 × 720.</summary>
+    private static List<string> RenderWindows(string folder)
+    {
+        var errors = new List<string>();
+        foreach (var scene in WindowScenes)
+        {
+            foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+            {
+                var name = $"window-{scene.Name}-{(variant == ThemeVariant.Dark ? "dark" : "light")}.png";
+                try
+                {
+                    Save(RenderWindow(scene, variant), Path.Combine(folder, name));
+                }
+                catch (Exception e)
+                {
+                    errors.Add($"{name}: {e}");
+                }
+            }
+        }
+        return errors;
+    }
+
+    private static BitmapSource RenderWindow(WindowScene scene, ThemeVariant variant)
+    {
+        var settings = new AppSettings(null);
+        using var store = new PrinterStore(new PrinterStore.Services
+        {
+            Settings = settings, History = new HistoryStore(null), Secrets = new MemorySecretStore(), Arguments = scene.Args,
+        });
+        store.Start();
+        Pump(TimeSpan.FromSeconds(2), () => store.Sessions.All(s => s.Status is not null || s.Phase is Core.Protocol.PrinterConnection.Phase.Offline));
+        var view = new WindowView(store, settings, new WindowServices { Offscreen = true }, variant, animate: false);
+        try
+        {
+            if (scene.AddPrinter) view.AddPrinter(null);
+            else view.Show(scene.Page);
+            Pump(TimeSpan.FromMilliseconds(200), () => false);
+            view.Refresh();
+            const double width = 1100, height = 720;
+            view.Measure(new Size(width, height));
+            view.Arrange(new Rect(0, 0, width, height));
+            view.UpdateLayout();
+            // A second pass: pages that lay out by their width (the Tray page) settle after the first.
+            Pump(TimeSpan.FromMilliseconds(100), () => false);
+            view.UpdateLayout();
+            var bitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(view);
+            bitmap.Freeze();
+            return bitmap;
+        }
+        finally
+        {
+            view.Dispose();
+            store.Stop();
+        }
     }
 
     /// <summary>A panel to render: the demo's command line, and what to set before drawing.</summary>

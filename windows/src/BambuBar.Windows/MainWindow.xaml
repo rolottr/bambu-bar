@@ -1,6 +1,0 @@
-<Window x:Class="BambuBar.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Bambu Bar" Width="480" Height="240" WindowStartupLocation="CenterScreen">
-  <TextBlock x:Name="VersionText" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" />
-</Window>
