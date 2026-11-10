@@ -32,41 +32,44 @@ Get-ChildItem (Join-Path $repo 'rainmeter/samples') | ForEach-Object {
   $json | ConvertTo-Json -Depth 20 -Compress | Set-Content -Encoding utf8NoBOM (Join-Path $state $_.Name)
 }
 
-# 3. One widget per scene, laid out in a grid (positions in Rainmeter.ini, as WidgetHost writes them).
-$widgets = @(
-  @('Small', 'printing'), @('Medium', 'printing'), @('Large', 'printing'), @('Small', 'paused'),
-  @('Medium', 'a1-multicolour'), @('Large', 'h2d-two-nozzles'), @('Small', 'finished'), @('Medium', 'offline'),
-  @('Large', 'unauthorized'), @('Small', 'connecting'), @('Medium', 'failed'), @('Small', 'unconfigured')
+# 3. Batches that fit the runner's 1024 x 768 screen, one screenshot each (positions in Rainmeter.ini, as
+#    WidgetHost writes them). Each batch runs its own Rainmeter, closed before the next.
+$batches = @(
+  @(@('Small', 'printing', 0, 0), @('Medium', 'printing', 212, 0), @('Small', 'paused', 0, 212), @('Medium', 'a1-multicolour', 212, 212), @('Small', 'preparing', 624, 0), @('Small', 'finished', 624, 212)),
+  @(@('Large', 'printing', 0, 0), @('Large', 'h2d-two-nozzles', 412, 0)),
+  @(@('Large', 'paused', 0, 0), @('Large', 'failed', 412, 0)),
+  @(@('Large', 'finished', 0, 0), @('Large', 'idle', 412, 0)),
+  @(@('Small', 'offline', 0, 0), @('Small', 'connecting', 212, 0), @('Small', 'unauthorized', 424, 0), @('Small', 'unconfigured', 636, 0),
+    @('Medium', 'offline', 0, 212), @('Medium', 'failed', 412, 212), @('Medium', 'idle', 0, 424), @('Medium', 'unauthorized', 412, 424)),
+  @(@('Large', 'unauthorized', 0, 0), @('Large', 'unconfigured', 412, 0))
 )
-$ini = @('[Rainmeter]', "SkinPath=$skins\", 'TrayIcon=0', 'DisableVersionCheck=1', 'DisableAutoUpdate=1', 'Logging=1', 'Debug=1', '')
-$x = 0; $y = 0; $rowHeight = 0
-for ($i = 0; $i -lt $widgets.Count; $i++) {
-  $size, $scene = $widgets[$i]
-  $w = @{ Small = 212; Medium = 412; Large = 412 }[$size]; $h = @{ Small = 212; Medium = 212; Large = 412 }[$size]
-  if ($x + $w -gt 1900) { $x = 0; $y += $rowHeight; $rowHeight = 0 }
-  $config = "BambuBar\W$($i + 1)"
-  $folder = Join-Path $skins $config
-  New-Item -ItemType Directory -Force $folder | Out-Null
-  "[Variables]`r`n@Include=#@#..\$size\$size.ini`r`nStateFile=$(Join-Path $state "$scene.json")`r`n" |
-    Set-Content -Encoding utf8 (Join-Path $folder 'Widget.ini')
-  $ini += "[$config]", 'Active=1', "WindowX=$x", "WindowY=$y", 'AlwaysOnTop=1', 'Draggable=0', ''
-  $x += $w; $rowHeight = [Math]::Max($rowHeight, $h)
-}
 $iniPath = Join-Path $root 'Rainmeter.ini'
-$ini -join "`r`n" | Set-Content -Encoding Unicode $iniPath
-
-# 4. Run it, let the animations settle, screenshot twice (state, then a second later for the countdown/motion).
-$process = Start-Process (Join-Path $portable 'Rainmeter.exe') -ArgumentList "`"$iniPath`"" -PassThru
-Start-Sleep -Seconds 10
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-foreach ($shot in 1, 2) {
+$n = 0
+for ($b = 0; $b -lt $batches.Count; $b++) {
+  Get-ChildItem $skins\BambuBar -Directory -Filter 'W*' | Remove-Item -Recurse -Force
+  $ini = @('[Rainmeter]', "SkinPath=$skins\", 'TrayIcon=0', 'DisableVersionCheck=1', 'DisableAutoUpdate=1', 'Logging=1', '')
+  foreach ($widget in $batches[$b]) {
+    $size, $scene, $x, $y = $widget
+    $n++
+    $config = "BambuBar\W$n"
+    $folder = Join-Path $skins $config
+    New-Item -ItemType Directory -Force $folder | Out-Null
+    "[Variables]`r`n@Include=#@#..\$size\$size.ini`r`nStateFile=$(Join-Path $state "$scene.json")`r`n" |
+      Set-Content -Encoding utf8 (Join-Path $folder 'Widget.ini')
+    $ini += "[$config]", 'Active=1', "WindowX=$x", "WindowY=$y", 'AlwaysOnTop=1', 'Draggable=0', ''
+  }
+  $ini -join "`r`n" | Set-Content -Encoding Unicode $iniPath
+  $process = Start-Process (Join-Path $portable 'Rainmeter.exe') -ArgumentList "`"$iniPath`"" -PassThru
+  Start-Sleep -Seconds 8
   $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
   $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-  $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-  $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-  $bitmap.Save((Join-Path $Out "widgets-$shot.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-  Start-Sleep -Seconds 2
+  [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+  $bitmap.Save((Join-Path $Out "widgets-$($b + 1).png"), [System.Drawing.Imaging.ImageFormat]::Png)
+  Get-Content (Join-Path $root 'Rainmeter.log') -ErrorAction SilentlyContinue | Add-Content (Join-Path $Out 'Rainmeter.log')
+  Get-Process Rainmeter -ErrorAction SilentlyContinue | Stop-Process -Force
+  Start-Sleep -Seconds 1
 }
-Copy-Item (Join-Path $root 'Rainmeter.log') $Out -ErrorAction SilentlyContinue
-Stop-Process $process -ErrorAction SilentlyContinue
-"Screen $($bounds.Width)x$($bounds.Height); Rainmeter $($pin.version) running: $(-not $process.HasExited)"
+$errors = Select-String -Path (Join-Path $Out 'Rainmeter.log') -Pattern '^(ERRO|WARN)' -ErrorAction SilentlyContinue
+"Screen $($bounds.Width)x$($bounds.Height); Rainmeter $($pin.version); $($batches.Count) screenshots; log errors/warnings: $(@($errors).Count)"
+if (@($errors).Count -gt 0) { $errors | ForEach-Object { $_.Line }; throw 'Rainmeter logged errors or warnings' }
