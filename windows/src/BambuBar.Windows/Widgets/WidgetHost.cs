@@ -37,6 +37,9 @@ public sealed partial class WidgetHost : IDisposable
         State = new WidgetStateWriter(StateFolder) { Reload = () => Bang("!UpdateGroup BambuBar") };
     }
 
+    /// <summary>A widget was added, changed or removed (from the Widgets page or a widget's own menu).</summary>
+    public event Action? Changed;
+
     /// <summary>The store's widget sink: writes the state files the skins read.</summary>
     public WidgetStateWriter State { get; }
 
@@ -90,6 +93,7 @@ public sealed partial class WidgetHost : IDisposable
             Bang("!RefreshApp");
             Bang($"!ActivateConfig \"{widget.Config}\" \"Widget.ini\"");
         }
+        Changed?.Invoke();
         return widget;
     }
 
@@ -98,10 +102,47 @@ public sealed partial class WidgetHost : IDisposable
     {
         WriteStub(widget with { Size = size, Serial = serial });
         Bang($"!Refresh \"{widget.Config}\"");
+        Changed?.Invoke();
     }
 
-    /// <summary>"Keep on Top" from the widget menu: 1 on top, -2 on the desktop (Rainmeter's AlwaysOnTop).</summary>
-    public void KeepOnTop(Widget widget, bool onTop) => Bang($"!ZPos {(onTop ? 1 : -2)} \"{widget.Config}\"");
+    /// <summary>"Keep on Top" from the widget menu: 1 on top, -2 on the desktop (Rainmeter's AlwaysOnTop). Written to
+    /// Rainmeter.ini too, so the menu's check and the next start agree whatever Rainmeter saves itself.</summary>
+    public void KeepOnTop(Widget widget, bool onTop)
+    {
+        var value = onTop ? 1 : -2;
+        Bang($"!ZPos {value} \"{widget.Config}\"");
+        WritePrivateProfileString(widget.Config, "AlwaysOnTop", value.ToString(System.Globalization.CultureInfo.InvariantCulture), IniPath);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Whether the widget stays above windows (Rainmeter.ini's AlwaysOnTop for its config).</summary>
+    public bool IsOnTop(Widget widget) => File.Exists(IniPath) && GetPrivateProfileInt(widget.Config, "AlwaysOnTop", -2, IniPath) >= 1;
+
+    /// <summary>The widget a right-click names: its config (<c>BambuBar\W3</c>, Rainmeter's #CURRENTCONFIG#).</summary>
+    public Widget? Find(string config) =>
+        Widgets.FirstOrDefault(w => string.Equals(w.Config, config.Trim().Trim('"'), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Puts a new widget top right of the primary screen's work area: the skin's window (the card plus its
+    /// 16 px shadow margin, which is the gap to the edge) flush with the corner, each further widget 24 px down and
+    /// left of the one before so none lands exactly on another. Physical pixels, as Rainmeter.ini keeps them.</summary>
+    public Widget Add(Size size, string? serial)
+    {
+        var (x, y) = Placement(size, Widgets.Count);
+        return Add(size, serial, x, y);
+    }
+
+    private static (int X, int Y) Placement(Size size, int existing)
+    {
+        var area = System.Windows.Forms.Screen.PrimaryScreen?.WorkingArea ?? new System.Drawing.Rectangle(0, 0, 1920, 1040);
+        // The primary screen's scale: its physical width over WPF's logical one.
+        var logical = System.Windows.SystemParameters.WorkArea.Width;
+        var scale = logical > 0 ? Math.Max(1, area.Width / logical) : 1;
+        var (w, _) = size switch { Size.Small => (180, 180), Size.Medium => (380, 180), _ => (380, 380) };
+        var step = (int)Math.Round(24 * scale) * (existing % 8);
+        var x = area.Right - (int)Math.Round((w + 32) * scale) - step;
+        var y = area.Top + step;
+        return (Math.Max(area.Left, x), y);
+    }
 
     public void Remove(Widget widget)
     {
@@ -109,6 +150,7 @@ public sealed partial class WidgetHost : IDisposable
         try { Directory.Delete(Path.Combine(SkinsFolder, widget.Config), recursive: true); } catch (IOException) { }
         // No widgets left: Rainmeter would show its own tray icon with nothing loaded (§4.14), so it goes.
         if (Widgets.Count == 0) Quit();
+        Changed?.Invoke();
     }
 
     public void Dispose() => Quit();
@@ -244,6 +286,13 @@ public sealed partial class WidgetHost : IDisposable
 
     [LibraryImport("user32.dll")]
     private static partial uint GetWindowThreadProcessId(nint window, out int processId);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "WritePrivateProfileStringW", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool WritePrivateProfileString(string section, string key, string value, string path);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "GetPrivateProfileIntW", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int GetPrivateProfileInt(string section, string key, int fallback, string path);
 
     [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
     private static partial nint SendMessage(nint window, int message, nint wParam, ref CopyData lParam);

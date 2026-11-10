@@ -287,7 +287,7 @@ public sealed class WindowView : Border, IDisposable
         var configured = store.IsConfigured;
         var id = store.Current?.Id ?? "";
         Page Printer() => new PrinterPage(_ctx);
-        Page Setup() => new SetupPlaceholderPage(_ctx, SetupCandidate);
+        Page Setup() => new SetupPage(_ctx, SetupCandidate);
         return Section switch
         {
             AppPage.Fleet when multiple && !AddingPrinter => ("fleet", () => new FleetPage(_ctx)),
@@ -297,7 +297,7 @@ public sealed class WindowView : Border, IDisposable
             AppPage.Tray => ("tray", () => new TrayPage(_ctx)),
             AppPage.Notifications => ("notifications", () => new NotificationsPage(_ctx)),
             AppPage.Printers => ("printers|" + id, () => new PrintersPage(_ctx)),
-            AppPage.Widgets => ("widgets", () => new WidgetsPlaceholderPage(_ctx)),
+            AppPage.Widgets => ("widgets", () => new WidgetsPage(_ctx)),
             AppPage.Settings => ("settings", () => new SettingsPage(_ctx)),
             _ => ("about", () => new AboutPage(_ctx)),
         };

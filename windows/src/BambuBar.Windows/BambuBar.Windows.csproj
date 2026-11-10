@@ -31,6 +31,12 @@
     <ProjectReference Include="..\BambuBar.Core\BambuBar.Core.csproj" />
   </ItemGroup>
 
+  <!-- The app icon toasts show (registered with the AppUserModelID, Notifications/AppIdentity.cs). -->
+  <ItemGroup>
+    <Content Include="$(RepoRoot)Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" Link="AppIcon.png"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- WinForms is only for the tray icon: keep its names out of the WPF code's global usings. -->
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />

@@ -35,7 +35,7 @@ internal sealed class NotificationsPage(WindowContext ctx) : Page(ctx)
     {
         if (DateTime.UtcNow - _checkedAt < TimeSpan.FromSeconds(2)) return;
         _checkedAt = DateTime.UtcNow;
-        var off = TurnedOff();
+        var off = !Ctx.Services.Offscreen && TurnedOff(Ctx.Services.ToastsEnabled);
         _banner.Show(off.ToString(), () => off
             ? W.InfoBar(Palette.Paused, "", Loc.T("Notifications for Bambu Bar are turned off in Windows Settings."), Ctx,
                 W.Button(Loc.T("Open Settings"), () => W.Open("ms-settings:notifications"), small: true))
@@ -43,24 +43,19 @@ internal sealed class NotificationsPage(WindowContext ctx) : Page(ctx)
     }
 
     /// <summary>Notifications are off for every app (Settings → System → Notifications), or for Bambu Bar's entry
-    /// there. The registry is what the Settings page writes; reading it needs no AppUserModelID or WinRT call.</summary>
-    internal static bool TurnedOff()
+    /// there. Asks Windows for Bambu Bar's AppUserModelID (<paramref name="toasts"/>, the app's toast notifier); where
+    /// that can't answer, reads what the Settings page writes in the registry.</summary>
+    internal static bool TurnedOff(Func<bool?>? toasts)
     {
+        if (toasts?.Invoke() is { } allowed) return !allowed;
         try
         {
             using (var push = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications"))
             {
                 if (push?.GetValue("ToastEnabled") is int enabled && enabled == 0) return true;
             }
-            using var apps = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings");
-            if (apps is null) return false;
-            foreach (var name in apps.GetSubKeyNames())
-            {
-                if (!name.Replace(" ", "").Contains("BambuBar", StringComparison.OrdinalIgnoreCase)) continue;
-                using var app = apps.OpenSubKey(name);
-                if (app?.GetValue("Enabled") is int on && on == 0) return true;
-            }
-            return false;
+            using var app = Registry.CurrentUser.OpenSubKey($@"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\{Notifications.AppIdentity.Id}");
+            return app?.GetValue("Enabled") is int on && on == 0;
         }
         catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or System.IO.IOException)
         {

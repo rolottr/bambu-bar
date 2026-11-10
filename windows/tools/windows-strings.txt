@@ -39,3 +39,28 @@ Supporter licenses are validated online, with the key and installation ID stored
 Desktop widgets are drawn by Rainmeter (GPL-2.0), shipped unmodified with its license and source.
 Your supporter license enables automatic updates on this PC.
 Installation: Windows · %@
+# Setup (P3.6): the Mac's texts that name the menu bar, the keychain or "this Mac" in Windows' words, and the Windows
+# Firewall notice (ledger §4 trap 5; the Mac's Local Network advice has no Windows counterpart).
+Bambu Bar watches every printer you add; pick which one the tray icon shows on the Tray page.
+Your printer's progress, temperatures and filament, one click away in the tray. Bambu Bar talks to the printer directly over your network, without a Bambu Lab sign-in.
+Looking for printers on this network. Printers announce themselves every few seconds; make sure yours is on and on the same network as this PC.
+Bambu Bar uses the access code saved there for this printer. It's kept in Credential Manager and only ever sent to the printer.
+On the printer's screen open **Settings → Network** (the Wi-Fi/LAN page) and read the **Access Code**. It's stored in Credential Manager and only ever sent to the printer.
+Bambu Studio on another PC?
+Drop its **BambuStudio.conf** here, or its BambuStudio folder. It's in **AppData → Roaming → BambuStudio** in that user's folder.
+Windows Firewall keeps printers on this network from reaching Bambu Bar. If Windows asked, click **Allow**. Otherwise allow **Bambu Bar** for this network under **Allow an app through firewall** (it needs an administrator), or set this network to **Private** in Settings → Network & internet.
+Open Firewall Settings
+# The Widgets page (P3.8) and a widget's right-click menu (P2.5): Rainmeter widgets are added from the app, not from
+# a widget gallery as on the Mac, so the steps and the list of placed widgets are Windows-only.
+Your printers on the desktop, in three sizes.
+Add Widget
+Choose a size and a printer, then click **Add Widget**. It appears at the top right of your screen.
+Drag it wherever you like. It stays there, and comes back each time Bambu Bar starts.
+Right-click a widget to change its printer or size, keep it above other windows, or remove it.
+A widget set to **Printer in the tray** follows the printer the tray icon shows. Add one widget per printer to watch them side by side.
+Add more printers later and each widget can show a different one: right-click it and choose **Printer**.
+On your desktop
+No widgets on your desktop yet.
+Widgets aren't available in this run of Bambu Bar.
+Keep on Top
+Remove

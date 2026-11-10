@@ -8,9 +8,12 @@ using BambuBar.AppWindow;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Model;
+using BambuBar.Core.Protocol;
+using BambuBar.Core.Widgets;
 using BambuBar.Theme;
 using BambuBar.Tray;
 using BambuBar.TrayPanel;
+using BambuBar.Widgets;
 
 namespace BambuBar;
 
@@ -18,7 +21,8 @@ namespace BambuBar;
 /// <c>BambuBar.exe --snapshot &lt;dir&gt;</c> (P3.13): renders the app's pieces offscreen to PNGs, for CI artifacts
 /// and review without a screen: the tray glyphs, the panel in every demo state, light and dark
 /// (<c>panel-&lt;scene&gt;-&lt;light|dark&gt;.png</c> at 2×), and every page of the window over the demo fleet
-/// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×). Problems are written to <c>panel-errors.txt</c>
+/// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×), and the widgets as the Widgets page draws them, every
+/// state in every size (<c>widgets-cards.png</c>). Problems are written to <c>panel-errors.txt</c>
 /// and <c>window-errors.txt</c> rather than failing the run, so the images that did render still reach the CI artifact.
 /// </summary>
 public static class Snapshot
@@ -36,7 +40,16 @@ public static class Snapshot
         var errors = RenderPanels(folder);
         errors.AddRange(ThemeResources.Errors);
         Report(Path.Combine(folder, "panel-errors.txt"), errors);
-        Report(Path.Combine(folder, "window-errors.txt"), RenderWindows(folder));
+        var windowErrors = RenderWindows(folder);
+        try
+        {
+            Save(WidgetSheet(), Path.Combine(folder, "widgets-cards.png"));
+        }
+        catch (Exception e)
+        {
+            windowErrors.Add($"widgets-cards.png: {e}");
+        }
+        Report(Path.Combine(folder, "window-errors.txt"), windowErrors);
         return 0;
     }
 
@@ -46,17 +59,32 @@ public static class Snapshot
         else if (File.Exists(path)) File.Delete(path);
     }
 
-    /// <summary>A page of the window to render: its file name, the demo's command line, and the page.</summary>
-    private sealed record WindowScene(string Name, string[] Args, AppPage Page, bool AddPrinter = false);
+    /// <summary>A page of the window to render: its file name, the demo's command line, and the page. <c>Slicer</c>
+    /// imports a Bambu Studio settings file with three printers first (setup's rows and Add All); <c>Candidate</c> opens
+    /// setup on one of them; <c>Widgets</c> gives the page a widget host in a temporary folder with two placed widgets.</summary>
+    private sealed record WindowScene(string Name, string[] Args, AppPage Page, bool AddPrinter = false, bool Slicer = false,
+        string? Candidate = null, bool Widgets = false);
+
+    /// <summary>The printers in the settings file the setup scenes import (a P2S, an X1C and an A1).</summary>
+    private static readonly (string Serial, string Host, string Code)[] SlicerPrinters =
+    [
+        ("22E00A000000123", "192.168.1.60", "12345678"),
+        ("00M00A000000456", "192.168.1.61", "23456789"),
+        ("03900A000000789", "192.168.1.62", "34567890"),
+    ];
 
     private static readonly WindowScene[] WindowScenes =
     [
-        .. AppPages.Order.Select(page => new WindowScene(page.ToString().ToLowerInvariant(), ["--demo", "printing", "--fleet"], page)),
+        .. AppPages.Order.Select(page => new WindowScene(page.ToString().ToLowerInvariant(), ["--demo", "printing", "--fleet"], page,
+            Widgets: page == AppPage.Widgets)),
         // One printer: the sidebar's footer instead of the picker, and no All Printers.
         new("printer-single", ["--demo", "printing"], AppPage.Printer),
         new("printer-offline", ["--demo", "offline"], AppPage.Printer),
         new("setup", ["--demo", "unconfigured"], AppPage.Printer),
+        new("setup-slicer", ["--demo", "unconfigured"], AppPage.Printer, Slicer: true),
+        new("setup-picked", ["--demo", "unconfigured"], AppPage.Printer, Slicer: true, Candidate: SlicerPrinters[0].Serial),
         new("add-printer", ["--demo", "printing", "--fleet"], AppPage.Printer, AddPrinter: true),
+        new("widgets-single", ["--demo", "paused"], AppPage.Widgets, Widgets: true),
     ];
 
     /// <summary>Every page of the main window, light and dark, as the window shows it at 1100 × 720.</summary>
@@ -90,10 +118,29 @@ public static class Snapshot
         });
         store.Start();
         Pump(TimeSpan.FromSeconds(2), () => store.Sessions.All(s => s.Status is not null || s.Phase is Core.Protocol.PrinterConnection.Phase.Offline));
-        var view = new WindowView(store, settings, new WindowServices { Offscreen = true }, variant, animate: false);
+        var temp = Path.Combine(Path.GetTempPath(), "BambuBarSnapshot-" + Guid.NewGuid().ToString("N"));
+        WidgetHost? widgets = null;
+        if (scene.Slicer)
+        {
+            Directory.CreateDirectory(temp);
+            var conf = Path.Combine(temp, "BambuStudio.conf");
+            File.WriteAllText(conf, "{\"access_code\": {" + string.Join(", ", SlicerPrinters.Select(p => $"\"{p.Serial}\": \"{p.Code}\"")) +
+                "}, \"ip_address\": {" + string.Join(", ", SlicerPrinters.Select(p => $"\"{p.Serial}\": \"{p.Host}\"")) + "}}");
+            store.ImportSlicerSettings(conf);
+        }
+        if (scene.Widgets)
+        {
+            Directory.CreateDirectory(temp);
+            widgets = new WidgetHost(temp, temp);
+            widgets.Add(WidgetHost.Size.Medium, store.Sessions.FirstOrDefault()?.Id, 1500, 16);
+            widgets.Add(WidgetHost.Size.Small, null, 1500, 240);
+        }
+        var view = new WindowView(store, settings, new WindowServices { Offscreen = true, Widgets = widgets }, variant, animate: false);
         try
         {
-            if (scene.AddPrinter) view.AddPrinter(null);
+            if (scene.Candidate is { } serial && SlicerPrinters.FirstOrDefault(p => p.Serial == serial) is { Serial.Length: > 0 } picked)
+                view.AddPrinter(new DiscoveredPrinter { Serial = picked.Serial, Host = picked.Host, Name = picked.Serial, ModelCode = "" });
+            else if (scene.AddPrinter) view.AddPrinter(null);
             else view.Show(scene.Page);
             Pump(TimeSpan.FromMilliseconds(200), () => false);
             view.Refresh();
@@ -113,7 +160,61 @@ public static class Snapshot
         {
             view.Dispose();
             store.Stop();
+            try { if (Directory.Exists(temp)) Directory.Delete(temp, recursive: true); }
+            catch (IOException) { /* Left in %TEMP%. */ }
         }
+    }
+
+    /// <summary>The widgets as the Widgets page draws them: every showcase scene and every link state, in each size,
+    /// on the showcase's dark backdrop.</summary>
+    private static BitmapSource WidgetSheet()
+    {
+        var now = DateTimeOffset.Now;
+        var printer = ShowcasePrinter.For(null);
+        var rows = new List<(string Name, WidgetState State, Core.Imaging.PrinterArt.Scene Art)>();
+        foreach (var scene in Enum.GetValues<ShowcaseScene>())
+        {
+            var (state, art) = ShowcaseScenes.Build(scene, Showcase.SceneSeconds / 2, now, printer);
+            rows.Add((scene.ToString(), state, art));
+        }
+        var lastJob = new JobRecord
+        {
+            Name = "Articulated Dragon", StartedAt = now.AddHours(-5), EndedAt = now.AddHours(-2), Outcome = JobOutcome.Finished, TotalLayers = 284,
+        };
+        foreach (var link in new[] { PrinterSnapshot.LinkState.Offline, PrinterSnapshot.LinkState.Connecting, PrinterSnapshot.LinkState.Unauthorized, PrinterSnapshot.LinkState.Unconfigured })
+        {
+            var snapshot = new PrinterSnapshot
+            {
+                Serial = link == PrinterSnapshot.LinkState.Unconfigured ? "" : "showcase", PrinterName = printer.Name, Model = printer.Model,
+                Link = link, LastJob = link == PrinterSnapshot.LinkState.Offline ? lastJob : null, SavedAt = now,
+            };
+            rows.Add((link.ToString(), WidgetStateWriter.Build(snapshot, now), ArtImage.Scene(null, printer.Model, lightOn: false, dimmed: true)));
+        }
+
+        var sheet = new System.Windows.Controls.StackPanel { Background = new SolidColorBrush(Color.FromRgb(0x16, 0x22, 0x40)) };
+        foreach (var (name, state, art) in rows)
+        {
+            var row = new System.Windows.Controls.StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(16, 16, 16, 0) };
+            row.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = name, Width = 110, Foreground = Brushes.White, FontSize = 13, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 8, 0, 0),
+            });
+            foreach (var size in Enum.GetValues<WidgetHost.Size>())
+            {
+                var card = new WidgetCard(size) { Margin = new Thickness(0, 0, 16, 0), VerticalAlignment = VerticalAlignment.Top };
+                card.Show(state, art, now);
+                row.Children.Add(card);
+            }
+            sheet.Children.Add(row);
+        }
+        sheet.Children.Add(new System.Windows.Controls.Border { Height = 16 });
+        sheet.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        sheet.Arrange(new Rect(sheet.DesiredSize));
+        sheet.UpdateLayout();
+        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(sheet.ActualWidth), (int)Math.Ceiling(sheet.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(sheet);
+        bitmap.Freeze();
+        return bitmap;
     }
 
     /// <summary>A panel to render: the demo's command line, and what to set before drawing.</summary>

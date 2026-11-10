@@ -75,6 +75,12 @@ public sealed class WindowServices
 
     /// <summary>Snapshot runs: nothing reads the registry or opens anything.</summary>
     public bool Offscreen { get; init; }
+
+    /// <summary>The desktop widgets (Rainmeter); null in demo, developer and snapshot runs, which must not touch them.</summary>
+    public Widgets.WidgetHost? Widgets { get; init; }
+
+    /// <summary>Whether Windows lets Bambu Bar's toasts through (the Notifications page's banner); null when unknown.</summary>
+    public Func<bool?>? ToastsEnabled { get; init; }
 }
 
 /// <summary>Keys this app adds to the Mac's settings (same file, Windows-only).</summary>
