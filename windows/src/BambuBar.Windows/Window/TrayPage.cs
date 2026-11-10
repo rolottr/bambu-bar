@@ -28,10 +28,8 @@ internal sealed class TrayPage(WindowContext ctx) : Page(ctx)
     private FrameworkElement _settings = null!;
     private FrameworkElement _previewBlock = null!;
     private readonly Region _printerPick = new();
-    private readonly Dictionary<TrayStyle, RadioOption> _styles = [];
     private ToggleSwitch _chamber = null!;
     private bool _wide = true;
-    private bool _syncing;
 
     private bool Setting(string key, bool fallback) => Ctx.Settings.Get(key, fallback);
 
@@ -91,24 +89,8 @@ internal sealed class TrayPage(WindowContext ctx) : Page(ctx)
     {
         var tray = W.Group(Loc.T("Tray icon"), AppPage.Tray.Glyph(), out var trayBody);
         trayBody.Children.Add(_printerPick.Host);
-        trayBody.Children.Add(Ui.Text(Loc.T("While printing, show"), WRamp.Body));
-        var radios = new Stack { Spacing = 2, Margin = new Thickness(0, -6, 0, 0) };
-        foreach (var style in Enum.GetValues<TrayStyle>())
-        {
-            var option = new RadioOption(style.Title(), Group) { IsChecked = Store.MenuBarStyle == style };
-            option.Checked += (_, _) =>
-            {
-                if (_syncing) return;
-                Store.MenuBarStyle = style;
-                _preview.Light(TrayPreview.Part.Icon);
-            };
-            _styles[style] = option;
-            radios.Children.Add(option);
-        }
-        AutomationProperties.SetName(radios, Loc.T("While printing, show"));
-        trayBody.Children.Add(radios);
-        trayBody.Children.Add(W.Note(Loc.T("Windows has no room for text beside a tray icon, so this is what the icon's tooltip says.")));
-        trayBody.Children.Add(W.Divider());
+        // The Mac's "While printing, show" has no place on Windows: nothing can sit beside a tray icon, and the
+        // tooltip always gives the whole line (ledger D2). The percentage in the icon is the Windows option.
         trayBody.Children.Add(W.Switch(Loc.T("Show the percentage in the icon"), Setting(WindowSettings.TrayShowsPercent, false), on =>
         {
             Ctx.Settings.Set(WindowSettings.TrayShowsPercent, on);
@@ -153,10 +135,6 @@ internal sealed class TrayPage(WindowContext ctx) : Page(ctx)
         var multiple = Store.HasMultiplePrinters;
         var names = string.Join("#", Store.Sessions.Select(s => s.Id + s.Config.Name));
         _printerPick.Show($"{multiple}|{Store.MenuBarSerial}|{names}", () => multiple ? PrinterPick() : null);
-        _syncing = true;
-        foreach (var (style, option) in _styles)
-            if (option.IsChecked != (Store.MenuBarStyle == style)) option.IsChecked = Store.MenuBarStyle == style;
-        _syncing = false;
         _preview.Follow(Store.MenuBarSession ?? Store.Current);
     }
 
@@ -221,7 +199,6 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer _dim = new() { Interval = TimeSpan.FromSeconds(1.6) };
     private Part? _lighted;
-    private string _followed = "";
 
     public TrayPreview(WindowContext ctx)
     {
@@ -330,10 +307,7 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
     /// <summary>Shows the panel with the printer the tray icon follows: its name on the sample print.</summary>
     public void Follow(PrinterSession? session)
     {
-        var name = session?.Config.Name ?? "";
-        if (name == _followed || _demo.Current is not { } demo || name.Length == 0) return;
-        _followed = name;
-        _demo.Rename(demo.Id, name);
+        // The sample keeps its own name and model: your printer's name on a P2S's print misleads.
         Refresh();
     }
 
@@ -355,8 +329,7 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
         var look = TrayGlyph.For(session, true, showsPercent);
         _icon.Source = TrayGlyph.Render(look, 40, lightTaskbar: !_ctx.Dark);
         RenderOptions.SetBitmapScalingMode(_icon, BitmapScalingMode.HighQuality);
-        var text = s is null ? null : _ctx.Store.MenuBarStyle.Text(s);
-        _tooltip.Text = session is null ? "Bambu Bar" : text is null ? $"{session.Config.Name} · {s?.StateTitle}" : $"{session.Config.Name} · {text}";
+        _tooltip.Text = Tray.TrayIcon.Tooltip(session);
         var now = DateTime.Now;
         _clock.Text = now.ToString("t", CultureInfo.CurrentCulture);
         _date.Text = now.ToString("d", CultureInfo.CurrentCulture);

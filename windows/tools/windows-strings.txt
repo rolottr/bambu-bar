@@ -18,7 +18,6 @@ Tray icon
 Printer in the tray
 Shown in the tray
 What the tray icon shows while you print, and what you see when you click it.
-Windows has no room for text beside a tray icon, so this is what the icon's tooltip says.
 Show the percentage in the icon
 While printing, the icon shows the percentage in place of the printer.
 What the panel above the tray icon shows below the print. The chamber temperature appears only for printers with a chamber sensor (not the P1 and A series).

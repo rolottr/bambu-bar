@@ -78,7 +78,7 @@ public sealed partial class TrayIcon : IDisposable
     }
 
     /// <summary>"P2S Workshop · 64% · 1h 02m · done 14:32", or the link state.</summary>
-    private string Tooltip(PrinterSession? session)
+    public static string Tooltip(PrinterSession? session)
     {
         if (session is null) return "Bambu Bar · " + Loc.T("No printer set up");
         if (session.Status is not { } s || !session.IsOnline) return $"{session.Config.Name} · {session.LinkSummary}";
