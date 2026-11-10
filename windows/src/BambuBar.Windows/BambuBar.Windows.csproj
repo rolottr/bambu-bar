@@ -32,6 +32,14 @@
     <ProjectReference Include="..\BambuBar.Core\BambuBar.Core.csproj" />
   </ItemGroup>
 
+  <!-- The live 3D printer (Model3D/, P3.10): HelixToolkit over Direct3D 11. Roslyn comes along as a dependency of a
+       node type the app doesn't use; nothing of it is copied (Directory.Packages.props). -->
+  <ItemGroup>
+    <PackageReference Include="HelixToolkit.Wpf.SharpDX" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" ExcludeAssets="all" PrivateAssets="all" />
+  </ItemGroup>
+
   <!-- The app icon toasts show (registered with the AppUserModelID, Notifications/AppIdentity.cs). -->
   <ItemGroup>
     <!-- The app icon, a tracked copy of the Mac's (Resources/Assets.xcassets is generated on the Mac and ignored). -->

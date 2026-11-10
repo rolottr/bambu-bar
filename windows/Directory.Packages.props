@@ -6,6 +6,14 @@
   <ItemGroup>
     <!-- Ed25519 for update signatures (Sparkle's sparkle:edSignature); the BCL has none. MIT. -->
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
+    <!-- The live 3D printer (P3.10, ledger D18): DirectX 11 through SharpDX, MIT. The 3.x line is the one built for
+         .NET 8+ (System.Numerics maths); it's pure managed, so it runs on x64 and ARM64 alike. glTF is read by our own
+         loader (Model3D/Gltf.cs): HelixToolkit.SharpDX.Assimp's native assimp.dll has no win-arm64 build. -->
+    <PackageVersion Include="HelixToolkit.Wpf.SharpDX" Version="3.1.2" />
+    <!-- HelixToolkit.SharpDX lists Roslyn as a dependency for one node type we don't use (DynamicCodeSurface3DNode):
+         referenced here only to keep its ~15 MB of compilers out of the app (ExcludeAssets in the Windows csproj). -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
 </Project>

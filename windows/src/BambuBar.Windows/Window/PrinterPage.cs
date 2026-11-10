@@ -57,7 +57,7 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
         _refresh = new RefreshControl(Ctx);
         var header = W.PageHeader(_name, _subtitle, _refresh);
 
-        _job = new JobSection(_panel);
+        _job = new JobSection(_panel, HeroScale);
         _hero = new Border { Child = _job.Root, LayoutTransform = new ScaleTransform(HeroScale, HeroScale) };
 
         _controls = new ControlsSection(_panel);

@@ -13,6 +13,8 @@ using BambuBar.Core.App;
 using BambuBar.Core.Model;
 using BambuBar.Core.Protocol;
 using BambuBar.Core.Widgets;
+using BambuBar.Core.Imaging;
+using BambuBar.Model3D;
 using BambuBar.Theme;
 using BambuBar.Tray;
 using BambuBar.TrayPanel;
@@ -25,8 +27,11 @@ namespace BambuBar;
 /// and review without a screen: the tray glyphs, the panel in every demo state, light and dark
 /// (<c>panel-&lt;scene&gt;-&lt;light|dark&gt;.png</c> at 2×), and every page of the window over the demo fleet
 /// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×), and the widgets as the Widgets page draws them, every
-/// state in every size (<c>widgets-cards.png</c>), and the camera over a picture FFmpeg decoded (<c>camera.png</c>). Problems are written to <c>panel-errors.txt</c>
-/// and <c>window-errors.txt</c> rather than failing the run, so the images that did render still reach the CI artifact.
+/// state in every size (<c>widgets-cards.png</c>), and the camera over a picture FFmpeg decoded (<c>camera.png</c>), and
+/// the live 3D model of every shape (<c>model3d-&lt;shape&gt;.png</c>, with <c>model3d.txt</c> saying which renderer drew
+/// it, or why the drawing stood in). Problems are written to <c>panel-errors.txt</c> and <c>window-errors.txt</c> rather
+/// than failing the run, so the images that did render still reach the CI artifact. Panels and pages are drawn in no
+/// window, so their printer is the drawing; the 3D model needs a window of its own.
 /// </summary>
 public static class Snapshot
 {
@@ -39,6 +44,8 @@ public static class Snapshot
     public static int Run(string folder)
     {
         Directory.CreateDirectory(folder);
+        // The 3D renderer's log goes into model3d.txt, not the user's folder.
+        Renderer3D.LogPath = null;
         Save(TraySheet(), Path.Combine(folder, "tray-glyphs.png"));
         var errors = RenderPanels(folder);
         errors.AddRange(ThemeResources.Errors);
@@ -53,6 +60,7 @@ public static class Snapshot
             cameraErrors.Add($"camera.png: {e}");
         }
         Report(Path.Combine(folder, "camera-errors.txt"), cameraErrors);
+        RenderModels(folder);
         var windowErrors = RenderWindows(folder);
         try
         {
@@ -403,6 +411,122 @@ public static class Snapshot
             foreach (var (_, feed) in feeds) feed.Stop();
         }
         return errors;
+    }
+
+    /// <summary>
+    /// The 3D model of every shape, printing at 60 % with four AMS spools (nine on the H3C), in the view the panel and the
+    /// Printer page use, shown in a window of its own off screen and read back from Direct3D: chamber light on and off,
+    /// over the panel's light and dark cards, at 2× (<c>model3d-&lt;shape&gt;.png</c>). <c>model3d.txt</c> says which
+    /// renderer drew them (the graphics card, or WARP on a runner without one) with the renderer's log, or "fallback"
+    /// and why, when Direct3D 11 couldn't run and the app would show the drawing instead.
+    /// </summary>
+    private static void RenderModels(string folder)
+    {
+        var report = new List<string>();
+        try
+        {
+            var effects = Renderer3D.Effects;
+            report.Add($"renderer: {Renderer3D.Status}");
+            if (effects is null)
+            {
+                report.Add($"fallback: {Renderer3D.OffReason} (the app shows the drawing)");
+            }
+            else
+            {
+                foreach (var shape in Enum.GetValues<PrinterShape>())
+                {
+                    var name = $"model3d-{shape.AssetName()}.png";
+                    try
+                    {
+                        var (sheet, note) = RenderModel(shape);
+                        if (sheet is not null) Save(sheet, Path.Combine(folder, name));
+                        report.Add($"{name}: {note}");
+                    }
+                    catch (Exception e)
+                    {
+                        report.Add($"{name}: failed: {e}");
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            report.Add($"fallback: {e} (the app shows the drawing)");
+        }
+        report.Add("");
+        report.Add("log:");
+        report.AddRange(Renderer3D.Log);
+        File.WriteAllLines(Path.Combine(folder, "model3d.txt"), report);
+    }
+
+    /// <summary>The sheet (null when nothing was drawn) and what happened.</summary>
+    private static (BitmapSource? Sheet, string Note) RenderModel(PrinterShape shape)
+    {
+        const double width = 240, height = 288, scale = 2;
+        string?[] spools = shape == PrinterShape.H3C
+            ? ["F4F4F4FF", "161616FF", "E8232BFF", "1F4FC4FF", "F5C518FF", "2FB24CFF", "FF7A1AFF", "8A4FD8FF", "9AA0A6FF"]
+            : ["F4F4F4FF", "161616FF", "E8232BFF", "1F4FC4FF"];
+        var scene = new PrinterArt.Scene
+        {
+            Shape = shape, State = JobState.Printing, Progress = 0.6, Filament = "FF7A1AFF", Spools = spools, LightOn = true,
+        };
+        var view = new PrinterModelView(width, height, scale);
+        view.Show(scene, animated: false);
+        var window = new Window
+        {
+            WindowStyle = WindowStyle.None, ResizeMode = ResizeMode.NoResize, ShowInTaskbar = false, ShowActivated = false,
+            WindowStartupLocation = WindowStartupLocation.Manual, Left = -12000, Top = -12000, SizeToContent = SizeToContent.WidthAndHeight,
+            Content = view, Title = "Bambu Bar 3D snapshot",
+        };
+        window.Show();
+        try
+        {
+            // Less than the view's own limit, so a picture Direct3D drew but WPF never got can still be read back.
+            Pump(TimeSpan.FromSeconds(4), () => view.IsLive || Renderer3D.IsOff);
+            var live = view.IsLive;
+            var note = live ? "rendered, on screen"
+                : view.FramesBeforeLive > 0 ? $"fallback: Direct3D drew {view.FramesBeforeLive} frames but WPF never got the picture (the app shows the drawing); read back from Direct3D"
+                : $"fallback: {Renderer3D.OffReason ?? "Direct3D drew nothing"} (the app shows the drawing)";
+            if (!live && view.FramesBeforeLive == 0) return (null, note);
+            // A few more frames: the dome's mipmaps, the lamp.
+            Pump(TimeSpan.FromMilliseconds(400), () => false);
+            var lit = view.Capture(drawnOnly: true);
+            view.Show(scene with { LightOn = false }, animated: false);
+            Pump(TimeSpan.FromMilliseconds(400), () => false);
+            var dark = view.Capture(drawnOnly: true);
+            if (lit is null || dark is null) return (null, note + "; nothing to read back");
+
+            var visual = new DrawingVisual();
+            using (var dc = visual.RenderOpen())
+            {
+                var face = new Typeface("Segoe UI");
+                (Color Card, Brush Ink, string Name)[] themes =
+                [
+                    (Color.FromRgb(0xFB, 0xFB, 0xFB), Brushes.Black, "light"),
+                    (Color.FromRgb(0x2B, 0x2B, 0x2B), Brushes.White, "dark"),
+                ];
+                for (var column = 0; column < themes.Length; column++)
+                {
+                    var (card, ink, theme) = themes[column];
+                    dc.DrawRectangle(new SolidColorBrush(card), null, new Rect(column * width, 0, width, height * 2 + 40));
+                    for (var row = 0; row < 2; row++)
+                    {
+                        var y = 20 + row * (height + 20);
+                        dc.DrawImage(row == 0 ? lit : dark, new Rect(column * width, y, width, height));
+                        dc.DrawText(new FormattedText($"{shape.AssetName()} · {theme} · light {(row == 0 ? "on" : "off")}", CultureInfo.InvariantCulture,
+                            FlowDirection.LeftToRight, face, 11, ink, 1.0), new Point(column * width + 8, y - 16));
+                    }
+                }
+            }
+            var bitmap = new RenderTargetBitmap((int)(width * 2 * scale), (int)((height * 2 + 40) * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            bitmap.Freeze();
+            return (bitmap, note);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     /// <summary>The printer art on a dark backdrop, as a JPEG: something recognisable for the camera to show.</summary>

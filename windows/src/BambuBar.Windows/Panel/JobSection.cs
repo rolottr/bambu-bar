@@ -7,6 +7,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using BambuBar.Core;
 using BambuBar.Core.Model;
+using BambuBar.Model3D;
 using BambuBar.Theme;
 
 namespace BambuBar.TrayPanel;
@@ -14,13 +15,13 @@ namespace BambuBar.TrayPanel;
 /// <summary>
 /// The job card (the Mac's JobHero, compact): the printer beside the state pill, the job's name and subtitle, the big
 /// percentage with layers, the filament-coloured bar and the timing line; or, while idle, "Ready to print" with how
-/// the last print went. The chamber light switch sits in the corner. The printer is Core's composited art; the Mac's
-/// 3D model comes with P3.10.
+/// the last print went. The chamber light switch sits in the corner and drives the model's lamp. The printer is the
+/// live 3D model (Model3D/PrinterModelView), with Core's composited art standing in when 3D can't run.
 /// </summary>
 internal sealed class JobSection : PanelSection
 {
     private readonly Border _root;
-    private readonly Image _art;
+    private readonly PrinterModelView _model;
     private readonly Border _pill;
     private readonly Ellipse _pillDot;
     private readonly TextBlock _pillText;
@@ -39,10 +40,10 @@ internal sealed class JobSection : PanelSection
     private readonly ChromeToggle _light;
     private bool _lightShown;
 
-    public JobSection(PanelContext ctx) : base(ctx)
+    /// <param name="modelScale">The scale the card is shown at (the Printer page's hero), so the model renders sharp.</param>
+    public JobSection(PanelContext ctx, double modelScale = 1) : base(ctx)
     {
-        _art = ArtImage.Element(Metrics.ArtWidth, Metrics.ArtHeight);
-        _art.VerticalAlignment = VerticalAlignment.Center;
+        _model = new PrinterModelView(Metrics.ArtWidth, Metrics.ArtHeight, modelScale) { VerticalAlignment = VerticalAlignment.Center };
 
         _pill = Ui.Pill(out _pillDot, out _pillText);
         _name = Ui.Text("", Ramp.Title, FontWeights.SemiBold);
@@ -82,7 +83,7 @@ internal sealed class JobSection : PanelSection
         foreach (var e in new UIElement[] { _pill, _jobTitles, _preparing, _numbers, _bar, _timing, _idle }) details.Children.Add(e);
 
         var grid = Ui.Columns(Metrics.ArtWidth.ToString(System.Globalization.CultureInfo.InvariantCulture), "12", "*");
-        grid.Children.Add(Ui.At(_art, 0));
+        grid.Children.Add(Ui.At(_model, 0));
         grid.Children.Add(Ui.At(details, 2));
 
         _light = LightToggle();
@@ -122,7 +123,7 @@ internal sealed class JobSection : PanelSection
         var session = Store.Current!;
         var s = session.Status!;
         var lightOn = session.ChamberLightOn;
-        ArtImage.Show(_art, ArtImage.Scene(s, session.Config.ModelName, lightOn, dimmed: false, Store.LastJob?.FilamentColor));
+        _model.Show(ArtImage.Scene(s, session.Config.ModelName, lightOn, dimmed: false, Store.LastJob?.FilamentColor), Ctx.Animate);
 
         _light.Visibility = s.ChamberLightOn is null ? Visibility.Collapsed : Visibility.Visible;
         if (s.ChamberLightOn is not null && (_light.Content is null || _lightShown != lightOn || _light.IsChecked != lightOn))
