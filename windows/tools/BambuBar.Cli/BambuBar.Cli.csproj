@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Core's command-line tools on any platform, for example the probe:
+       dotnet run (project windows/tools/BambuBar.Cli), then the probe's arguments.
+       The app runs the same code as BambuBar.exe with the probe's arguments on Windows. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>bambubar</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BambuBar.Core\BambuBar.Core.csproj" />
+  </ItemGroup>
+</Project>

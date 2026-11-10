@@ -7,4 +7,7 @@
     <Project Path="tests/BambuBar.Core.Tests/BambuBar.Core.Tests.csproj" />
     <Project Path="tests/BambuBar.Integration.Tests/BambuBar.Integration.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/BambuBar.Cli/BambuBar.Cli.csproj" />
+  </Folder>
 </Solution>

@@ -11,7 +11,7 @@ It needs Windows 10 1903 or later, or Windows 11, on x64 or ARM64.
 | `windows/src/BambuBar.Windows` | The WPF app (`BambuBar.exe`): tray icon, panel, window, widgets host |
 | `windows/tests/BambuBar.Core.Tests` | Unit tests, against the fixtures in `shared/ModelReports` |
 | `windows/tests/BambuBar.Integration.Tests` | Tests against the Docker simulators in `shared/scripts/integration`; they skip without them |
-| `windows/tools` | `version.sh`/`version.ps1` (the shared version), `integration-test.sh` |
+| `windows/tools` | `version.sh`/`version.ps1` (the shared version), `integration-test.sh`, `BambuBar.Cli` (Core's commands on any platform), `windows-strings.txt` (Windows texts waiting for translation) |
 | `shared/` | Printer art and models, HMS texts, certificates, filament names, `Localizable.xcstrings`, fixtures, simulators |
 
 ## Build and test
@@ -27,6 +27,13 @@ dotnet test --solution BambuBar.slnx       # unit tests (integration tests skip)
 tools/integration-test.sh                  # starts the simulators in Docker, runs the integration tests
 dotnet publish src/BambuBar.Windows -c Release -r win-x64     # or win-arm64: self-contained BambuBar.exe
 ```
+
+`--probe <host> <serial> <access-code> [seconds] [--insecure-tls] [--raw-filament] [--raw-all]` connects like the
+app and prints the Mac probe's summary, line for line: `BambuBar.exe --probe …` on Windows, or
+`dotnet run --project tools/BambuBar.Cli -- --probe …` anywhere (`--insecure-tls` for the mock fleet). Core's
+printer store also handles the Mac's `--demo [scenario] [--fleet]`, `--connect <host> <serial> <code>` and
+`--emulator <BambuStudio.conf> [--add-all]` (none of them saves anything); the app passes them on once its shell
+exists (P3.1).
 
 The app only runs on Windows. CI (`.github/workflows/build.yml`) tests Core on Linux and builds and publishes
 both architectures on Windows.

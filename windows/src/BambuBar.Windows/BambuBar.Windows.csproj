@@ -13,6 +13,8 @@
     <AssemblyName>BambuBar</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyTitle>Bambu Bar</AssemblyTitle>
+    <!-- Source-generated Win32 interop (LibraryImport): tray, WM_COPYDATA, Credential Manager. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- dotnet publish -r win-x64|win-arm64: one self-contained folder, no .NET install needed. -->
@@ -23,5 +25,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BambuBar.Core\BambuBar.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Program.cs has the Main: command-line runs (probe) never start WPF. -->
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
   </ItemGroup>
 </Project>
