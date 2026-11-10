@@ -31,3 +31,63 @@ jobs:
             build/Bambu-Bar-*-macos.zip
             build/Bambu-Bar-*-macos.zip.sha256
           if-no-files-found: error
+
+  # The Windows app (docs/windows.md). Core has no Windows APIs, so its tests run on Linux.
+  windows-core:
+    name: Windows Core tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DOTNET_NOLOGO: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: windows/global.json
+      - name: Test
+        run: dotnet test --solution BambuBar.slnx
+
+  windows:
+    name: Windows (${{ matrix.rid }})
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+    env:
+      DOTNET_NOLOGO: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: windows/global.json
+      - name: Check the version matches project.yml
+        run: |
+          $expected = ./tools/version.ps1
+          $built = dotnet msbuild src/BambuBar.Windows/BambuBar.Windows.csproj -getProperty:Version
+          if ($built -ne $expected) { throw "Build version '$built' isn't project.yml's '$expected'" }
+          "Version $built"
+      - name: Test
+        if: matrix.rid == 'win-x64'
+        run: dotnet test --solution BambuBar.slnx
+      - name: Publish (self-contained)
+        run: dotnet publish src/BambuBar.Windows -c Release -r ${{ matrix.rid }} -o ../build/windows/${{ matrix.rid }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Bambu-Bar-windows-${{ matrix.rid }}
+          path: build/windows/${{ matrix.rid }}/
+          if-no-files-found: error
