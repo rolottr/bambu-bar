@@ -1,21 +1,17 @@
 # Loads the widget skins in the pinned Rainmeter on a Windows runner and screenshots the desktop (P2.8 evidence,
-# P5.2 payload). Usage: pwsh rainmeter/ci/smoke.ps1 -Out <folder>
+# with the P5.2 payload). Usage: pwsh rainmeter/ci/smoke.ps1 -Out <folder>
 param([Parameter(Mandatory)] [string] $Out)
 $ErrorActionPreference = 'Stop'
 $repo = Resolve-Path (Join-Path $PSScriptRoot '..' '..')
 New-Item -ItemType Directory -Force $Out | Out-Null
 
-# 1. The pinned installer, checked, installed portably.
+# 1. The trimmed Rainmeter the app ships (payload.ps1: pinned installer, checked, installed portably, trimmed), so this
+#    also proves the skins need nothing that was left out.
 $pin = @{}
 Get-Content (Join-Path $repo 'rainmeter/version.txt') | Where-Object { $_ -match '^(\w+)=(.+)$' } | ForEach-Object { $pin[$Matches[1]] = $Matches[2] }
-$installer = Join-Path $env:RUNNER_TEMP 'rainmeter-setup.exe'
-Invoke-WebRequest $pin.url -OutFile $installer
-$hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($hash -ne $pin.sha256) { throw "Rainmeter installer hash $hash isn't the pinned $($pin.sha256)" }
 $portable = Join-Path $env:RUNNER_TEMP 'Rainmeter'
-Start-Process $installer -ArgumentList '/S', '/PORTABLE=1', "/D=$portable" -Wait
-if (-not (Test-Path (Join-Path $portable 'Rainmeter.exe'))) { throw 'Portable install failed' }
-Compress-Archive -Path "$portable\*" -DestinationPath (Join-Path $Out 'rainmeter-portable.zip') -Force
+& (Join-Path $PSScriptRoot 'payload.ps1') -Out $portable
+Compress-Archive -Path "$portable\*" -DestinationPath (Join-Path $Out 'rainmeter-payload.zip') -Force
 
 # 2. The widgets folder as WidgetHost lays it out, with the sample states made current.
 $root = Join-Path $env:RUNNER_TEMP 'Widgets'

@@ -161,6 +161,8 @@ public sealed partial class WidgetHost : IDisposable
     {
         var installedVersion = Path.Combine(_installedSkins, "..", "version.txt");
         var copiedVersion = Path.Combine(SkinsFolder, "version.txt");
+        // A build without skins beside it (a bare dotnet run): nothing to copy, and no widgets to show.
+        if (!Directory.Exists(_installedSkins)) return;
         var version = File.Exists(installedVersion) ? File.ReadAllText(installedVersion) : "dev";
         if (File.Exists(copiedVersion) && File.ReadAllText(copiedVersion) == version && Directory.Exists(BambuBarSkins)) return;
         // Our files are replaced wholesale (users can't edit the skins, D3); the W<n> instance stubs stay.
@@ -175,6 +177,7 @@ public sealed partial class WidgetHost : IDisposable
 
     private void WriteSettings()
     {
+        Directory.CreateDirectory(Path.Combine(BambuBarSkins, "@Resources"));
         File.WriteAllText(Path.Combine(BambuBarSkins, "@Resources", "App.inc"),
             $"; Written by Bambu Bar.\r\n[Variables]\r\nBambuBarExe={_bambuBarExe}\r\n", new UTF8Encoding(true));
         if (File.Exists(IniPath)) return;

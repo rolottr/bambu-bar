@@ -12,6 +12,7 @@ It needs Windows 10 1903 or later, or Windows 11, on x64 or ARM64.
 | `windows/tests/BambuBar.Core.Tests` | Unit tests, against the fixtures in `shared/ModelReports` |
 | `windows/tests/BambuBar.Integration.Tests` | Tests against the Docker simulators in `shared/scripts/integration`; they skip without them |
 | `windows/ffmpeg` | `build.sh` builds the minimal FFmpeg the camera decodes with; `version.txt` pins its source, toolchain (SHA-256) and configure flags |
+| `windows/installer` | `BambuBar.iss` (Inno Setup), `notices.ps1` (THIRD-PARTY-NOTICES.txt), `smoke.ps1` (CI install test), `licenses/` |
 | `windows/tools` | `version.sh`/`version.ps1` (the shared version), `integration-test.sh`, `BambuBar.Cli` (Core's commands on any platform), `windows-strings.txt` (Windows texts waiting for translation) |
 | `shared/` | Printer art and models, HMS texts, certificates, filament names, `Localizable.xcstrings`, fixtures, simulators |
 
@@ -68,6 +69,49 @@ FFmpeg's warnings through. Without FFmpeg 9 the decoder tests skip and the camer
 
 The app only runs on Windows. CI (`.github/workflows/build.yml`) tests Core on Linux and builds and publishes
 both architectures on Windows.
+
+## Installer
+
+`windows/installer/BambuBar.iss` (Inno Setup 6.3+) builds one installer per architecture,
+`Bambu-Bar-<ver>-windows-x64.exe` and `…-arm64.exe`, from the install image CI stages in `build/windows/<rid>/`:
+
+| In the image | From |
+| --- | --- |
+| `BambuBar.exe`, the .NET runtime, `Assets\`, `AppIcon.png`, `LICENSE.txt`, `Skins\BambuBar\`, `Skins\version.txt` | `dotnet publish` (the csproj adds the skins from `rainmeter/Skins/BambuBar`, their version file = app version + a hash of the skin files, and the license) |
+| `ffmpeg\` | the `ffmpeg` job (above) |
+| `Rainmeter\` | `rainmeter/ci/payload.ps1`: the installer pinned in `rainmeter/version.txt`, SHA-256 checked, installed portably, trimmed to `Rainmeter.exe`, `Rainmeter.dll` and `Languages\1033.rmlang` (the skins use only built-in measures). x64 only: the ARM64 installer carries it too (emulated) |
+| `THIRD-PARTY-NOTICES.txt` | `windows/installer/notices.ps1`: Rainmeter (GPL-2.0 + where its source is), FFmpeg (`LICENSE.txt` + `SOURCE.txt`), Nunito (OFL), Fluent icons (MIT), and every package and runtime pack in `BambuBar.deps.json`, with the license files from the restored packages (`windows/installer/licenses/` for the ones that ship none) |
+
+```powershell
+pwsh rainmeter/ci/payload.ps1 -Out build/windows/win-x64/Rainmeter -SourceDir build/release   # + rainmeter-<ver>-source.zip
+pwsh windows/installer/notices.ps1 -App build/windows/win-x64
+ISCC /DAppVersion=$(pwsh windows/tools/version.ps1) /DArch=x64 /DSourceDir=$PWD\build\windows\win-x64 /DOutputDir=$PWD\build\installer windows\installer\BambuBar.iss
+```
+
+What it does:
+
+- **Per user, no admin**: `%LOCALAPPDATA%\Programs\Bambu Bar`, Windows 10 1903+; the x64 installer runs only on x64
+  Windows, the ARM64 one only on ARM64. A Start menu shortcut carrying the AppUserModelID `dev.rolottr.BambuBar`
+  (toasts), `bambubar://` and the AppUserModelID's name and icon under `HKCU\Software\Classes` (the app writes them
+  too). An update replaces `Assets\`, `ffmpeg\`, `Rainmeter\` and `Skins\` wholesale.
+- **Before copying**, it stops a `BambuBar.exe` and a `Rainmeter.exe` running from that folder (and no other: a
+  Rainmeter the person runs themselves is left alone).
+- **Silent update**: `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`. If the app was running it is started again
+  afterwards, with `--background` when it had been started with it (at sign-in). Interactive installs offer
+  "Launch Bambu Bar" on the last page.
+- **Uninstall** stops both, removes the shortcut, the folder, `bambubar://`, the AppUserModelID key, the sign-in
+  entry (`Run` and Task Manager's `StartupApproved\Run` value) and the `.rmskin` association our Rainmeter registers
+  for itself when the person has no Rainmeter. Settings, history and widgets (`%APPDATA%\Bambu Bar`,
+  `%LOCALAPPDATA%\Bambu Bar`) stay unless the person says yes to removing them, or `/PURGE=1` on a silent uninstall;
+  Credential Manager entries always stay.
+- **Signing** (ledger §9) isn't done yet. The hook: sign `BambuBar.exe` in the image, then
+  `ISCC "/Sbambubar=signtool sign /fd SHA256 /f <pfx> /p <pw> /tr http://timestamp.digicert.com /td SHA256 $f" /DSignTool=bambubar …`
+  signs the installer and its uninstaller.
+
+CI builds both installers in the `windows` job, then on x64 runs `windows/installer/smoke.ps1`: silent install,
+checks the files, registry keys and shortcut, runs the installed `BambuBar.exe --snapshot`, silent uninstall, and
+checks that only the user's data is left. Artifacts: `Bambu-Bar-windows-installer-<rid>` (installer + `.sha256`),
+`rainmeter-source` (for the release) and `Bambu-Bar-windows-install-smoke` (logs, snapshots).
 
 ## Version
 

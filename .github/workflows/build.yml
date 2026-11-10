@@ -87,7 +87,7 @@ jobs:
     name: Windows (${{ matrix.rid }})
     needs: ffmpeg
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -142,6 +142,14 @@ jobs:
           New-Item -ItemType Directory -Force $target | Out-Null
           Copy-Item (Join-Path $env:FFMPEG_ROOT '*') $target
           Get-ChildItem $target | Format-Table Name, Length
+      - name: Bundle Rainmeter into Rainmeter\
+        # The pinned Rainmeter, trimmed to what the skins need (P5.2); x64 only, so the ARM64 app ships it too and runs it
+        # under emulation (D9). The x64 job also saves the matching source zip for the release (GPL-2.0).
+        run: |
+          $source = if ('${{ matrix.rid }}' -eq 'win-x64') { @{ SourceDir = '../build/release' } } else { @{} }
+          ../rainmeter/ci/payload.ps1 -Out ../build/windows/${{ matrix.rid }}/Rainmeter @source
+      - name: Third-party notices
+        run: ./installer/notices.ps1 -App ../build/windows/${{ matrix.rid }}
       - name: Snapshot the UI (tray glyphs, pages, camera)
         if: matrix.rid == 'win-x64'
         # A WinExe: PowerShell wouldn't wait for it on its own. camera.png goes through the bundled FFmpeg; a problem
@@ -163,6 +171,47 @@ jobs:
           [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
           $bmp.Save("$PWD/../build/snapshots/desktop-demo.png", [System.Drawing.Imaging.ImageFormat]::Png)
           Stop-Process $p
+      - name: Build the installer
+        # windows/installer/BambuBar.iss (P5.1) over the install image in build/windows/<rid>/. Inno Setup 6 is on the
+        # runner image; installed with Chocolatey if it ever isn't.
+        run: |
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          $version = ./tools/version.ps1
+          $arch = '${{ matrix.rid }}' -replace '^win-', ''
+          $image = (Resolve-Path '../build/windows/${{ matrix.rid }}').Path
+          $out = (New-Item -ItemType Directory -Force '../build/installer').FullName
+          & $iscc "/DAppVersion=$version" "/DArch=$arch" "/DSourceDir=$image" "/DOutputDir=$out" installer/BambuBar.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+          Get-ChildItem $out -Filter *.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+            "$($_.Name): $([math]::Round($_.Length / 1MB, 1)) MB, $hash"
+          }
+      - name: Install, snapshot and uninstall (silent)
+        if: matrix.rid == 'win-x64'
+        run: ./installer/smoke.ps1 -Installer (Get-ChildItem ../build/installer/*.exe)[0].FullName -Out ../build/install-smoke
+      - uses: actions/upload-artifact@v7
+        if: always() && matrix.rid == 'win-x64'
+        with:
+          name: Bambu-Bar-windows-install-smoke
+          path: build/install-smoke/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Bambu-Bar-windows-installer-${{ matrix.rid }}
+          path: build/installer/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: matrix.rid == 'win-x64'
+        with:
+          name: rainmeter-source
+          path: build/release/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v7
         if: matrix.rid == 'win-x64'
         with:

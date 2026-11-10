@@ -46,6 +46,32 @@
     <Content Include="Assets\AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- What the installer puts beside BambuBar.exe besides the build (P5.1): the widget skins in Skins\BambuBar\ with
+       Skins\version.txt (WidgetHost copies them to the user's widget folder when it changes), and the app's license.
+       Rainmeter\ and ffmpeg\ are added by CI (rainmeter/ci/payload.ps1, windows/ffmpeg/build.sh). -->
+  <ItemGroup>
+    <SkinFile Include="$(RepoRoot)rainmeter\Skins\BambuBar\**\*" Exclude="$(RepoRoot)rainmeter\Skins\BambuBar\README.md" />
+    <Content Include="@(SkinFile)" Link="Skins\BambuBar\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <Content Include="$(RepoRoot)LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <!-- Skins\version.txt: the app version and a hash of the skin files, so a rebuild with changed skins is copied too. -->
+  <Target Name="WriteSkinsVersion" BeforeTargets="AssignTargetPaths">
+    <GetFileHash Files="@(SkinFile)">
+      <Output TaskParameter="Items" ItemName="_SkinHash" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_SkinHashes>@(_SkinHash->'%(FileHash)', '')</_SkinHashes>
+      <_SkinsVersion>$(Version) $([MSBuild]::StableStringHash('$(_SkinHashes)'))</_SkinsVersion>
+      <_SkinsVersionFile>$(IntermediateOutputPath)skins-version.txt</_SkinsVersionFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_SkinsVersionFile)" Lines="$(_SkinsVersion)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Content Include="$(_SkinsVersionFile)" Link="Skins\version.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+      <FileWrites Include="$(_SkinsVersionFile)" />
+    </ItemGroup>
+  </Target>
+
   <!-- WinForms is only for the tray icon: keep its names out of the WPF code's global usings. -->
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
