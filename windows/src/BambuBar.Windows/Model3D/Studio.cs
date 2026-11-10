@@ -28,8 +28,12 @@ internal static class Studio
         (-new Vector3(0.4f, 0.6f, -0.9f), new Color4(0.80f * 0.62f, 0.88f * 0.62f, 1.00f * 0.62f, 1)),
     ];
 
-    /// <summary>The chamber light: warm, wide, from the ceiling (the Mac's spot, 50° inner, 120° outer).</summary>
-    public static readonly Color4 LampLight = new(1.0f * 0.55f, 0.93f * 0.55f, 0.82f * 0.55f, 1);
+    /// <summary>The chamber light: warm, wide, from the ceiling (the Mac's spot, 50° inner, 120° outer). Far brighter
+    /// than the Mac's numbers: without the Mac's tone mapping and exposure, 0.55 barely changed the picture.</summary>
+    public static readonly Color4 LampLight = new(1.0f * 2.4f, 0.93f * 2.4f, 0.82f * 2.4f, 1);
+
+    /// <summary>The warm light the lamp fills the chamber with (walls, bed, part), so a lit printer reads as lit.</summary>
+    public static readonly Color4 ChamberFill = new(1.0f * 0.9f, 0.82f * 0.9f, 0.62f * 0.9f, 1);
 
     /// <summary>The lamp's glow when on (the Mac's emission colour).</summary>
     public static readonly Color4 LampGlow = new(1, 0.95f, 0.86f, 1);
@@ -144,10 +148,11 @@ internal static class Studio
     }
 
     /// <summary>The lights, the dome, and the lamp's spot (switched by <see cref="PrinterScene"/>).</summary>
-    public static void Light(GroupNode root, SpotLightNode lamp)
+    public static void Light(GroupNode root, SpotLightNode lamp, PointLightNode fill)
     {
         foreach (var (direction, color) in Lights) root.AddChildNode(new DirectionalLightNode { Direction = Vector3.Normalize(direction), Color = color });
         root.AddChildNode(new EnvironmentMapNode { Texture = Dome, SkipRendering = true });
         root.AddChildNode(lamp);
+        root.AddChildNode(fill);
     }
 }

@@ -48,6 +48,11 @@ internal sealed class PrinterScene
         Name = "ChamberLight", Color = new Color4(0, 0, 0, 1), InnerAngle = 50, OuterAngle = 120, FallOff = 1.5f,
         Range = 0.6f, Attenuation = new Vector3(1, 0, 9),
     };
+    /// <summary>The lamp's warm fill, a little below it inside the chamber.</summary>
+    private readonly PointLightNode _fill = new()
+    {
+        Name = "ChamberFill", Color = new Color4(0, 0, 0, 1), Range = 0.45f, Attenuation = new Vector3(1, 0, 14),
+    };
     /// <summary>Where the lamp hangs, in the pivot's space (it turns with the model).</summary>
     private readonly Vector3? _lampAt;
     private readonly Tracked? _carriage, _gantry, _bed, _head;
@@ -105,7 +110,7 @@ internal sealed class PrinterScene
 
         var content = new GroupNode { Name = "Model", ModelMatrix = Matrix4x4.CreateTranslation(-centre) };
         _pivot.AddChildNode(content);
-        Studio.Light(Root, _lamp);
+        Studio.Light(Root, _lamp, _fill);
         Root.AddChildNode(_pivot);
 
         _part = Pbr(Accent, roughness: 0.42f);
@@ -306,6 +311,7 @@ internal sealed class PrinterScene
             changed = true;
             _lit = lit;
             _lamp.Color = lit && HasLamp ? Studio.LampLight : new Color4(0, 0, 0, 1);
+            _fill.Color = lit && HasLamp ? Studio.ChamberFill : new Color4(0, 0, 0, 1);
             foreach (var glow in _lampGlass) glow.EmissiveColor = lit ? Studio.LampGlow : new Color4(0, 0, 0, 1);
         }
         return changed;
@@ -325,6 +331,8 @@ internal sealed class PrinterScene
         {
             _lamp.Position = Vector3.Transform(at, turn);
             _lamp.Direction = Vector3.TransformNormal(-Vector3.UnitY, turn);
+            // Mid-chamber and a little forward, so the walls, bed and part facing the viewer warm up.
+            _fill.Position = Vector3.Transform(at + new Vector3(0, -0.12f, 0.06f), turn);
         }
     }
 
