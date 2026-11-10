@@ -27,7 +27,9 @@ internal sealed class PanelContext
     public required AppSettings Settings { get; init; }
     public required ResourceDictionary Theme { get; init; }
     public required bool Dark { get; init; }
-    public required bool Animate { get; init; }
+    /// <summary>Motion is on: the caller asked for it (not a snapshot) and Windows' "Show animations" is on, read each
+    /// time, so turning it off (Settings → Accessibility → Visual effects) stops the next animation.</summary>
+    public required bool Animate { get => field && AppTheme.AnimationsEnabled; init; }
     public required Action<PanelDestination, DiscoveredPrinter?> Navigate { get; init; }
     public required Action Quit { get; init; }
     public required Func<bool> ShowsAll { get; init; }
@@ -98,7 +100,7 @@ public sealed class PanelView : Border, IDisposable
     {
         _store = store;
         _settings = settings;
-        _animate = animate && AppTheme.AnimationsEnabled;
+        _animate = animate;
         Width = Metrics.PanelWidth;
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
@@ -147,8 +149,8 @@ public sealed class PanelView : Border, IDisposable
         }
     }
 
-    /// <summary>Animations run (Windows' setting on, and not a snapshot).</summary>
-    public bool Animates => _animate;
+    /// <summary>Animations run (Windows' setting on now, and not a snapshot).</summary>
+    public bool Animates => _animate && AppTheme.AnimationsEnabled;
 
     /// <summary>Asks the app to open its window at <paramref name="destination"/> (Ctrl+O, the footer).</summary>
     public void Go(PanelDestination destination) => Navigate?.Invoke(destination, null);

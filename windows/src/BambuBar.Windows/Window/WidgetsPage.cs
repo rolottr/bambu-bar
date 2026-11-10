@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -160,7 +161,7 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
         return list;
     }
 
-    private static Grid Step(int n, string glyph, string text)
+    private static FrameworkElement Step(int n, string glyph, string text)
     {
         var grid = Ui.Columns("Auto", "Auto", "*");
         var number = new Border
@@ -181,8 +182,7 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
         var label = W.Note(text, ThemeKeys.TextPrimary, WRamp.Detail);
         label.Margin = new Thickness(0, 2, 0, 0);
         grid.Children.Add(Ui.At(label, 2));
-        AutomationProperties.SetName(grid, $"{n}. {text.Replace("**", "", StringComparison.Ordinal)}");
-        return grid;
+        return Ui.ReadAsOne(grid, $"{n}. {text.Replace("**", "", StringComparison.Ordinal)}");
     }
 
     /// <summary>The widgets on the desktop: size and printer, each changeable, and Remove.</summary>
@@ -214,8 +214,8 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
             grid.Children.Add(Ui.At(printer, 2));
             grid.Children.Add(Ui.At(size, 3));
             grid.Children.Add(Ui.At(remove, 4));
-            AutomationProperties.SetName(grid, name);
-            list.Children.Add(W.Card(grid, 10));
+            // Each row a group named after its widget, so its Printer, Size and Remove say which widget they change.
+            list.Children.Add(W.Card(Ui.Group(grid, name), 10));
         }
         return list;
     }
@@ -224,7 +224,8 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
 /// <summary>The showcase (the Mac's WidgetShowcase): one widget on a desktop backdrop that changes size while a
 /// simulated print plays through every state, the states as a bar under it (the highlight slides to the current one,
 /// a click jumps there), and beside it what the size carries. The tour advances every 3.6 s, all states in one size
-/// and then the next, while the page is on screen and Windows' animations are on.</summary>
+/// and then the next, while the page is on screen and Windows' animations are on ("reduce motion" off), and holds
+/// while the keyboard focus is on it.</summary>
 internal sealed class Showcase : IDisposable
 {
     public const double SceneSeconds = 3.6;
@@ -315,7 +316,8 @@ internal sealed class Showcase : IDisposable
         content.Children.Add(Ui.At(_widgetSlot, 0, 0));
         content.Children.Add(Ui.At(ScenesBar(), 0, 1));
 
-        var stage = new Border
+        // A group named "Widgets": the widget and the states the tour walks through.
+        var stage = new AccessibleGroup
         {
             CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top, MinWidth = ScenesWidth, ClipToBounds = true,
@@ -350,6 +352,7 @@ internal sealed class Showcase : IDisposable
             {
                 Look = new ButtonLook(null, null, null), Padding = new Thickness(11, 6, 11, 7), CornerRadius = new CornerRadius(999),
                 Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } },
+                Role = AutomationControlType.RadioButton, Selected = false,
             };
             AutomationProperties.SetName(button, scene.Title());
             Ui.Tip(button, scene.Help());
@@ -419,7 +422,7 @@ internal sealed class Showcase : IDisposable
             _sizes[size] = toggle;
             row.Children.Add(toggle);
         }
-        var box = new Border { Child = row, CornerRadius = Metrics.Control, Padding = new Thickness(2), BorderThickness = new Thickness(1), MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left };
+        var box = new AccessibleGroup { Child = row, CornerRadius = Metrics.Control, Padding = new Thickness(2), BorderThickness = new Thickness(1), MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left };
         box.SetResourceReference(Border.BackgroundProperty, WindowKeys.OffFill);
         box.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.ControlStroke);
         AutomationProperties.SetName(box, Loc.T("Size"));
@@ -451,7 +454,7 @@ internal sealed class Showcase : IDisposable
             icon.Margin = new Thickness(0, 0, 6, 0);
             var label = Ui.Text(feature.Title(), 12, FontWeights.Medium);
             label.Foreground = color;
-            var chip = new Border
+            var chip = new AccessibleCard
             {
                 Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } },
                 CornerRadius = Metrics.Pill, Padding = new Thickness(9, 3, 10, 4), Margin = new Thickness(0, 0, 6, 6),
@@ -474,6 +477,19 @@ internal sealed class Showcase : IDisposable
 
     private void Tick()
     {
+        // "Show animations" turned off while the page is open: the tour stops where it is.
+        if (!AppTheme.AnimationsEnabled)
+        {
+            _timer?.Stop();
+            return;
+        }
+        // While the keyboard is on the showcase's buttons, the tour holds the scene, so it doesn't change under
+        // someone reading or picking one (it moves on again once the focus leaves).
+        if (_layout.IsKeyboardFocusWithin && (DateTime.UtcNow - _sceneStart).TotalSeconds >= SceneSeconds)
+        {
+            _sceneStart = DateTime.UtcNow.AddSeconds(-SceneSeconds / 2);
+            return;
+        }
         if ((DateTime.UtcNow - _sceneStart).TotalSeconds >= SceneSeconds)
         {
             // Every scene in one size, then the next size, on a loop.
@@ -495,9 +511,10 @@ internal sealed class Showcase : IDisposable
 
     private void ShowScene(bool animate)
     {
-        foreach (var (scene, (_, icon, label)) in _scenes)
+        foreach (var (scene, (button, icon, label)) in _scenes)
         {
             var on = scene == _scene;
+            button.Selected = on;
             label.Foreground = Palette.Brush(Color.FromArgb((byte)(on ? 255 : 204), 255, 255, 255));
             label.FontWeight = on ? FontWeights.SemiBold : FontWeights.Medium;
             ShowcaseScenes.Tint(icon, on ? scene.Color() : Color.FromArgb(0xBF, 255, 255, 255));

@@ -42,6 +42,7 @@ internal sealed class IssueSection : PanelSection, IDisposable
 {
     private static readonly HmsWiki Wiki = new();
     private readonly Border _root;
+    private readonly AccessibleGroup _group;
     private readonly ContentControl _icon = new() { Focusable = false, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 1, 10, 0) };
     private readonly TextBlock _message;
     private readonly TextBox _code;
@@ -89,7 +90,9 @@ internal sealed class IssueSection : PanelSection, IDisposable
         grid.Children.Add(Ui.At(_icon, 0));
         grid.Children.Add(Ui.At(text, 1));
         grid.Children.Add(Ui.At(dismiss, 2));
-        _root = Ui.Card(grid, Metrics.Tile, new Thickness(11));
+        // Read as the message, with its copy, wiki and dismiss buttons inside (the window's IssueBanner too).
+        _group = Ui.Group(grid, "");
+        _root = Ui.Card(_group, Metrics.Tile, new Thickness(11));
         ShowCopied(false);
     }
 
@@ -104,7 +107,9 @@ internal sealed class IssueSection : PanelSection, IDisposable
         Ui.Tint(_root, color);
         _icon.Content = Icons.Glyph(issue.Severity <= IssueSeverity.Serious ? Icons.Warning : Icons.Info, 14, null, Ctx.Ink(color));
         _message.Text = issue.Message;
+        AutomationProperties.SetName(_group, issue.Message);
         _code.Text = issue.Id;
+        AutomationProperties.SetName(_code, issue.Id);
         _wiki.Visibility = issue.WikiUrl is null ? Visibility.Collapsed : Visibility.Visible;
         if (issue.WikiUrl is { } url) Ui.Tip(_wiki, url.AbsoluteUri);
     }
@@ -157,7 +162,7 @@ internal sealed class CameraSection : PanelSection
         _header = new ChromeButton
         {
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { chevron, video, title } },
-            HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(4, 2, 8, 3),
+            HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(4, 2, 8, 3), Expanded = true,
         };
         AutomationProperties.SetName(_header, Loc.T("Camera"));
         _header.Click += (_, _) =>
@@ -189,7 +194,7 @@ internal sealed class CameraSection : PanelSection
         _frame.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
         _chevron.Angle = expanded ? 90 : 0;
         Ui.Tip(_header, expanded ? Loc.T("Hide the camera") : Loc.T("Show the camera"));
-        AutomationProperties.SetItemStatus(_header, expanded ? Loc.T("On") : Loc.T("Off"));
+        _header.Expanded = expanded;
         // Folded, the player goes: it's no longer one of the feed's viewers.
         if (expanded && session is not null)
         {
@@ -545,7 +550,7 @@ internal sealed class ControlsSection : PanelSection
         };
         _stop = new ChromeButton { Height = Metrics.ControlHeight, HorizontalAlignment = HorizontalAlignment.Stretch, Look = ButtonLook.Tinted(Palette.Failed) };
         _stop.Click += (_, _) => Store.StopPrint();
-        _speed = new ChromeButton { Height = Metrics.ControlHeight, Width = 44, Padding = new Thickness(0), Look = ButtonLook.Standard };
+        _speed = new ChromeButton { Height = Metrics.ControlHeight, Width = 44, Padding = new Thickness(0), Look = ButtonLook.Standard, Expanded = false };
         AutomationProperties.SetName(_speed, Loc.T("Speed"));
         _speed.Click += (_, _) => ShowSpeedMenu();
         _root = Ui.Columns("*", "8", "*", "8", "44");

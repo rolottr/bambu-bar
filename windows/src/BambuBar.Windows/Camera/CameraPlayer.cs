@@ -106,7 +106,8 @@ public sealed class CameraPlayer : Border, ICameraViewer
         _clip.RadiusX = _clip.RadiusY = cornerRadius;
         Clip = _clip;
         SnapsToDevicePixels = true;
-        _image = new Image { Stretch = Stretch.Uniform };
+        // The picture itself says nothing: the player around it is the named group (the Mac's "<name> camera").
+        _image = new DecorativeImage { Stretch = Stretch.Uniform };
         // Fant: a 1080p picture shrunk to the panel's width stays smooth.
         RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.HighQuality);
         _message = new Stack { Spacing = compact ? 6 : 9, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, MaxWidth = 420 };
@@ -123,6 +124,10 @@ public sealed class CameraPlayer : Border, ICameraViewer
         Unloaded += (_, _) => OnUnloaded();
         lock (Players) Players.Add(new WeakReference<CameraPlayer>(this));
     }
+
+    /// <summary>A group named "&lt;printer&gt; camera", its message and Try Again inside (the Mac's
+    /// <c>.accessibilityElement(children: .contain)</c>); what's wrong is its help text.</summary>
+    protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new GroupPeer(this);
 
     /// <summary>The printer whose camera this shows.</summary>
     public PrinterSession? Session

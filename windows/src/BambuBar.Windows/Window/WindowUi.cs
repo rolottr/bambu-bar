@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -62,7 +63,10 @@ internal static class W
         var label = Ui.Text(title, WRamp.GroupTitle, FontWeights.SemiBold);
         AutomationProperties.SetHeadingLevel(label, AutomationHeadingLevel.Level2);
         header.Children.Add(label);
-        return new Stack { Spacing = 8, Children = { header, Ui.Card(body, Metrics.Card, new Thickness(16)) } };
+        // A group named by its heading (which may change later: the Printers page's), like a GroupBox.
+        var group = new Stack { Spacing = 8, Role = AutomationControlType.Group, Children = { header, Ui.Card(body, Metrics.Card, new Thickness(16)) } };
+        AutomationProperties.SetLabeledBy(group, label);
+        return group;
     }
 
     public static Stack Group(string title, string glyph, out Stack body) =>
@@ -163,8 +167,8 @@ internal static class W
         return button;
     }
 
-    /// <summary>"Speed ……… Standard (100%)" (the Mac's DetailRow).</summary>
-    public static Grid DetailRow(string title, string value, FrameworkElement? icon = null)
+    /// <summary>"Speed ……… Standard (100%)" (the Mac's DetailRow), read as "Speed: Standard (100%)".</summary>
+    public static FrameworkElement DetailRow(string title, string value, FrameworkElement? icon = null)
     {
         var grid = Ui.Columns("Auto", "Auto", "*");
         var slot = new Border { Width = 16, Margin = new Thickness(0, 0, 8, 0), Child = icon, VerticalAlignment = VerticalAlignment.Center };
@@ -177,8 +181,7 @@ internal static class W
         text.TextTrimming = TextTrimming.None;
         text.Margin = new Thickness(12, 0, 0, 0);
         grid.Children.Add(Ui.At(text, 2));
-        AutomationProperties.SetName(grid, $"{title}: {value}");
-        return grid;
+        return Ui.ReadAsOne(grid, $"{title}: {value}");
     }
 
     public static FrameworkElement Glyph(string glyph) => Icons.Glyph(glyph, 13, ThemeKeys.TextSecondary);
@@ -206,9 +209,9 @@ internal static class W
             a.VerticalAlignment = VerticalAlignment.Center;
             grid.Children.Add(Ui.At(a, 2));
         }
-        var bar = Ui.Card(grid, Metrics.Card, new Thickness(14, 12, 14, 12), tint);
-        AutomationProperties.SetLiveSetting(bar, AutomationLiveSetting.Polite);
-        return bar;
+        // Named by its message, its button inside, and read out when it appears.
+        var group = Announce.WhenShown(Ui.Group(grid, text.Replace("**", "", StringComparison.Ordinal)));
+        return Ui.Card(group, Metrics.Card, new Thickness(14, 12, 14, 12), tint);
     }
 
     /// <summary>Nothing to show yet: a large faint icon, a title and why (the Mac's empty states).</summary>
@@ -263,6 +266,7 @@ internal sealed class Dropdown : ChromeButton
         chevron.Margin = new Thickness(8, 1, 0, 0);
         grid.Children.Add(Ui.At(chevron, 1));
         Content = grid;
+        Expanded = false;
         AutomationProperties.SetName(this, name);
         Click += (_, _) => MenuPopup.Show(this, _theme, _entries());
     }

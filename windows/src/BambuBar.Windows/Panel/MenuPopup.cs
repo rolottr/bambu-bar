@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -18,13 +19,25 @@ public sealed record MenuEntry(string Text, Action? Action = null, bool Checked 
 /// <summary>
 /// A Fluent menu flyout (the Mac's Menu): rounded, shadowed, a check beside the current choice. Built on a Popup, so
 /// it doesn't take activation from the panel (which would light-dismiss it). Arrow keys move, Enter picks, Esc closes
-/// and gives focus back to the button that opened it.
+/// and gives focus back to the button that opened it. Screen readers get a menu of menu items, the current choice
+/// checked, and the button that opened it expanded while it's open.
 /// </summary>
 public static class MenuPopup
 {
+    /// <summary>The menu on screen, if any (the accessibility check walks it).</summary>
+    internal static Popup? Open { get; private set; }
+
+    /// <summary>Closes the menu <paramref name="target"/> opened, if it's open; false when it isn't.</summary>
+    internal static bool Close(FrameworkElement target)
+    {
+        if (Open is not { IsOpen: true } popup || popup.PlacementTarget != target) return false;
+        popup.IsOpen = false;
+        return true;
+    }
+
     public static void Show(FrameworkElement target, ResourceDictionary theme, IReadOnlyList<MenuEntry> entries, string? header = null)
     {
-        var list = new StackPanel { Margin = new Thickness(4) };
+        var list = new MenuList { Margin = new Thickness(4) };
         KeyboardNavigation.SetDirectionalNavigation(list, KeyboardNavigationMode.Cycle);
         KeyboardNavigation.SetTabNavigation(list, KeyboardNavigationMode.Cycle);
         var popup = new Popup
@@ -65,7 +78,7 @@ public static class MenuPopup
             var button = new ChromeButton
             {
                 Content = row, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(8, 7, 8, 7),
-                MinWidth = 200, Margin = new Thickness(0, 1, 0, 1),
+                MinWidth = 200, Margin = new Thickness(0, 1, 0, 1), Role = AutomationControlType.MenuItem, Selected = entry.Checked ? true : null,
             };
             AutomationProperties.SetName(button, entry.Text);
             var action = entry.Action;
@@ -81,7 +94,11 @@ public static class MenuPopup
 
         var card = new Border
         {
-            Child = new ScrollViewer { Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 420, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled },
+            Child = new ScrollViewer
+            {
+                Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 420, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Focusable = false,
+            },
             CornerRadius = Metrics.Overlay, BorderThickness = new Thickness(1), Margin = new Thickness(12, 4, 12, 16),
             Effect = new DropShadowEffect { BlurRadius = 16, ShadowDepth = 4, Direction = 270, Opacity = 0.22 },
         };
@@ -89,7 +106,7 @@ public static class MenuPopup
         card.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.FlyoutStroke);
         // A popup isn't in the panel's tree, so it brings its own theme.
         card.Resources.MergedDictionaries.Add(theme);
-        AutomationProperties.SetName(card, header ?? "");
+        if (header is not null) AutomationProperties.SetName(list, header);
         popup.Child = card;
         popup.KeyDown += (_, e) =>
         {
@@ -99,6 +116,20 @@ public static class MenuPopup
             e.Handled = true;
         };
         popup.Opened += (_, _) => focus?.Focus();
+        var opener = target as ChromeButton;
+        popup.Closed += (_, _) =>
+        {
+            if (opener is not null) opener.Expanded = false;
+            if (Open == popup) Open = null;
+        };
+        Open = popup;
         popup.IsOpen = true;
+        if (opener is not null) opener.Expanded = true;
+    }
+
+    /// <summary>The entries' container: a menu to screen readers, named after its header.</summary>
+    private sealed class MenuList : StackPanel
+    {
+        protected override AutomationPeer OnCreateAutomationPeer() => new GroupPeer(this, AutomationControlType.Menu);
     }
 }

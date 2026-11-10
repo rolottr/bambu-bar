@@ -21,6 +21,7 @@ public static partial class Program
             return Probe.RunAsync(probe, Console.Out).GetAwaiter().GetResult();
         }
         if (Snapshot.Folder(args) is { } folder) return Snapshot.Run(folder);
+        if (A11yCheck.Folder(args) is { } report) return A11yCheck.Run(report);
         var app = new App();
         app.InitializeComponent();
         return app.Run();

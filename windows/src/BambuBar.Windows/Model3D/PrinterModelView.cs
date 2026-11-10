@@ -120,6 +120,9 @@ public sealed class PrinterModelView : Grid
         Children.Add(_art);
         Children.Add(_surface);
         Focusable = false;
+        // Nothing inside (HelixToolkit's viewport and its parts) is a Tab stop: the model is a picture with a value.
+        KeyboardNavigation.SetTabNavigation(this, KeyboardNavigationMode.None);
+        KeyboardNavigation.SetDirectionalNavigation(this, KeyboardNavigationMode.None);
         _tick = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(50) };
         _tick.Tick += (_, _) => Step();
         _idle = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(250) };

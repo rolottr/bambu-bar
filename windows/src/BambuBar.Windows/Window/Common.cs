@@ -104,7 +104,8 @@ internal sealed class WindowContext
     public required WindowServices Services { get; init; }
     public required ResourceDictionary Theme { get; init; }
     public required bool Dark { get; init; }
-    public required bool Animate { get; init; }
+    /// <summary>Motion is on: asked for, and Windows' "Show animations" is on now (see PanelContext.Animate).</summary>
+    public required bool Animate { get => field && AppTheme.AnimationsEnabled; init; }
     public required Action<AppPage> Show { get; init; }
     /// <summary>Opens setup for another printer (the Mac's MainWindow.addPrinter).</summary>
     public required Action<DiscoveredPrinter?> AddPrinter { get; init; }

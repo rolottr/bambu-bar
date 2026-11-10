@@ -28,7 +28,7 @@ public sealed class CameraWindowView : Grid
     private readonly Border _bar;
     private readonly TextBlock _status;
     private readonly TextBlock _detail;
-    private readonly ChromeButton _pin;
+    private readonly ChromeToggle _pin;
     private readonly Func<bool> _onTop;
     private readonly Action<bool> _setOnTop;
     private bool _barShown;
@@ -48,10 +48,12 @@ public sealed class CameraWindowView : Grid
         _status = new TextBlock { Foreground = white, FontSize = 12.5, FontWeight = FontWeights.Medium, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         Ui.Tabular(_status);
         _detail = new TextBlock { Foreground = new SolidColorBrush(Color.FromArgb(0xA6, 0xFF, 0xFF, 0xFF)), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 8, 0) };
-        _pin = new ChromeButton
+        // A toggle, so screen readers say whether it's on.
+        _pin = new ChromeToggle
         {
             Width = 28, Height = 28, Padding = new Thickness(0), Foreground = white,
-            Look = ButtonLook.Tinted(Colors.White, 0, 0.16, 0.24), CornerRadius = new CornerRadius(14),
+            Look = ButtonLook.Tinted(Colors.White, 0, 0.16, 0.24), CheckedLook = ButtonLook.Tinted(Colors.White, 0, 0.16, 0.24),
+            CornerRadius = new CornerRadius(14),
         };
         _pin.Click += (_, _) =>
         {
@@ -71,7 +73,9 @@ public sealed class CameraWindowView : Grid
         Children.Add(_player);
         Children.Add(_bar);
         MouseEnter += (_, _) => ShowBar(true);
-        MouseLeave += (_, _) => ShowBar(false);
+        MouseLeave += (_, _) => ShowBar(IsKeyboardFocusWithin);
+        // The keyboard reaches the pin too: the bar shows while it has the focus, so the focus rectangle isn't hidden.
+        IsKeyboardFocusWithinChanged += (_, _) => ShowBar(IsKeyboardFocusWithin || IsMouseOver);
         Loaded += (_, _) =>
         {
             if (statusSource is not null) statusSource.PropertyChanged += OnChanged;
@@ -109,8 +113,8 @@ public sealed class CameraWindowView : Grid
         var on = _onTop();
         _pin.Content = Icons.Glyph(on ? Icons.Pinned : Icons.Pin, 13, null, _pin.Foreground);
         var label = Loc.T("Keep on top");
+        _pin.IsChecked = on;
         AutomationProperties.SetName(_pin, label);
-        AutomationProperties.SetItemStatus(_pin, on ? Loc.T("On") : Loc.T("Off"));
         Ui.Tip(_pin, label);
     }
 

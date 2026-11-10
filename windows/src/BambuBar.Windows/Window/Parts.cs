@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -125,10 +126,13 @@ internal sealed class IssueBanner : Border
         Padding = new Thickness(14, 12, 14, 12);
         BorderThickness = new Thickness(1);
         Ui.Tint(this, color);
+        // A group named by the message, its copy, wiki and dismiss buttons inside (the Mac's banner).
         AutomationProperties.SetName(this, issue.Message);
         ShowCopied(false);
         Unloaded += (_, _) => _copied.Stop();
     }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new GroupPeer(this);
 
     private void Copy()
     {

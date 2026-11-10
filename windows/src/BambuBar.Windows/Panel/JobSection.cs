@@ -158,7 +158,6 @@ internal sealed class JobSection : PanelSection
         _layerCount.Text = $"{s.Layer}/{s.TotalLayers}";
         _bar.Tint = Tint(s);
         _bar.SetProgress(s.Progress / 100.0, Ctx.Animate && _root.IsVisible);
-        AutomationProperties.SetName(_numbers, $"{s.Progress}%");
         FillTiming(s);
     }
 

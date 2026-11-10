@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -44,6 +45,7 @@ public sealed class WindowView : Border, IDisposable
     private Region _footer = null!;
     private Region _supporter = null!;
     private Rectangle _wash = null!;
+    private AccessibleGroup _layer = null!;
     private FrameworkElement _appName = null!;
     private Color? _washColor;
     private bool _showsAppName = true;
@@ -59,7 +61,7 @@ public sealed class WindowView : Border, IDisposable
         _store = store;
         _settings = settings;
         _services = services;
-        _animate = animate && AppTheme.AnimationsEnabled;
+        _animate = animate;
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
         TextOptions.SetTextFormattingMode(this, TextFormattingMode.Ideal);
@@ -210,7 +212,7 @@ public sealed class WindowView : Border, IDisposable
     {
         _picker = new Region();
         _footer = new Region();
-        var list = new StackPanel { Margin = new Thickness(4, 4, 4, 0) };
+        var list = new NavList { Margin = new Thickness(4, 4, 4, 0) };
         KeyboardNavigation.SetDirectionalNavigation(list, KeyboardNavigationMode.Contained);
         _nav.Clear();
         foreach (var page in AppPages.Order)
@@ -251,10 +253,13 @@ public sealed class WindowView : Border, IDisposable
         var content = new Grid { Children = { _wash, accentWash, _scroller } };
         // The washes would square off the layer's rounded corner.
         content.SizeChanged += (_, e) => content.Clip = new RectangleGeometry(new Rect(e.NewSize), 7, 7);
-        var layer = new Border
+        // A group named after the page, so screen readers say where they are on the way in, and the page's buttons
+        // aren't mistaken for the sidebar's (the printer picker and an All Printers card share the printer's name).
+        var layer = new AccessibleGroup
         {
             CornerRadius = new CornerRadius(8, 0, 0, 0), BorderThickness = new Thickness(1, 1, 0, 0), Child = content,
         };
+        _layer = layer;
         layer.SetResourceReference(BackgroundProperty, WindowKeys.LayerFill);
         layer.SetResourceReference(BorderBrushProperty, WindowKeys.LayerStroke);
         return layer;
@@ -330,6 +335,7 @@ public sealed class WindowView : Border, IDisposable
             _page = make();
             _pageHost.Child = _page.Build();
             _scroller.ScrollToTop();
+            AutomationProperties.SetName(_layer, Section == AppPage.Fleet && !_store.HasMultiplePrinters ? AppPage.Printer.Title() : Section.Title());
         }
         FillSidebar();
         FillSupporter();
@@ -350,7 +356,7 @@ public sealed class WindowView : Border, IDisposable
         foreach (var (page, item) in _nav)
         {
             item.Visibility = page == AppPage.Fleet && !multiple ? Visibility.Collapsed : Visibility.Visible;
-            item.Selected = page == shown;
+            item.Showing = page == shown;
         }
         var current = _store.Current;
         if (multiple && current is not null)
@@ -395,8 +401,7 @@ public sealed class WindowView : Border, IDisposable
         grid.Children.Add(Ui.At(art, 0));
         grid.Children.Add(Ui.At(new Stack { Spacing = 1, VerticalAlignment = VerticalAlignment.Center, Children = { name, detail } }, 1));
         grid.Margin = new Thickness(18, 12, 14, 14);
-        AutomationProperties.SetName(grid, $"{name.Text}, {line}");
-        return grid;
+        return Ui.ReadAsOne(grid, $"{name.Text}, {line}");
     }
 
     /// <summary>"Hero Supporter" for supporters (opens About), else "Support this project" (opens the page).</summary>
@@ -503,7 +508,6 @@ public sealed class WindowView : Border, IDisposable
     private sealed class NavItem : ChromeButton
     {
         private readonly Border _indicator;
-        private bool _selected;
 
         public NavItem(AppPage page)
         {
@@ -525,28 +529,35 @@ public sealed class WindowView : Border, IDisposable
             AutomationProperties.SetName(this, page.Title());
             AutomationProperties.SetAcceleratorKey(this, shortcut);
             Ui.Tip(this, $"{page.Title()} ({shortcut})");
-            Paint();
+            // A list item screen readers call selected when it's the page on show (NavigationView's items).
+            Role = AutomationControlType.ListItem;
+            Paint(false);
         }
 
-        public bool Selected
+        public bool Showing
         {
-            get => _selected;
+            get => Selected == true;
             set
             {
-                if (_selected == value) return;
-                _selected = value;
-                Paint();
+                if (Showing == value) return;
+                Paint(value);
             }
         }
 
-        private void Paint()
+        private void Paint(bool showing)
         {
-            _indicator.Visibility = _selected ? Visibility.Visible : Visibility.Hidden;
-            Look = _selected
+            Selected = showing;
+            _indicator.Visibility = showing ? Visibility.Visible : Visibility.Hidden;
+            Look = showing
                 ? new ButtonLook(WindowKeys.NavSelected, WindowKeys.NavSelected, WindowKeys.NavPressed)
                 : new ButtonLook(null, WindowKeys.NavHover, WindowKeys.NavPressed);
-            AutomationProperties.SetItemStatus(this, _selected ? Loc.T("Showing") : "");
         }
+    }
+
+    /// <summary>The sidebar's pages: a list to screen readers.</summary>
+    private sealed class NavList : StackPanel
+    {
+        protected override AutomationPeer OnCreateAutomationPeer() => new GroupPeer(this, AutomationControlType.List);
     }
 }
 
@@ -577,6 +588,7 @@ internal sealed class SidebarPicker : ChromeButton
         CornerRadius = Metrics.Tile;
         Padding = new Thickness(10, 8, 10, 8);
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
+        Expanded = false;
         AutomationProperties.SetName(this, current.Config.Name);
         AutomationProperties.SetItemStatus(this, current.ShortState);
         Ui.Tip(this, Loc.T("Choose a printer"));

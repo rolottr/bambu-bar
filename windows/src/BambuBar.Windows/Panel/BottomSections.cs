@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Automation;
-using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -72,7 +71,7 @@ internal sealed class ToastSection : PanelSection
         _icon.Content = Icons.Glyph(toast.IsError ? Icons.Alert : Icons.Done, 14, null, Ctx.Ink(toast.IsError ? Palette.Paused : Palette.Accent));
         _message.Text = toast.Message;
         AutomationProperties.SetName(_root, toast.Message);
-        UIElementAutomationPeer.FromElement(_root)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        Announce.Changed(_root);
         if (!Ctx.Animate) return;
         _root.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, Metrics.Fast));
         _slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(8, 0, Metrics.Fast)

@@ -227,7 +227,7 @@ public sealed class Spinner : FrameworkElement
 
     private void Spin(bool on)
     {
-        if (!_animate) return;
+        if (!_animate || (on && !AppTheme.AnimationsEnabled)) return;
         _rotation.BeginAnimation(RotateTransform.AngleProperty, on && IsVisible
             ? new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1)) { RepeatBehavior = RepeatBehavior.Forever }
             : null);

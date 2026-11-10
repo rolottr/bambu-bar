@@ -117,7 +117,8 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
     /// <summary>The app's mark, name, maker, version and what it is.</summary>
     private Grid Hero()
     {
-        var glyph = new Image
+        // The app's mark beside its name: decoration (the Mac hides it from VoiceOver).
+        var glyph = new DecorativeImage
         {
             Source = TrayGlyph.Render(new TrayGlyph.Look(JobState.Printing, 0.6, false, false), 64, lightTaskbar: false),
             Width = 56, Height = 56,
@@ -151,7 +152,10 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
     private static Stack Section(string title, out Stack body)
     {
         body = new Stack { Spacing = 10 };
-        return new Stack { Spacing = 8, Children = { Ui.SectionLabel(title, null), W.Card(body, 16) } };
+        // A group named by its heading: "Manage Purchase" is under Links and under Your license.
+        var section = new Stack { Spacing = 8, Role = System.Windows.Automation.Peers.AutomationControlType.Group, Children = { Ui.SectionLabel(title, null), W.Card(body, 16) } };
+        AutomationProperties.SetName(section, title);
+        return section;
     }
 
     private static TextBlock Paragraph(string text) => W.Note(text, ThemeKeys.TextSecondary, WRamp.Detail);
@@ -230,8 +234,8 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
             };
             text.SetResourceReference(Control.ForegroundProperty, ThemeKeys.TextSecondary);
             text.SetResourceReference(Control.FontFamilyProperty, ThemeKeys.FontText);
-            AutomationProperties.SetLiveSetting(text, AutomationLiveSetting.Polite);
-            stack.Children.Add(text);
+            AutomationProperties.SetName(text, message);
+            stack.Children.Add(Announce.WhenShown(text));
         }
         var links = Ui.Columns("Auto", "*", "Auto");
         var support = W.Link(Loc.T("Support for $9.99"), () => W.Open(PolarConfiguration.SupportUrl(PolarConfiguration.SupportPlacement.License)));

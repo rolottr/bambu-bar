@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -47,6 +48,7 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
     private TextField _hostField = null!, _serialField = null!, _nameField = null!, _codeField = null!;
     private FrameworkElement _manualBody = null!;
     private TextBlock _manualChevron = null!;
+    private ChromeButton _manualHeader = null!;
     private Spinner _searching = null!;
     private ChromeButton _connect = null!;
     private TextBlock _connectLabel = null!;
@@ -182,9 +184,8 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         grid.Children.Add(Ui.At(icon, 0));
         var label = Ui.Paragraph(text, WRamp.Detail, textKey);
         grid.Children.Add(Ui.At(label, 1));
-        AutomationProperties.SetName(grid, text);
-        AutomationProperties.SetLiveSetting(grid, AutomationLiveSetting.Polite);
-        return grid;
+        // Read out when it appears (an inline error, what's still missing), without moving the focus.
+        return Announce.WhenShown(Ui.ReadAsOne(grid, text));
     }
 
     // MARK: Parts
@@ -304,10 +305,11 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         {
             Content = grid, Look = selected ? ButtonLook.Tinted(Palette.Accent) : ButtonLook.Card, CornerRadius = Metrics.Card,
             Padding = new Thickness(14, 12, 14, 12), HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            // The Mac's radio list: one of the printers found, the picked one selected.
+            Role = AutomationControlType.RadioButton, Selected = selected,
         };
         AutomationProperties.SetName(button, printer.Name);
         AutomationProperties.SetHelpText(button, Loc.F("Bambu Lab %@ · %@ · %@", printer.ModelName, printer.Host, printer.Serial));
-        AutomationProperties.SetItemStatus(button, selected ? Loc.T("Showing") : "");
         button.Click += (_, _) =>
         {
             Pick(printer);
@@ -348,8 +350,9 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         var header = new ChromeButton
         {
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { _manualChevron, Ui.Text(Loc.T("Enter address manually"), WRamp.Detail, FontWeights.SemiBold) } },
-            Padding = new Thickness(6, 4, 8, 5), HorizontalAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(6, 4, 8, 5), HorizontalAlignment = HorizontalAlignment.Left, Expanded = false,
         };
+        _manualHeader = header;
         AutomationProperties.SetName(header, Loc.T("Enter address manually"));
         header.Click += (_, _) => SetManual(!_manual);
 
@@ -376,6 +379,7 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         _manual = open;
         _manualBody.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
         _manualChevron.Text = open ? Icons.ChevronDown : Icons.ChevronRight;
+        _manualHeader.Expanded = open;
         Refresh();
     }
 

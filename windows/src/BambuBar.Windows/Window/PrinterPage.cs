@@ -280,6 +280,8 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
             _editor = new Stack { Spacing = 6, Children = { row, _hint }, Visibility = Visibility.Collapsed };
             Children.Add(_display);
             Children.Add(_editor);
+            // The page's title is the name (W.PageHeader marks the element it's given, this grid, which has no peer).
+            AutomationProperties.SetHeadingLevel(_title, AutomationHeadingLevel.Level1);
         }
 
         private bool Editing => _editor.Visibility == Visibility.Visible;

@@ -73,16 +73,25 @@ public sealed partial class TrayIcon : IDisposable
         var look = TrayGlyph.For(session, _store.IsConfigured, ShowPercent);
         var light = TaskbarIsLight();
         var pixels = Forms.SystemInformation.SmallIconSize.Width;
-        var tooltip = Tooltip(session);
+        var tooltip = Text(session);
         var key = $"{look}|{light}|{pixels}|{tooltip}";
         if (key == _lastKey) return;
         _lastKey = key;
         var previous = _current;
         _current = ToIcon(TrayGlyph.Render(look, pixels, light));
         _icon.Icon = _current;
-        // NotifyIcon.Text is limited to 127 characters.
-        _icon.Text = tooltip.Length > 127 ? tooltip[..126] + "…" : tooltip;
+        _icon.Text = tooltip;
         previous?.Dispose();
+    }
+
+    /// <summary>The icon's text: "Bambu Bar" over the tooltip line, as other tray icons say whose they are (OneDrive's).
+    /// It's also the icon's name for screen readers, which read the tray by its tooltips: "Bambu Bar, P2S Workshop ·
+    /// 64% · 1h 02m", like the Mac's VoiceOver label. NotifyIcon allows 127 characters.</summary>
+    public static string Text(PrinterSession? session)
+    {
+        var line = Tooltip(session);
+        var text = line.StartsWith("Bambu Bar", StringComparison.Ordinal) ? line : "Bambu Bar\n" + line;
+        return text.Length > 127 ? text[..126] + "…" : text;
     }
 
     /// <summary>"P2S Workshop · 64% · 1h 02m · done 14:32", or the link state.</summary>

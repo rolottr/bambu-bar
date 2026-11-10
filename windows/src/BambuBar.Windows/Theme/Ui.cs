@@ -77,6 +77,24 @@ public static class Ui
         return element;
     }
 
+    /// <summary>Wraps <paramref name="child"/> in a group screen readers name, its controls still inside
+    /// (<see cref="AccessibleGroup"/>).</summary>
+    public static AccessibleGroup Group(UIElement child, string name)
+    {
+        var group = new AccessibleGroup { Child = child };
+        AutomationProperties.SetName(group, name);
+        return group;
+    }
+
+    /// <summary>Wraps <paramref name="child"/> so screen readers read it as one line, <paramref name="name"/>
+    /// (<see cref="AccessibleCard"/>): a detail row, a numbered step.</summary>
+    public static AccessibleCard ReadAsOne(UIElement child, string name)
+    {
+        var card = new AccessibleCard { Child = child };
+        AutomationProperties.SetName(card, name);
+        return card;
+    }
+
     /// <summary>"● Printing": the state in its colour on a 14 % capsule.</summary>
     public static Border Pill(out Ellipse dot, out TextBlock label)
     {
@@ -144,6 +162,13 @@ public sealed class Stack : Panel
 {
     public Orientation Orientation { get; set; } = Orientation.Vertical;
     public double Spacing { get; set; }
+
+    /// <summary>What screen readers make of the stack: nothing of its own (null, the default: its children are read
+    /// in its place), or a named container of that type (a settings group).</summary>
+    public System.Windows.Automation.Peers.AutomationControlType? Role { get; set; }
+
+    protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
+        Role is { } role ? new GroupPeer(this, role) : base.OnCreateAutomationPeer();
 
     protected override Size MeasureOverride(Size available)
     {

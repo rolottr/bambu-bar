@@ -1,4 +1,7 @@
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -76,11 +79,98 @@ public class ChromeButton : Button
         set { _look = value; Refresh(); }
     }
 
+    /// <summary>What screen readers call it: a button, or one of a set (a sidebar page is a list item, a printer in
+    /// setup a radio button, a menu's entry a menu item).</summary>
+    public AutomationControlType Role { get; set; } = AutomationControlType.Button;
+
+    /// <summary>The picked one of its set (screen readers say "selected", or "checked" for a menu item); null for a
+    /// button that isn't one of a set.</summary>
+    public bool? Selected
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            var was = field == true;
+            field = value;
+            if (UIElementAutomationPeer.FromElement(this) is { } peer && was != (value == true))
+            {
+                peer.RaisePropertyChangedEvent(SelectionItemPatternIdentifiers.IsSelectedProperty, was, value == true);
+                if (value == true) peer.RaiseAutomationEvent(AutomationEvents.SelectionItemPatternOnElementSelected);
+            }
+        }
+    }
+
+    /// <summary>Opens a menu or folds something open: whether it's open now (screen readers say "expanded" or
+    /// "collapsed"); null for a button that does neither. <see cref="TrayPanel.MenuPopup"/> keeps it for menus.</summary>
+    public bool? Expanded
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+            var was = field == true;
+            field = value;
+            if (UIElementAutomationPeer.FromElement(this) is { } peer && was != (value == true))
+            {
+                peer.RaisePropertyChangedEvent(ExpandCollapsePatternIdentifiers.ExpandCollapseStateProperty,
+                    was ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed,
+                    value == true ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed);
+            }
+        }
+    }
+
     protected override void OnIsPressedChanged(DependencyPropertyChangedEventArgs e) { base.OnIsPressedChanged(e); Refresh(); }
     protected override void OnMouseEnter(MouseEventArgs e) { base.OnMouseEnter(e); Refresh(); }
     protected override void OnMouseLeave(MouseEventArgs e) { base.OnMouseLeave(e); Refresh(); }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new ChromeButtonPeer(this);
+
     private void Refresh() => Chrome.Apply(this, _look, IsMouseOver, IsPressed);
+
+    /// <summary>A button's peer that also says its <see cref="Role"/>, whether it's the picked one (SelectionItem; Toggle
+    /// for a checked menu item) and whether what it opens is open (ExpandCollapse). Invoking still clicks it.</summary>
+    private sealed class ChromeButtonPeer(ChromeButton owner) : ButtonAutomationPeer(owner), ISelectionItemProvider, IExpandCollapseProvider, IToggleProvider
+    {
+        private ChromeButton Button => (ChromeButton)Owner;
+
+        protected override AutomationControlType GetAutomationControlTypeCore() => Button.Role;
+        protected override string GetClassNameCore() => Button.GetType().Name;
+
+        public override object? GetPattern(PatternInterface patternInterface) => patternInterface switch
+        {
+            PatternInterface.SelectionItem when Button.Selected is not null && Button.Role != AutomationControlType.MenuItem => this,
+            PatternInterface.Toggle when Button.Selected == true && Button.Role == AutomationControlType.MenuItem => this,
+            PatternInterface.ExpandCollapse when Button.Expanded is not null => this,
+            _ => base.GetPattern(patternInterface),
+        };
+
+        private void Click()
+        {
+            if (!IsEnabled()) throw new ElementNotEnabledException();
+            ((IInvokeProvider)this).Invoke();
+        }
+
+        // SelectionItem: one of a set, picked by clicking it.
+        public bool IsSelected => Button.Selected == true;
+        public IRawElementProviderSimple? SelectionContainer => null;
+        public void Select() { if (!IsSelected) Click(); }
+        public void AddToSelection() { if (!IsSelected) throw new InvalidOperationException("Only one can be picked."); }
+        public void RemoveFromSelection() { if (IsSelected) throw new InvalidOperationException("Pick another one instead."); }
+
+        // ExpandCollapse: a menu or a fold, opened and closed by clicking.
+        public ExpandCollapseState ExpandCollapseState => Button.Expanded == true ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed;
+        public void Expand() { if (Button.Expanded != true) Click(); }
+        public void Collapse()
+        {
+            if (Button.Expanded != true) return;
+            if (!TrayPanel.MenuPopup.Close(Button)) Click();
+        }
+
+        // Toggle: a checked menu item (the current choice).
+        public ToggleState ToggleState => ToggleState.On;
+        public void Toggle() => Click();
+    }
 }
 
 /// <summary>A <see cref="ChromeButton"/> that stays on: the all-printers switch, the chamber light.</summary>

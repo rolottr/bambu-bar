@@ -113,6 +113,13 @@ checks the files, registry keys and shortcut, runs the installed `BambuBar.exe -
 checks that only the user's data is left. Artifacts: `Bambu-Bar-windows-installer-<rid>` (installer + `.sha256`),
 `rainmeter-source` (for the release) and `Bambu-Bar-windows-install-smoke` (logs, snapshots).
 
+Before that, `BambuBar.exe --a11y-check <dir>` (`A11yCheck.cs`) opens the panel, its menus, the stop confirmation
+and every page of the window over the demo fleet, and fails on a control without a name, a glyph or meaningless
+name, two same-named controls in one named group, an unnamed picture, a control Tab never reaches (or a Tab stop
+without a name or focus rectangle), and Enter, Space or Esc not opening or closing what they should. It reads WPF's
+automation peers and, per window, the UI Automation client's tree. Artifact: `Bambu-Bar-windows-a11y`
+(`a11y-report.txt` with each scene's tree, names, roles, states and Tab order; `a11y-problems.txt`).
+
 ## Version
 
 There is one version line for the Mac and Windows: `MARKETING_VERSION` in `project.yml`. `Directory.Build.props`

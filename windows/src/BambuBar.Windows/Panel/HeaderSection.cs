@@ -47,6 +47,7 @@ internal sealed class HeaderSection : PanelSection, IDisposable
         {
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { _pickerName, chevron } },
             Padding = new Thickness(6, 2, 6, 3), Margin = new Thickness(-6, -2, 0, -1), HorizontalAlignment = HorizontalAlignment.Left,
+            Expanded = false,
         };
         Ui.Tip(_picker, Loc.T("Show another printer"));
         _picker.Click += (_, _) => ShowPrinterMenu();
@@ -151,7 +152,12 @@ internal sealed class HeaderSection : PanelSection, IDisposable
     {
         _requestedAt = null;
         _spinLimit.Stop();
-        if (!Ctx.Animate) return;
+        if (!Ctx.Animate)
+        {
+            // Animations turned off mid-turn: stop where it is.
+            _spin.BeginAnimation(RotateTransform.AngleProperty, null);
+            return;
+        }
         // Finish the turn instead of snapping back.
         var angle = _spin.Angle % 360;
         _spin.BeginAnimation(RotateTransform.AngleProperty, angle < 1 ? null

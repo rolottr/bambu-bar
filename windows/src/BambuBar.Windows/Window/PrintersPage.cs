@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Shapes;
@@ -130,6 +131,9 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
             AutomationProperties.SetName(this, session.Config.Name);
             AutomationProperties.SetItemStatus(this, session.ShortState);
         }
+
+        /// <summary>A group named after the printer, its Show button inside.</summary>
+        protected override AutomationPeer OnCreateAutomationPeer() => new GroupPeer(this);
     }
 
     /// <summary>The selected printer's settings. Built once per printer, so what's being typed survives the reports.</summary>

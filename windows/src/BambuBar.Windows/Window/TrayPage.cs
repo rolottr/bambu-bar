@@ -329,7 +329,7 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
         var look = TrayGlyph.For(session, true, showsPercent);
         _icon.Source = TrayGlyph.Render(look, 40, lightTaskbar: !_ctx.Dark);
         RenderOptions.SetBitmapScalingMode(_icon, BitmapScalingMode.HighQuality);
-        _tooltip.Text = Tray.TrayIcon.Tooltip(session);
+        _tooltip.Text = Tray.TrayIcon.Text(session);
         var now = DateTime.Now;
         _clock.Text = now.ToString("t", CultureInfo.CurrentCulture);
         _date.Text = now.ToString("d", CultureInfo.CurrentCulture);
