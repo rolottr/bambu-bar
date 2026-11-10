@@ -4,7 +4,9 @@ using System.Windows;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Platform;
+using BambuBar.Theme;
 using BambuBar.Tray;
+using BambuBar.TrayPanel;
 using BambuBar.Widgets;
 using Microsoft.Win32;
 
@@ -19,7 +21,9 @@ public partial class App : Application
 {
     private SingleInstance? _instance;
     private PrinterStore? _store;
+    private AppSettings? _settings;
     private TrayIcon? _tray;
+    private PanelWindow? _panel;
     private WidgetHost? _widgets;
     private MainWindow? _window;
 
@@ -53,23 +57,47 @@ public partial class App : Application
             _widgets.Start();
             Registration.RegisterUriScheme();
         }
+        _settings = new AppSettings(ephemeral ? null : Path.Combine(folder, "settings.json"));
         _store = new PrinterStore(new PrinterStore.Services
         {
-            Settings = new AppSettings(ephemeral ? null : Path.Combine(folder, "settings.json")),
+            Settings = _settings,
             History = new HistoryStore(ephemeral ? null : Path.Combine(folder, "history.json")),
             Secrets = ephemeral ? new MemorySecretStore() : new CredentialStore(),
             Widgets = _widgets?.State,
+            Confirmer = new StopConfirmer(() => _panel),
             Arguments = args,
         });
         _store.Start();
 
         _tray = new TrayIcon(_store);
         _tray.OpenWindow += ShowWindow;
-        _tray.OpenPanel += ShowWindow; // The flyout panel (P3.3) replaces this.
+        _tray.OpenPanel += TogglePanel;
         _tray.Quit += Quit;
 
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         if (!args.Contains("--background")) ShowWindow();
+        // Demo runs open the panel too, so CI's desktop screenshot shows it in place over the taskbar.
+        if (args.Contains("--demo") || args.Contains("--panel"))
+            Dispatcher.InvokeAsync(TogglePanel, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    }
+
+    /// <summary>A left click on the tray icon: the flyout opens, or closes if it's open.</summary>
+    private void TogglePanel()
+    {
+        if (_store is null || _settings is null) return;
+        if (_panel is null)
+        {
+            var view = new PanelView(_store, _settings, AppTheme.Current, animate: true);
+            _panel = new PanelWindow(view);
+            // The window's pages (P3.5) will open at the destination; for now every button opens the window.
+            view.Navigate += (_, _) =>
+            {
+                _panel.HidePanel();
+                ShowWindow();
+            };
+            view.QuitRequested += Quit;
+        }
+        _panel.Toggle();
     }
 
     /// <summary>A later launch's arguments: a link to a printer, or just "show yourself".</summary>
@@ -101,6 +129,7 @@ public partial class App : Application
     private void Quit()
     {
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        _panel?.Quit();
         _tray?.Dispose();
         _store?.Dispose();
         // Widgets close with the app (O5).
