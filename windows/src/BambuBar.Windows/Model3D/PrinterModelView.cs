@@ -305,7 +305,9 @@ public sealed class PrinterModelView : Grid
             };
             _viewport = new Viewport3DX
             {
-                EffectsManager = effects, Camera = _camera, BackgroundColor = Colors.Transparent,
+                // Transparent black, not WPF's Colors.Transparent (white with no alpha): the picture reaches WPF premultiplied,
+                // where "transparent white" adds white, and the printer sat on a white box.
+                EffectsManager = effects, Camera = _camera, BackgroundColor = System.Windows.Media.Color.FromArgb(0, 0, 0, 0),
                 ShowViewCube = false, ShowCoordinateSystem = false, ShowFrameRate = false, ShowCameraInfo = false, ShowTriangleCountInfo = false,
                 ShowFrameDetails = false, ShowCameraTarget = false, IsRotationEnabled = false, IsPanEnabled = false, IsZoomEnabled = false,
                 IsMoveEnabled = false, IsChangeFieldOfViewEnabled = false, IsInertiaEnabled = false, UseDefaultGestures = false,
