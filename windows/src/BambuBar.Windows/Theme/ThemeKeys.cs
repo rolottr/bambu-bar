@@ -92,28 +92,29 @@ public static class Metrics
     /// <summary>Around the panel's content (Mac 12).</summary>
     public const double PanelPadding = 12;
     /// <summary>Between sections (Mac 10).</summary>
-    public const double Gap = 8;
+    public const double Gap = 10;
     /// <summary>From the work area's edge (Windows 11 flyouts sit 12 px off the taskbar).</summary>
     public const double ScreenMargin = 12;
 
     /// <summary>The job card (Mac 20).</summary>
-    public static readonly CornerRadius Hero = new(12);
+    public static readonly CornerRadius Hero = new(20);
     /// <summary>Cards: connection, setup, filament (Mac 18–20).</summary>
-    public static readonly CornerRadius Card = new(8);
+    public static readonly CornerRadius Card = new(18);
     /// <summary>Tiles, issue, toast, update row, list rows (Mac 12–14).</summary>
-    public static readonly CornerRadius Tile = new(8);
-    /// <summary>Buttons (Mac 11, Fluent ControlCornerRadius 4).</summary>
-    public static readonly CornerRadius Control = new(4);
+    public static readonly CornerRadius Tile = new(14);
+    /// <summary>Buttons in the window's forms (between Fluent's 4 and the Mac's 11).</summary>
+    public static readonly CornerRadius Control = new(8);
+    /// <summary>The panel's print controls and its prominent buttons (Mac ControlButtonStyle, 11).</summary>
+    public static readonly CornerRadius Button = new(11);
     /// <summary>Menus and tooltips (Fluent OverlayCornerRadius).</summary>
     public static readonly CornerRadius Overlay = new(8);
-    /// <summary>State pills, chips, slot labels, the light switch: a rectangle rounded only a little at the corners,
-    /// as on the Mac.</summary>
-    public static readonly CornerRadius Pill = new(6);
+    /// <summary>State pills, chips, the light switch: capsules, as on the Mac (StatePill, LightToggle).</summary>
+    public static readonly CornerRadius Pill = new(999);
     /// <summary>Round icon buttons.</summary>
     public static readonly CornerRadius Round = new(999);
 
-    /// <summary>Header icon buttons (Mac 28, Fluent 32).</summary>
-    public const double HeaderButton = 32;
+    /// <summary>Header icon buttons: circles (Mac HeaderIconStyle 28).</summary>
+    public const double HeaderButton = 28;
     /// <summary>Print controls (Mac min height 34).</summary>
     public const double ControlHeight = 34;
     /// <summary>The printer beside the job (Mac 92 × 110).</summary>

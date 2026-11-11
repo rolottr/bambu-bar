@@ -109,7 +109,7 @@ internal sealed class JobSection : PanelSection
         var toggle = new ChromeToggle
         {
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -2, -2, 0),
-            Padding = new Thickness(8, 3, 9, 4), CornerRadius = Metrics.Pill, Look = ButtonLook.Standard,
+            Padding = new Thickness(9, 4, 10, 5), CornerRadius = Metrics.Pill, Look = ButtonLook.Standard,
             // The Mac's: a yellow tint with a yellow edge when on.
             CheckedLook = ButtonLook.Tinted(Palette.Lamp, 0.16, 0.22, 0.28) with { StrokeBrush = Palette.Brush(Palette.WithAlpha(Palette.Lamp, 0.45)) },
         };
@@ -120,7 +120,18 @@ internal sealed class JobSection : PanelSection
 
     private void FillLight(bool on)
     {
-        var icon = Icons.Draw(on ? Icons.Vector.BulbLit : Icons.Vector.Bulb, 13, on ? Palette.Brush(Palette.Lamp) : Ctx.Brush(ThemeKeys.TextSecondary));
+        FrameworkElement icon = Icons.Draw(on ? Icons.Vector.BulbLit : Icons.Vector.Bulb, 13, on ? Palette.Brush(Palette.Lamp) : Ctx.Brush(ThemeKeys.TextSecondary));
+        if (on)
+        {
+            // The Mac's yellow glow around the lit bulb, drawn (an effect would blur the switch).
+            var glow = new RadialGradientBrush(Palette.WithAlpha(Palette.Lamp, 0.55), Palette.WithAlpha(Palette.Lamp, 0));
+            glow.Freeze();
+            icon = new Grid
+            {
+                Width = 13, Height = 13,
+                Children = { new Ellipse { Width = 22, Height = 22, Margin = new Thickness(-4.5), Fill = glow }, icon },
+            };
+        }
         var label = Ui.Text(Loc.T("Light"), Ramp.Caption, FontWeights.SemiBold, on ? ThemeKeys.TextPrimary : ThemeKeys.TextSecondary);
         label.Margin = new Thickness(5, 0, 0, 0);
         _light.Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } };

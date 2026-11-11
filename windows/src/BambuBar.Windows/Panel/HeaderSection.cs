@@ -63,18 +63,22 @@ internal sealed class HeaderSection : PanelSection, IDisposable
         var titles = new Stack { Spacing = 1, VerticalAlignment = VerticalAlignment.Center, Children = { _allTitle, _picker, _plainTitle, _summary, _linkRow } };
         _root.Children.Add(Ui.At(titles, 0));
 
-        _allToggle = new ChromeToggle { Width = Metrics.HeaderButton, Height = Metrics.HeaderButton, Padding = new Thickness(0), Content = Icons.Glyph(Icons.AllPrinters, 14) };
+        _allToggle = new ChromeToggle
+        {
+            Width = Metrics.HeaderButton, Height = Metrics.HeaderButton, Padding = new Thickness(0), Content = Icons.Glyph(Icons.AllPrinters, 13),
+            CornerRadius = Metrics.Round, Look = Circle,
+        };
         AutomationProperties.SetName(_allToggle, Loc.T("All Printers"));
         _allToggle.Click += (_, _) => Ctx.SetShowsAll(_allToggle.IsChecked == true);
 
-        var refreshGlyph = Icons.Glyph(Icons.Refresh, 14);
+        var refreshGlyph = Icons.Glyph(Icons.Refresh, 13);
         refreshGlyph.RenderTransform = _spin;
         refreshGlyph.RenderTransformOrigin = new Point(0.5, 0.5);
         _refresh = HeaderButton(refreshGlyph, Loc.T("Refresh"), Loc.T("Ask the printer for a full status report"));
         _refresh.Click += (_, _) => StartRefresh();
         _spinLimit.Tick += (_, _) => FinishRefresh();
 
-        var settings = HeaderButton(Icons.Glyph(Icons.Settings, 14), Loc.T("Settings"), Loc.T("Settings"));
+        var settings = HeaderButton(Icons.Glyph(Icons.Settings, 13), Loc.T("Settings"), Loc.T("Settings"));
         settings.Click += (_, _) => Ctx.Navigate(PanelDestination.Settings, null);
 
         var buttons = new Stack { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
@@ -86,9 +90,16 @@ internal sealed class HeaderSection : PanelSection, IDisposable
 
     public override FrameworkElement Root => _root;
 
+    private static readonly ButtonLook Circle = new(ThemeKeys.ControlFill, ThemeKeys.ControlHover, ThemeKeys.SubtleHover);
+
     private static ChromeButton HeaderButton(UIElement glyph, string name, string help)
     {
-        var button = new ChromeButton { Width = Metrics.HeaderButton, Height = Metrics.HeaderButton, Padding = new Thickness(0), Content = glyph };
+        // The Mac's HeaderIconStyle: a circle of faint fill around the icon.
+        var button = new ChromeButton
+        {
+            Width = Metrics.HeaderButton, Height = Metrics.HeaderButton, Padding = new Thickness(0), Content = glyph,
+            CornerRadius = Metrics.Round, Look = Circle,
+        };
         AutomationProperties.SetName(button, name);
         Ui.Tip(button, help);
         return button;

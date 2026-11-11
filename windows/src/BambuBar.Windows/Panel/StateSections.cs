@@ -32,7 +32,7 @@ internal sealed class SetupSection : PanelSection
 
         var setUp = new ChromeButton
         {
-            Look = ButtonLook.Accent, Height = Metrics.ControlHeight, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Look = ButtonLook.Accent, CornerRadius = Metrics.Button, Height = Metrics.ControlHeight, HorizontalAlignment = HorizontalAlignment.Stretch,
             Content = Ui.Text(Loc.T("Set Up…"), Ramp.Control, FontWeights.SemiBold, ThemeKeys.TextOnAccent),
         };
         AutomationProperties.SetName(setUp, Loc.T("Set Up…"));

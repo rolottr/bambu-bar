@@ -54,7 +54,10 @@ public static class Ui
         if (tint is { } t)
         {
             card.Background = Palette.Brush(Palette.WithAlpha(t, 0.12));
-            card.BorderBrush = Palette.Brush(Palette.WithAlpha(t, 0.28));
+            // The Mac's hairline, in the tint: brighter at the top, fading down.
+            var edge = new LinearGradientBrush(Palette.WithAlpha(t, 0.34), Palette.WithAlpha(t, 0.08), 90);
+            edge.Freeze();
+            card.BorderBrush = edge;
         }
         else
         {
@@ -108,7 +111,7 @@ public static class Ui
         var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { mark, label } };
         return new Border
         {
-            Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(6, 3, 9, 4),
+            Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(5, 3, 10, 4),
             HorizontalAlignment = HorizontalAlignment.Left,
         };
     }
@@ -125,7 +128,7 @@ public static class Ui
     /// <summary>A pill tinted with a state colour: a soft fill of it, no outline (the Mac's StatePill).</summary>
     public static void TintCapsule(Border capsule, Color color, bool dark)
     {
-        capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.18 : 0.14));
+        capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.16 : 0.13));
         capsule.BorderBrush = null;
         capsule.BorderThickness = new Thickness(0);
     }

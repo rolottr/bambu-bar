@@ -34,7 +34,7 @@ public static class ThemeResources
                 Put(ThemeKeys.TextLink, Palette.Ink(Palette.Accent, dark: false));
                 Put(ThemeKeys.PanelBackground, C(0xFFF3F3F3));
                 Put(ThemeKeys.PanelStroke, C(0x26000000));
-                Put(ThemeKeys.CardFill, C(0xB3FFFFFF));
+                Put(ThemeKeys.CardFill, C(0x0A000000));
                 Put(ThemeKeys.CardStroke, C(0x0F000000));
                 Put(ThemeKeys.SubtleHover, C(0x09000000));
                 Put(ThemeKeys.SubtlePressed, C(0x06000000));
@@ -110,6 +110,8 @@ public static class ThemeResources
                 break;
         }
 
+        if (variant != ThemeVariant.HighContrast) Glass(d, variant == ThemeVariant.Dark);
+
         // Segoe UI Variable on Windows 11; WPF falls back along the list (Segoe UI on Windows 10).
         d[ThemeKeys.FontText] = new FontFamily("Segoe UI Variable Text, Segoe UI");
         d[ThemeKeys.FontDisplay] = new FontFamily("Segoe UI Variable Display, Segoe UI");
@@ -119,6 +121,32 @@ public static class ThemeResources
         d[typeof(ToolTip)] = ToolTipStyle();
         if (ScrollBarStyle() is { } scrollBar) d[typeof(ScrollBar)] = scrollBar;
         return d;
+    }
+
+    /// <summary>
+    /// The Mac's glass, as far as brushes go: the panel's own background (when Windows gives it no acrylic: Windows 10,
+    /// snapshots, high contrast aside) is a soft vertical gradient instead of a flat grey; cards and tiles get the
+    /// Mac's hairline that fades from top to bottom (PanelBackground's 10 % → 3 % stroke), so they read as lit glass
+    /// modules; and the accent fills (Resume, Set Up, switches) are the Mac's tint gradient, lighter at the top.
+    /// </summary>
+    private static void Glass(ResourceDictionary d, bool dark)
+    {
+        static Brush Vertical(Color top, Color bottom)
+        {
+            var brush = new LinearGradientBrush(top, bottom, 90);
+            brush.Freeze();
+            return brush;
+        }
+        var ink = dark ? Colors.White : Colors.Black;
+        d[ThemeKeys.CardStroke] = Vertical(Palette.WithAlpha(ink, dark ? 0.12 : 0.11), Palette.WithAlpha(ink, dark ? 0.035 : 0.04));
+        d[ThemeKeys.ControlStroke] = Vertical(Palette.WithAlpha(ink, dark ? 0.10 : 0.10), Palette.WithAlpha(ink, dark ? 0.04 : 0.05));
+        d[ThemeKeys.PanelBackground] = dark
+            ? Vertical(Color.FromRgb(0x33, 0x31, 0x31), Color.FromRgb(0x27, 0x28, 0x2B))
+            : Vertical(Color.FromRgb(0xF6, 0xF5, 0xF4), Color.FromRgb(0xEC, 0xED, 0xEF));
+        var accent = dark ? Palette.Accent : Color.FromRgb(0x00, 0x7A, 0x3D);
+        d[ThemeKeys.AccentFill] = Vertical(SpoolArt.Mix(accent, Colors.White, 0.12), SpoolArt.Mix(accent, Colors.Black, 0.06));
+        d[ThemeKeys.AccentHover] = Vertical(SpoolArt.Mix(accent, Colors.White, 0.2), accent);
+        d[ThemeKeys.AccentPressed] = Vertical(accent, SpoolArt.Mix(accent, Colors.Black, 0.12));
     }
 
     /// <summary>Fluent's tooltip: a small rounded flyout in the theme's colours.</summary>
