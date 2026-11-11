@@ -32,6 +32,10 @@ public static class Renderer3D
     /// <summary>What happened: "Direct3D 11 on NVIDIA …", "WARP (software)", or why 3D is off.</summary>
     public static string Status { get; private set; } = "not started";
 
+    /// <summary>Drawing with WARP, Direct3D's software rasterizer (no graphics card: VMs, basic display drivers): the
+    /// views then skip multisampling, which costs a CPU core there.</summary>
+    public static bool IsSoftware => _effects?.DriverType == SharpDX.Direct3D.DriverType.Warp;
+
     /// <summary>Off by request or after a failure; the views then show the drawing.</summary>
     public static bool IsOff => _offReason is not null || Requested() == Mode.Off;
 

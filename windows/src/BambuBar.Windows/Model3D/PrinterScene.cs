@@ -84,6 +84,12 @@ internal sealed class PrinterScene
     /// <summary>The shape's glTF from <c>Assets\Printers</c>, read once; null (logged) when missing or unreadable.</summary>
     public static Gltf? Model(PrinterShape shape)
     {
+        // Also read ahead of time on a worker thread (PanelWarmup).
+        lock (Models) return LoadModel(shape);
+    }
+
+    private static Gltf? LoadModel(PrinterShape shape)
+    {
         if (Models.TryGetValue(shape, out var cached)) return cached;
         Gltf? model = null;
         var path = Assets.PathOf("Printers", shape.AssetName() + ".glb");

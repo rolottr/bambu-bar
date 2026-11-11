@@ -313,7 +313,8 @@ public sealed class PrinterModelView : Grid
                 EnableMouseButtonHitTest = false, EnableCursorPosition = false, EnableD2DRendering = false, EnableSwapChainRendering = false,
                 EnableDeferredRendering = false, IsShadowMappingEnabled = false, EnableSSAO = false,
                 // Plain sorted blending: its alpha over the transparent background composes correctly in WPF.
-                OITRenderMode = OITRenderType.None, MSAA = MSAALevel.Four, FXAALevel = FXAALevel.None,
+                // 4× multisampling, except in software (WARP), where it costs a CPU core while the printer moves.
+                OITRenderMode = OITRenderType.None, MSAA = Renderer3D.IsSoftware ? MSAALevel.Disable : MSAALevel.Four, FXAALevel = FXAALevel.None,
                 IsHitTestVisible = false, Focusable = false, IsTabStop = false,
                 DpiScale = DeviceScale() * _renderScale,
             };

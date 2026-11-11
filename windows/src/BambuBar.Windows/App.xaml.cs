@@ -144,6 +144,11 @@ public partial class App : Application
         // Demo runs open the panel too, so CI's desktop screenshot shows it in place over the taskbar.
         if (args.Contains("--demo") || args.Contains("--panel"))
             Dispatcher.InvokeAsync(TogglePanel, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        // The first click on the tray icon shouldn't wait for files, Direct3D and the panel's views to be made.
+        _ = PanelWarmup.RunAsync(_store, () =>
+        {
+            if (EnsurePanel() is { } panel) new System.Windows.Interop.WindowInteropHelper(panel).EnsureHandle();
+        }, TimeSpan.FromSeconds(3));
     }
 
     private static bool IsLink(string arg) => arg.StartsWith("bambubar://", StringComparison.OrdinalIgnoreCase);
@@ -151,22 +156,28 @@ public partial class App : Application
     /// <summary>A left click on the tray icon: the flyout opens, or closes if it's open.</summary>
     private void TogglePanel()
     {
-        if (_store is null || _settings is null) return;
+        if (EnsurePanel() is { } panel) panel.Toggle();
+    }
+
+    /// <summary>The tray panel, built on first use (or ahead of it by <see cref="PanelWarmup"/>).</summary>
+    private PanelWindow? EnsurePanel()
+    {
+        if (_store is null || _settings is null) return null;
         if (_panel is null)
         {
             var view = new PanelView(_store, _settings, AppTheme.Current, animate: true) { ShowsSupport = !(_license?.HasAccess ?? false) };
             _panelView = view;
             ShowUpdateOffer();
-            _panel = new PanelWindow(view);
+            var panel = _panel = new PanelWindow(view);
             // Every button that leads out of the panel opens the window at its page.
             view.Navigate += (destination, printer) =>
             {
-                _panel.HidePanel();
+                panel.HidePanel();
                 ShowWindow()?.View.Go(destination, printer);
             };
             view.QuitRequested += Quit;
         }
-        _panel.Toggle();
+        return _panel;
     }
 
     /// <summary>A launch's arguments: <c>bambubar://printer/&lt;serial&gt;</c> (select it, show its page),
