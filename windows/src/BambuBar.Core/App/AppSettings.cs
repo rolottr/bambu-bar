@@ -33,11 +33,19 @@ public sealed class AppSettings
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return []; }
     }
 
+    /// <summary>Primitives (bool, string, numbers, dates) straight from the parsed value; other types through the
+    /// serializer. The serializer builds its metadata for a type by reflection on first use: 300 ms of the app's launch
+    /// on a slow machine, for settings that are mostly a bool or a string.</summary>
+    private static T? Read<T>(JsonNode node) =>
+        node is JsonValue value && value.TryGetValue<T>(out var direct) ? direct
+        : CoreJson.Default.GetTypeInfo(typeof(T)) is System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> known ? node.Deserialize(known)
+        : node.Deserialize<T>();
+
     public T? Get<T>(string key)
     {
         lock (_gate)
         {
-            try { return _values[key] is { } node ? node.Deserialize<T>() : default; }
+            try { return _values[key] is { } node ? Read<T>(node) : default; }
             catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException) { return default; }
         }
     }
@@ -46,7 +54,7 @@ public sealed class AppSettings
     {
         lock (_gate)
         {
-            try { return _values[key] is { } node ? node.Deserialize<T>() : fallback; }
+            try { return _values[key] is { } node ? Read<T>(node) : fallback; }
             catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException) { return fallback; }
         }
     }

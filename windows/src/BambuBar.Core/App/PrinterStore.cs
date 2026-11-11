@@ -28,6 +28,9 @@ public sealed class PrinterStore : Observable, IDisposable
         public IReadOnlyList<int>? DiscoveryPorts { get; init; }
         /// <summary>How the camera feeds connect and decode; null for the real ones.</summary>
         public CameraServices? Camera { get; init; }
+        /// <summary>Opens the discovery sockets on a worker (the apps: 200–400 ms of the launch on a slow machine); what
+        /// it finds still arrives on this store's thread. Off for tests, which expect it started on return.</summary>
+        public bool StartDiscoveryInBackground { get; init; }
     }
 
     public sealed record ToastMessage(string Message, bool IsError)
@@ -235,7 +238,8 @@ public sealed class PrinterStore : Observable, IDisposable
         _history = _services.History.Load();
         Changed(nameof(History));
         if (SelectedSerial is null || Session(SelectedSerial) is null) SelectedSerial = _sessions.FirstOrDefault()?.Id;
-        _discovery.Start();
+        if (_services.StartDiscoveryInBackground) _ = Task.Run(_discovery.Start);
+        else _discovery.Start();
         ReloadSlicerPrinters();
         WriteSnapshot(force: true);
     }

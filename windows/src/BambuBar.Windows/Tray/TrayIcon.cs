@@ -43,7 +43,11 @@ public sealed partial class TrayIcon : IDisposable
         {
             if (e.Button == Forms.MouseButtons.Left) OpenPanel?.Invoke();
         };
-        _icon.ContextMenuStrip = Menu();
+        // The menu (WinForms' first ContextMenuStrip: 200 ms on a slow machine) right after launch, not before the icon.
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+        {
+            if (!_disposed) EnsureMenu();
+        });
         store.PropertyChanged += OnStoreChanged;
         foreach (var session in store.Sessions) session.PropertyChanged += OnStoreChanged;
         ((System.Collections.Specialized.INotifyCollectionChanged)store.Sessions).CollectionChanged += OnSessionsChanged;
@@ -56,7 +60,7 @@ public sealed partial class TrayIcon : IDisposable
     internal static System.Drawing.Bitmap MenuPicture(PrinterStore store, bool dark)
     {
         using var tray = new TrayIcon(store, visible: false);
-        var menu = tray._icon.ContextMenuStrip!;
+        var menu = tray.EnsureMenu();
         tray.Fill(menu, dark);
         menu.CreateControl();
         menu.PerformLayout();
@@ -72,6 +76,8 @@ public sealed partial class TrayIcon : IDisposable
     /// page's "Pause, stop and speed" on); the chamber light; Show Camera; Refresh, Widgets and Settings; Quit.
     /// Each item acts once the menu has closed (posted to the dispatcher): Quit disposes the icon and this menu, and
     /// doing that inside the item's own click left WinForms' menu code running on a disposed menu.</summary>
+    private Forms.ContextMenuStrip EnsureMenu() => _icon.ContextMenuStrip ??= Menu();
+
     private Forms.ContextMenuStrip Menu()
     {
         var menu = new Forms.ContextMenuStrip();

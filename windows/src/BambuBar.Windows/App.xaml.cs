@@ -88,6 +88,7 @@ public partial class App : Application
             Secrets = ephemeral ? new MemorySecretStore() : new CredentialStore(),
             // Written on a worker: the art's PNG and Rainmeter's reload would freeze the UI (QueuedWidgetSink).
             Widgets = _widgets is null ? null : new QueuedWidgetSink(_widgets.State),
+            StartDiscoveryInBackground = true,
             Confirmer = new StopConfirmer(() => _panel),
             Notifier = notifier,
             Arguments = args,
