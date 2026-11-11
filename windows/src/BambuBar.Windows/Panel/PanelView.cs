@@ -36,6 +36,8 @@ internal sealed class PanelContext
     public required Action<bool> SetShowsAll { get; init; }
     /// <summary>A section changed its height on its own (the camera unfolding): the panel window re-anchors.</summary>
     public Action? Relayout { get; init; }
+    /// <summary>Hides the panel (the header's hide button); null where there's nothing to hide (previews).</summary>
+    public Action? Hide { get; init; }
 
     public Brush Brush(string key) => (Brush?)Theme[key] ?? Brushes.Gray;
 
@@ -116,6 +118,8 @@ public sealed class PanelView : Border, IDisposable
 
     public event Action<PanelDestination, DiscoveredPrinter?>? Navigate;
     public event Action? QuitRequested;
+    /// <summary>The header's hide button: the panel goes back to the tray (the app keeps running).</summary>
+    public event Action? HideRequested;
     /// <summary>The content changed and may have a new height (the window re-anchors).</summary>
     public event Action? ContentChanged;
 
@@ -197,7 +201,7 @@ public sealed class PanelView : Border, IDisposable
         _ctx = new PanelContext
         {
             Store = _store, Settings = _settings, Theme = Theme, Dark = ThemeResources.IsDark(Variant), Animate = _animate,
-            Navigate = (d, p) => Navigate?.Invoke(d, p), Quit = () => QuitRequested?.Invoke(),
+            Navigate = (d, p) => Navigate?.Invoke(d, p), Quit = () => QuitRequested?.Invoke(), Hide = () => HideRequested?.Invoke(),
             ShowsAll = () => ShowsAll,
             SetShowsAll = on =>
             {

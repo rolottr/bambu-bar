@@ -75,6 +75,7 @@ public sealed class PanelWindow : Window
         KeyDown += OnKeyDown;
         DpiChanged += (_, _) => SchedulePlace();
         _view.ContentChanged += SchedulePlace;
+        _view.HideRequested += HidePanel;
         AppTheme.Changed += OnThemeChanged;
     }
 

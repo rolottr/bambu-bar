@@ -85,6 +85,14 @@ internal sealed class HeaderSection : PanelSection, IDisposable
         buttons.Children.Add(_allToggle);
         buttons.Children.Add(_refresh);
         buttons.Children.Add(settings);
+        // Back to the tray, like Esc or a click outside: without it, people looking for a way to close the panel
+        // reach for Quit.
+        if (Ctx.Hide is { } hide)
+        {
+            var hideButton = HeaderButton(Icons.Glyph("\uE921", 12), Loc.T("Hide"), $"{Loc.T("Hide")} (Esc)");
+            hideButton.Click += (_, _) => hide();
+            buttons.Children.Add(hideButton);
+        }
         _root.Children.Add(Ui.At(buttons, 1));
     }
 

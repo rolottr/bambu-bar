@@ -257,6 +257,8 @@ internal sealed class Showcase : IDisposable
             CornerRadius = new CornerRadius(999), HorizontalAlignment = HorizontalAlignment.Left, Background = Palette.Brush(Color.FromArgb(0x2E, 255, 255, 255)),
             BorderThickness = new Thickness(0.75), RenderTransform = new TranslateTransform(), IsHitTestVisible = false,
         };
+        // Capsules: a 999 radius draws ellipses in WPF.
+        Ui.Capsule(_highlight);
         _stage = Stage();
         _title = Ui.Text("", 17, FontWeights.SemiBold);
         _summary = Ui.Paragraph("", WRamp.Detail);
@@ -362,6 +364,7 @@ internal sealed class Showcase : IDisposable
                 Restart();
                 ShowScene(animate: _ctx.Animate);
             };
+            Ui.Capsule(button);
             _scenes[scene] = (button, icon, label);
             _sceneButtons.Children.Add(button);
         }
@@ -374,7 +377,7 @@ internal sealed class Showcase : IDisposable
             Background = Palette.Brush(Color.FromArgb(0x66, 0x08, 0x0C, 0x18)), BorderBrush = Palette.Brush(Color.FromArgb(0x1F, 255, 255, 255)),
             BorderThickness = new Thickness(0.75), HorizontalAlignment = HorizontalAlignment.Center,
         };
-        return bar;
+        return Ui.Capsule(bar);
     }
 
     private void MoveHighlight(bool animate)
