@@ -231,7 +231,7 @@ public sealed class WindowView : Border, IDisposable
         var grid = Ui.Columns("Auto", "*", "Auto");
         // Bambu Bar's icon, as the taskbar and Start show it; the printer glyph only without the file.
         FrameworkElement mark = W.AppIcon(32) is { } icon
-            ? new Image { Source = icon, Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center }
+            ? new DecorativeImage { Source = icon, Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center }
             : Icons.Glyph(Icons.Printer, 14, null, Palette.Brush(Palette.Accent));
         RenderOptions.SetBitmapScalingMode(mark, BitmapScalingMode.HighQuality);
         mark.Margin = new Thickness(14, 0, 9, 0);
