@@ -540,7 +540,8 @@ public sealed class PrinterModelView : Grid
 
     private void UpdatePlayback()
     {
-        var moving = _onScreen && _ready && _animated && _state is { State: JobState.Printing, Dimmed: false };
+        // In software (WARP) the toolhead stays still: 20 frames a second there cost a fifth of a CPU core.
+        var moving = _onScreen && _ready && _animated && !Renderer3D.IsSoftware && _state is { State: JobState.Printing, Dimmed: false };
         if (moving && !_moving) _motionTime = 0;
         _moving = moving;
         var needsTicks = _onScreen && _scene is not null && (_moving || _motionAmount > 0 || _reset is not null);

@@ -13,12 +13,12 @@ namespace BambuBar.TrayPanel;
 /// (measured on a Windows 11 VM: 1–2 s warm, over 20 s right after installing, when every file still comes off the
 /// disk): the printer drawing's images decoded, the 3D model parsed, the Direct3D device created, the panel's views built
 /// and their code compiled, all at the moment of the click. Here the file work runs on a worker thread a few seconds
-/// after launch, then the device and the panel are made while the app sits in the tray, at idle priority so anything
-/// the person does comes first.
+/// after launch, then the device is made and the panel built and drawn once out of sight (PanelWindow.PrimeAsync),
+/// while the app sits in the tray, at idle priority so anything the person does comes first.
 /// </summary>
 public static class PanelWarmup
 {
-    public static async Task RunAsync(PrinterStore store, Action buildPanel, TimeSpan delay)
+    public static async Task RunAsync(PrinterStore store, Func<Task> preparePanel, TimeSpan delay)
     {
         try
         {
@@ -37,7 +37,7 @@ public static class PanelWarmup
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             if (!Renderer3D.IsOff) _ = Renderer3D.Effects;
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-            buildPanel();
+            await preparePanel();
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or InvalidDataException or UnauthorizedAccessException
                                       or ArgumentException or NotSupportedException)

@@ -145,10 +145,7 @@ public partial class App : Application
         if (args.Contains("--demo") || args.Contains("--panel"))
             Dispatcher.InvokeAsync(TogglePanel, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         // The first click on the tray icon shouldn't wait for files, Direct3D and the panel's views to be made.
-        _ = PanelWarmup.RunAsync(_store, () =>
-        {
-            if (EnsurePanel() is { } panel) new System.Windows.Interop.WindowInteropHelper(panel).EnsureHandle();
-        }, TimeSpan.FromSeconds(3));
+        _ = PanelWarmup.RunAsync(_store, () => EnsurePanel()?.PrimeAsync() ?? Task.CompletedTask, TimeSpan.FromSeconds(3));
     }
 
     private static bool IsLink(string arg) => arg.StartsWith("bambubar://", StringComparison.OrdinalIgnoreCase);

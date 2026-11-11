@@ -48,7 +48,12 @@ public sealed class WindowView : Border, IDisposable
     private FrameworkElement _appName = null!;
     private bool _showsAppName = true;
     private Page? _page;
+    private FrameworkElement? _pageRoot;
     private string _route = "";
+    /// <summary>Pages kept after they were left, by route, so going back shows them at once instead of building them
+    /// again (measured 100–150 ms a switch). Only pages with nothing running of their own; at most <see cref="KeptPages"/>.</summary>
+    private readonly List<(string Route, Page Page, FrameworkElement Root)> _kept = [];
+    private const int KeptPages = 8;
     private bool _pending;
     private bool _live = true;
     private bool _transparent;
@@ -143,6 +148,9 @@ public sealed class WindowView : Border, IDisposable
         Variant = variant;
         _page?.Dispose();
         _page = null;
+        // Kept pages were built with the old theme.
+        foreach (var (_, page, _) in _kept) page.Dispose();
+        _kept.Clear();
         _route = "";
         Build();
         Refresh();
@@ -308,6 +316,10 @@ public sealed class WindowView : Border, IDisposable
         }
     }
 
+    /// <summary>Pages that only show what the store says, with no timer, animation or setup state of their own.</summary>
+    private static bool Keepable(Page page) =>
+        page is PrinterPage or FleetPage or FilamentPage or NotificationsPage or PrintersPage or SettingsPage;
+
     // MARK: Updating
 
     /// <summary>Redraws from the store: the sidebar, the wash, the page (a new one when the route changed).</summary>
@@ -317,10 +329,29 @@ public sealed class WindowView : Border, IDisposable
         var (route, make) = Route();
         if (route != _route || _page is null)
         {
-            _page?.Dispose();
+            if (_page is not null && _pageRoot is not null && Keepable(_page))
+            {
+                _kept.Add((_route, _page, _pageRoot));
+                if (_kept.Count > KeptPages)
+                {
+                    _kept[0].Page.Dispose();
+                    _kept.RemoveAt(0);
+                }
+            }
+            else _page?.Dispose();
             _route = route;
-            _page = make();
-            _pageHost.Child = _page.Build();
+            var kept = _kept.FindIndex(k => k.Route == route);
+            if (kept >= 0)
+            {
+                (_, _page, _pageRoot) = _kept[kept];
+                _kept.RemoveAt(kept);
+            }
+            else
+            {
+                _page = make();
+                _pageRoot = _page.Build();
+            }
+            _pageHost.Child = _pageRoot;
             _scroller.ScrollToTop();
             AutomationProperties.SetName(_layer, Section == AppPage.Fleet && !_store.HasMultiplePrinters ? AppPage.Printer.Title() : Section.Title());
         }
@@ -482,6 +513,8 @@ public sealed class WindowView : Border, IDisposable
         _watched.Clear();
         _page?.Dispose();
         _page = null;
+        foreach (var (_, page, _) in _kept) page.Dispose();
+        _kept.Clear();
         _live = false;
     }
 

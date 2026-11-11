@@ -64,7 +64,7 @@ public sealed class PanelWindow : Window
         };
         Deactivated += (_, _) =>
         {
-            if (_holds > 0 || !IsVisible) return;
+            if (_holds > 0 || !IsVisible || _priming) return;
             _dismissedAt = DateTime.UtcNow;
             HidePanel();
         };
@@ -79,12 +79,14 @@ public sealed class PanelWindow : Window
     /// <summary>The tray icon was clicked: open, or close if open (or if that very click just dismissed it).</summary>
     public void Toggle()
     {
-        if (IsVisible) HidePanel();
+        // While it's being drawn out of sight (PrimeAsync), a click opens it for real.
+        if (IsVisible && !_priming) HidePanel();
         else if (DateTime.UtcNow - _dismissedAt > ReopenGuard) ShowPanel();
     }
 
     public void ShowPanel()
     {
+        _shownByClick = true;
         if (!Native.GetCursorPos(out _anchor)) _anchor = default;
         _view.Opening();
         _view.IsLive = true;
@@ -102,8 +104,64 @@ public sealed class PanelWindow : Window
 
     public void HidePanel()
     {
+        _shownByClick = false;
         _view.IsLive = false;
         Hide();
+    }
+
+    /// <summary>
+    /// Draws the panel once out of sight (<see cref="PanelWarmup"/>), so the first click finds its layout, its first
+    /// frame and the 3D view already made, and opens as fast as every later click (measured: 665 ms → under 100 ms). The
+    /// window shows far off every screen, not activated, until the 3D printer is live (at most 5 s), then hides.
+    /// </summary>
+    public async Task PrimeAsync()
+    {
+        if (IsVisible || _quitting) return;
+        var activated = ShowActivated;
+        ShowActivated = false;
+        Left = Top = -32000;
+        _view.Opening();
+        _view.IsLive = true;
+        _priming = true;
+        try
+        {
+            Show();
+            var until = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            do await Dispatcher.Yield(DispatcherPriority.ContextIdle);
+            while (DateTime.UtcNow < until && !_quitting && IsVisible && !Model3D.Renderer3D.IsOff && !ModelsLive(_view));
+        }
+        finally
+        {
+            _priming = false;
+            ShowActivated = activated;
+            // A click that came in meanwhile opened it for real: leave it open.
+            if (!_shownByClick)
+            {
+                _view.IsLive = false;
+                Hide();
+            }
+        }
+    }
+
+    private bool _priming;
+    private bool _shownByClick;
+
+    private static bool ModelsLive(DependencyObject root)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        var live = true;
+        var any = false;
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is Model3D.PrinterModelView view)
+            {
+                if (view.IsVisible) { any = true; live &= view.IsLive; }
+                continue;
+            }
+            if (!ModelsLive(child)) return false;
+        }
+        return !any || live;
     }
 
     /// <summary>Keeps the panel open while a dialog it opened (the stop confirmation) has the focus.</summary>
