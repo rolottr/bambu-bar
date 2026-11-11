@@ -233,11 +233,18 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
         var panelCard = new Border
         {
             Width = Metrics.PanelWidth, Padding = new Thickness(Metrics.PanelPadding), CornerRadius = Metrics.Overlay, BorderThickness = new Thickness(1),
-            Child = sections, Margin = new Thickness(Inset, Inset, Inset, 8),
-            Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 8, Direction = 270, Opacity = 0.28 },
+            Child = sections,
         };
         panelCard.SetResourceReference(BackgroundProperty, ThemeKeys.PanelBackground);
         panelCard.SetResourceReference(BorderBrushProperty, ThemeKeys.PanelStroke);
+        // The shadow on a layer of its own behind the card: an effect on the card would redraw everything in it, the 3D
+        // printer included, through a bitmap every frame (450 ms to open this page on a machine without a graphics card).
+        var shadow = new Border
+        {
+            CornerRadius = Metrics.Overlay, Background = Brushes.Black,
+            Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 8, Direction = 270, Opacity = 0.28 },
+        };
+        var panelLayer = new Grid { Width = Metrics.PanelWidth, Margin = new Thickness(Inset, Inset, Inset, 8), Children = { shadow, panelCard } };
 
         var tip = new Border
         {
@@ -247,7 +254,7 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
         tip.SetResourceReference(BackgroundProperty, ThemeKeys.FlyoutFill);
         tip.SetResourceReference(BorderBrushProperty, ThemeKeys.FlyoutStroke);
 
-        Child = new Stack { Children = { panelCard, tip, Taskbar() } };
+        Child = new Stack { Children = { panelLayer, tip, Taskbar() } };
         CornerRadius = Metrics.Hero;
         ClipToBounds = true;
         BorderThickness = new Thickness(1);
