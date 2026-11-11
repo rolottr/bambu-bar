@@ -117,19 +117,21 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
     /// <summary>The app's mark, name, maker, version and what it is.</summary>
     private Grid Hero()
     {
-        // The app's mark beside its name: decoration (the Mac hides it from VoiceOver).
-        var glyph = new DecorativeImage
-        {
-            Source = TrayGlyph.Render(new TrayGlyph.Look(JobState.Printing, 0.6, false, false), 64, lightTaskbar: false),
-            Width = 56, Height = 56,
-        };
-        RenderOptions.SetBitmapScalingMode(glyph, BitmapScalingMode.HighQuality);
-        var icon = new Border
-        {
-            Width = 96, Height = 96, CornerRadius = new CornerRadius(22), Child = glyph,
-            Background = new LinearGradientBrush(Palette.Accent, Palette.AccentDeep, 90),
-            Effect = new DropShadowEffect { BlurRadius = 20, ShadowDepth = 5, Direction = 270, Opacity = 0.25 },
-        };
+        // The app's icon beside its name: decoration (the Mac hides it from VoiceOver).
+        FrameworkElement icon = AppIcon() is { } picture
+            ? new DecorativeImage
+            {
+                Source = picture, Width = 96, Height = 96,
+                Effect = new DropShadowEffect { BlurRadius = 20, ShadowDepth = 5, Direction = 270, Opacity = 0.25 },
+            }
+            : new Border
+            {
+                // A build without AppIcon.png beside it (a bare dotnet run): the tray's mark on the icon's green.
+                Width = 96, Height = 96, CornerRadius = new CornerRadius(22),
+                Child = new DecorativeImage { Source = TrayGlyph.Render(new TrayGlyph.Look(JobState.Printing, 0.6, false, false), 64, lightTaskbar: false), Width = 56, Height = 56 },
+                Background = new LinearGradientBrush(Palette.Accent, Palette.AccentDeep, 90),
+            };
+        RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
         var titles = new Stack
         {
             Spacing = 4, VerticalAlignment = VerticalAlignment.Center,
@@ -147,6 +149,28 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
         grid.Children.Add(Ui.At(icon, 0));
         grid.Children.Add(Ui.At(titles, 2));
         return grid;
+    }
+
+    /// <summary>Bambu Bar's icon (AppIcon.png beside the exe, as the toasts show it), decoded at twice its size here.</summary>
+    private static System.Windows.Media.Imaging.BitmapImage? AppIcon()
+    {
+        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "AppIcon.png");
+        if (!System.IO.File.Exists(path)) return null;
+        try
+        {
+            var image = new System.Windows.Media.Imaging.BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri(path);
+            image.DecodePixelWidth = 192;
+            image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch (Exception e) when (e is System.IO.IOException or NotSupportedException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     private static Stack Section(string title, out Stack body)

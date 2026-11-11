@@ -133,6 +133,46 @@ public static class Ui
         capsule.BorderThickness = new Thickness(0);
     }
 
+    /// <summary>
+    /// A heart that beats: two quick pulses (to 122 %, then 114 %) every 3.2 s, so "Support this project" catches the
+    /// eye without moving the text. A short animation started by a timer, not a looping one: between beats nothing is
+    /// redrawn (a forever animation would redraw at 60 fps). Only while it's on screen, and not when Windows' animation
+    /// effects are off.
+    /// </summary>
+    public static void Heartbeat(FrameworkElement heart)
+    {
+        if (!AppTheme.AnimationsEnabled) return;
+        var scale = new ScaleTransform(1, 1);
+        heart.RenderTransform = scale;
+        heart.RenderTransformOrigin = new Point(0.5, 0.55);
+        var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(3.2) };
+        timer.Tick += (_, _) => Beat(scale);
+        heart.Loaded += (_, _) => timer.Start();
+        heart.Unloaded += (_, _) => timer.Stop();
+        heart.IsVisibleChanged += (_, e) => { if (e.NewValue is true && heart.IsLoaded) timer.Start(); else timer.Stop(); };
+    }
+
+    private static readonly System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames BeatAnimation = MakeBeat();
+
+    private static System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames MakeBeat()
+    {
+        static System.Windows.Media.Animation.EasingDoubleKeyFrame Key(double value, double ms) =>
+            new(value, System.Windows.Media.Animation.KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms)), new System.Windows.Media.Animation.SineEase());
+        var beat = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(640),
+            KeyFrames = { Key(1.22, 110), Key(1.0, 240), Key(1.14, 350), Key(1.0, 640) },
+        };
+        beat.Freeze();
+        return beat;
+    }
+
+    private static void Beat(ScaleTransform scale)
+    {
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, BeatAnimation);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, BeatAnimation);
+    }
+
     /// <summary>Rounds <paramref name="element"/>'s ends fully, whatever its height: the radius follows half the height
     /// (WPF draws a radius larger than the side as an ellipse, so a fixed 999 doesn't make a capsule).</summary>
     public static T Capsule<T>(T element) where T : FrameworkElement

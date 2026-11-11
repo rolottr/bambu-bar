@@ -91,7 +91,16 @@ internal sealed class SupportSection : PanelSection
 
     public SupportSection(PanelContext ctx) : base(ctx)
     {
-        var support = new ChromeButton { Padding = new Thickness(4, 2, 4, 3), Content = Ui.Text(Loc.T("Support this project"), Ramp.Footnote, null, ThemeKeys.TextLink) };
+        var heart = Icons.Glyph("\uEB51", Ramp.Footnote, ThemeKeys.TextLink);
+        heart.Margin = new Thickness(0, 1, 6, 0);
+        heart.VerticalAlignment = VerticalAlignment.Center;
+        Ui.Heartbeat(heart);
+        var supportLabel = Ui.Text(Loc.T("Support this project"), Ramp.Footnote, null, ThemeKeys.TextLink);
+        var support = new ChromeButton
+        {
+            Padding = new Thickness(4, 2, 4, 3),
+            Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { heart, supportLabel } },
+        };
         AutomationProperties.SetName(support, Loc.T("Support this project"));
         support.Click += (_, _) => Shell.Open(PolarConfiguration.SupportUrl(PolarConfiguration.SupportPlacement.MenuPanel));
         var manage = new ChromeButton { Padding = new Thickness(4, 2, 4, 3), Content = Ui.Text(Loc.T("Manage License…"), Ramp.Footnote, null, ThemeKeys.TextSecondary) };

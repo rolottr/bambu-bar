@@ -425,6 +425,7 @@ public sealed class WindowView : Border, IDisposable
                 ? W.Link(Loc.T("Hero Supporter"), () => Show(AppPage.About), "", 12)
                 : W.Link(Loc.T("Support this project"), () => W.Open(PolarConfiguration.SupportUrl(PolarConfiguration.SupportPlacement.MainWindow)), "", 12);
             if (access) Ui.Tip(button, Loc.T("Thanks for supporting Bambu Bar"));
+            else if (button.Content is StackPanel { Children: [FrameworkElement heart, ..] }) Ui.Heartbeat(heart);
             return button;
         });
     }
