@@ -77,7 +77,8 @@ public sealed partial class WidgetHost : IDisposable
         Directory.CreateDirectory(StateFolder);
         SyncSkins();
         WriteSettings();
-        if (Widgets.Count > 0) Launch();
+        Revive();
+        if (Widgets.Count > 0) _ = Launch();
         // No widgets, but ours left running from before: it goes.
         else if (Running() is { } stray)
         {
@@ -93,9 +94,10 @@ public sealed partial class WidgetHost : IDisposable
         while (Directory.Exists(Path.Combine(BambuBarSkins, $"W{n}"))) n++;
         var widget = new Widget($@"BambuBar\W{n}", size, serial);
         WriteStub(widget);
-        AppendConfigSection(widget.Config, x, y);
-        if (_process is null || _process.HasExited) Launch();
-        else
+        WriteConfigSection(widget.Config, x, y);
+        // A Rainmeter we start reads Active=1 from Rainmeter.ini; one already running (ours, or adopted by Launch)
+        // needs the bang. !ActivateConfig rescans the skins folder when it doesn't know the config yet.
+        if (_process is { HasExited: false } || !Launch())
         {
             Bang("!RefreshApp");
             Bang($"!ActivateConfig \"{widget.Config}\" \"Widget.ini\"");
@@ -196,6 +198,15 @@ public sealed partial class WidgetHost : IDisposable
             "") + "\r\n", new UnicodeEncoding(false, true));
     }
 
+    /// <summary>A widget with a stub is on the desktop, so its config is active. Before WriteConfigSection, a new
+    /// widget could land behind a removed one's section that said Active=0 and never show: those come on now.</summary>
+    private void Revive()
+    {
+        foreach (var widget in Widgets)
+            if (GetPrivateProfileInt(widget.Config, "Active", 0, IniPath) != 1)
+                WritePrivateProfileString(widget.Config, "Active", "1", IniPath);
+    }
+
     private void WriteStub(Widget widget)
     {
         var folder = Path.Combine(SkinsFolder, widget.Config);
@@ -205,17 +216,37 @@ public sealed partial class WidgetHost : IDisposable
             $"[Variables]\r\n@Include=#@#..\\{widget.Size}\\{widget.Size}.ini\r\nStateFile={state}\r\n", new UTF8Encoding(true));
     }
 
-    /// <summary>The config's section in Rainmeter.ini: where it sits and how it behaves, before Rainmeter loads it.</summary>
-    private void AppendConfigSection(string config, int x, int y) =>
-        File.AppendAllText(IniPath, string.Join("\r\n",
-            $"[{config}]", "Active=1", $"WindowX={x}", $"WindowY={y}", "AlwaysOnTop=-2", "Draggable=1", "SnapEdges=1",
-            "KeepOnScreen=1", "SavePosition=1", "") + "\r\n", new UnicodeEncoding(false, false));
+    /// <summary>The config's section in Rainmeter.ini: where it sits and how it behaves, before Rainmeter loads it.
+    /// A removed widget's section stays behind (Rainmeter writes Active=0 into it when the config is deactivated), and
+    /// the next widget gets the same name: Windows' profile API and Rainmeter read only the first section of a name,
+    /// so an appended second one was never seen and the new widget stayed inactive. Every old one goes first, and the
+    /// keys go in through the same API, so they land in whichever section of that name is read.</summary>
+    private void WriteConfigSection(string config, int x, int y)
+    {
+        for (var i = 0; i < 16 && HasSection(config); i++) WritePrivateProfileString(config, null, null, IniPath);
+        var invariant = System.Globalization.CultureInfo.InvariantCulture;
+        (string Key, string Value)[] keys =
+        [
+            ("Active", "1"), ("WindowX", x.ToString(invariant)), ("WindowY", y.ToString(invariant)), ("AlwaysOnTop", "-2"),
+            ("Draggable", "1"), ("SnapEdges", "1"), ("KeepOnScreen", "1"), ("SavePosition", "1"),
+        ];
+        foreach (var (key, value) in keys) WritePrivateProfileString(config, key, value, IniPath);
+    }
+
+    private bool HasSection(string section)
+    {
+        if (!File.Exists(IniPath)) return false;
+        var buffer = new char[64];
+        return GetPrivateProfileSection(section, buffer, buffer.Length, IniPath) > 0;
+    }
 
     // MARK: Rainmeter
 
-    private void Launch()
+    /// <summary>Starts our Rainmeter, or adopts ours if it already runs. True only when a new one was started (it
+    /// then loads every active config from Rainmeter.ini by itself).</summary>
+    private bool Launch()
     {
-        if (!File.Exists(_rainmeterExe)) return;
+        if (!File.Exists(_rainmeterExe)) return false;
         _quitting = false;
         // Ours may still run from before (the app was ended without quitting it, or crashed). Never start a second:
         // Rainmeter 5 started again with the same settings opens its Manage window, sends !Manage to the first
@@ -224,16 +255,17 @@ public sealed partial class WidgetHost : IDisposable
         {
             Adopt(running);
             Bang("!RefreshApp");
-            return;
+            return false;
         }
         // The settings path as the first argument: its own Rainmeter.ini, and with it its own single-instance mutex
         // (Rainmeter + MD5 of the path), so it runs beside a Rainmeter the person may have (§7).
         var process = Process.Start(new ProcessStartInfo(_rainmeterExe, $"\"{IniPath}\"") { UseShellExecute = false });
-        if (process is null) return;
+        if (process is null) return false;
         Adopt(process);
         // Our Rainmeter claims .rmskin at start (Rainmeter::EnsureSkinInstallerAssociation, settings outside its folder)
         // for a SkinInstaller.exe we don't ship: take that back once it has run.
         _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(_ => RemoveRmskinAssociation(), TaskScheduler.Default);
+        return true;
     }
 
     /// <summary>Removes the .rmskin association when it points into our Rainmeter folder (a user's own Rainmeter, which
@@ -304,7 +336,7 @@ public sealed partial class WidgetHost : IDisposable
         // Rainmeter of ours that is somehow running instead of starting another.
         if (++_crashes > 10) return;
         var delay = TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, _crashes)));
-        _ = Task.Delay(delay).ContinueWith(_ => { if (!_quitting && Widgets.Count > 0) Launch(); }, TaskScheduler.Default);
+        _ = Task.Delay(delay).ContinueWith(_ => { if (!_quitting && Widgets.Count > 0) _ = Launch(); }, TaskScheduler.Default);
     }
 
     private void Quit()
@@ -378,7 +410,10 @@ public sealed partial class WidgetHost : IDisposable
 
     [LibraryImport("kernel32.dll", EntryPoint = "WritePrivateProfileStringW", StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool WritePrivateProfileString(string section, string key, string value, string path);
+    private static partial bool WritePrivateProfileString(string section, string? key, string? value, string path);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "GetPrivateProfileSectionW", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int GetPrivateProfileSection(string section, [Out] char[] buffer, int size, string path);
 
     [LibraryImport("kernel32.dll", EntryPoint = "GetPrivateProfileIntW", StringMarshalling = StringMarshalling.Utf16)]
     private static partial int GetPrivateProfileInt(string section, string key, int fallback, string path);

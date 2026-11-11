@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
@@ -30,7 +31,6 @@ public sealed class WindowView : Border, IDisposable
 {
     /// <summary>The strip at the top that is the window's caption (drag, double-click, Windows' own buttons).</summary>
     public const double TitleHeight = 40;
-    private const double SidebarWidth = 248;
 
     private readonly PrinterStore _store;
     private readonly AppSettings _settings;
@@ -174,7 +174,7 @@ public sealed class WindowView : Border, IDisposable
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TitleHeight) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(SidebarWidth) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(SidebarWidth()) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var title = TitleStrip();
@@ -183,6 +183,17 @@ public sealed class WindowView : Border, IDisposable
         root.Children.Add(Ui.At(Sidebar(), 0, 1));
         root.Children.Add(Ui.At(Layer(), 1, 1));
         Child = root;
+    }
+
+    /// <summary>Just wide enough for the longest page name in this language, within the Mac's sidebar column (190 to
+    /// 260): a fixed 248 left a wide empty strip between the names and the page.</summary>
+    private double SidebarWidth()
+    {
+        var family = TryFindResource(ThemeKeys.FontText) as FontFamily ?? new FontFamily("Segoe UI");
+        var typeface = new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+        var longest = AppPages.Order.Max(page => new FormattedText(page.Title(), CultureInfo.CurrentUICulture,
+            FlowDirection.LeftToRight, typeface, NavItem.LabelSize, Brushes.Black, 1).WidthIncludingTrailingWhitespace);
+        return Math.Clamp(Math.Ceiling(longest + NavItem.Chrome), 190, 260);
     }
 
     private void PaintBackground()
@@ -479,13 +490,19 @@ public sealed class WindowView : Border, IDisposable
     {
         private readonly Border _indicator;
 
+        public const double LabelSize = 15;
+
+        /// <summary>Everything in the sidebar's width but the label: the list's margins (4 + 4), the accent bar (3), the
+        /// tile and its margins (8 + 28 + 12), the right padding (8) and some air after the longest name (16).</summary>
+        public const double Chrome = 83;
+
         public NavItem(AppPage page)
         {
             _indicator = new Border { Width = 3, Height = 16, CornerRadius = new CornerRadius(1.5), VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Hidden };
             _indicator.SetResourceReference(BackgroundProperty, ThemeKeys.AccentFill);
             var icon = Tile(page);
             icon.Margin = new Thickness(8, 0, 12, 0);
-            var label = Ui.Text(page.Title(), 15);
+            var label = Ui.Text(page.Title(), LabelSize);
             var grid = Ui.Columns("Auto", "Auto", "*");
             grid.Children.Add(Ui.At(_indicator, 0));
             grid.Children.Add(Ui.At(icon, 1));
