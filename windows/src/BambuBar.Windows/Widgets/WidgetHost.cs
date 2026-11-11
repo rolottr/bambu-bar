@@ -336,7 +336,7 @@ public sealed partial class WidgetHost : IDisposable
         // Rainmeter of ours that is somehow running instead of starting another.
         if (++_crashes > 10) return;
         var delay = TimeSpan.FromSeconds(Math.Min(60, Math.Pow(2, _crashes)));
-        _ = Task.Delay(delay).ContinueWith(_ => { if (!_quitting && Widgets.Count > 0) _ = Launch(); }, TaskScheduler.Default);
+        _ = Task.Delay(delay).ContinueWith(_ => { if (!_quitting && Widgets.Count > 0) Launch(); }, TaskScheduler.Default);
     }
 
     private void Quit()
