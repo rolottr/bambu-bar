@@ -247,7 +247,8 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
 /// <summary>The catalog's languages and Windows' choice among them. Loaded once, like the app's own <see cref="Strings"/>.</summary>
 internal static class LanguageMatch
 {
-    private static readonly Lazy<Strings> Catalog = new(() => Strings.Load());
+    /// <summary>The app's own catalog when it's loaded (its language list is the whole catalog's); otherwise read once.</summary>
+    private static readonly Lazy<Strings> Catalog = new(() => Strings.Current ?? Strings.Load());
 
     public static IReadOnlyList<string> Available => Catalog.Value.Languages;
 

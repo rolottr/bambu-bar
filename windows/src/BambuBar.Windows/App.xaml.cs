@@ -67,8 +67,11 @@ public partial class App : Application
         var folder = AppSettings.DefaultFolder;
         _settings = new AppSettings(ephemeral ? null : Path.Combine(folder, "settings.json"));
         // The language picked in Settings, else the first of Windows' languages the catalog has.
-        var strings = Strings.Load();
-        strings.Use(_settings.Get<string>(WindowSettings.Language) ?? strings.Match(CultureInfo.CurrentUICulture));
+        // Only the language shown (and English): a language change restarts the app.
+        string? language = null;
+        var settings = _settings;
+        var strings = Strings.LoadFor(catalog => language = settings.Get<string>(WindowSettings.Language) ?? catalog.Match(CultureInfo.CurrentUICulture));
+        strings.Use(language ?? "en");
 
         var install = AppContext.BaseDirectory;
         INotifier notifier = _notifier;
@@ -150,6 +153,25 @@ public partial class App : Application
         _ = PanelWarmup.RunAsync(_store, () => EnsurePanel()?.PrimeAsync() ?? Task.CompletedTask, TimeSpan.FromSeconds(3));
     }
 
+    /// <summary>
+    /// After the window closes, its pages, pictures and 3D view are garbage, but .NET keeps the memory until a later
+    /// collection, and keeps the freed pages after it. Two seconds later, with nothing of the app on screen, one
+    /// compacting collection gives them back to Windows (tens of milliseconds, while nobody is looking; skipped if the
+    /// window or the panel is open again by then).
+    /// </summary>
+    private void ReleaseMemorySoon()
+    {
+        var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.ApplicationIdle) { Interval = TimeSpan.FromSeconds(2) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (_window is not null || _panel?.IsVisible == true) return;
+            System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+        };
+        timer.Start();
+    }
+
     private static bool IsLink(string arg) => arg.StartsWith("bambubar://", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>A left click on the tray icon: the flyout opens, or closes if it's open.</summary>
@@ -227,7 +249,11 @@ public partial class App : Application
                 TrayChanged = () => { if (_tray is not null && _settings is not null) _tray.ShowPercent = _settings.Get(WindowSettings.TrayShowsPercent, false); },
             });
             // Closed, it's let go and built again on the next open, so a hidden window doesn't follow every report.
-            window.Closed += (_, _) => { if (_window == window) _window = null; };
+            window.Closed += (_, _) =>
+            {
+                if (_window == window) _window = null;
+                ReleaseMemorySoon();
+            };
             _window = window;
         }
         if (page is { } p) _window.Show(p);

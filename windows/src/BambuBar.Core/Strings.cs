@@ -21,13 +21,46 @@ public sealed class Strings
         Languages = languages;
     }
 
+    /// <summary>The catalog in use (<see cref="Use"/>), for the language list in Settings.</summary>
+    public static Strings? Current { get; private set; }
+
+    /// <summary>Every language of the catalog (tests, snapshots, checks that switch languages).</summary>
     public static Strings Load(string? path = null)
     {
         path ??= Assets.PathOf("Localizable.xcstrings");
-        var entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
-        var languages = new SortedSet<string>(StringComparer.Ordinal) { "en" };
-        if (!File.Exists(path)) return new(entries, [.. languages]);
+        if (!File.Exists(path)) return new(new(StringComparer.Ordinal), ["en"]);
         using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
+        return Build(doc, LanguagesOf(doc), only: null);
+    }
+
+    /// <summary>
+    /// Only the language <paramref name="choose"/> picks (given the catalog, whose <see cref="Languages"/> and
+    /// <see cref="Match"/> it can use) and English, the fallback: what the app shows. The catalog holds 18 languages,
+    /// and changing the language restarts the app, so the other 16 are never read: less work at launch and far fewer
+    /// strings kept.
+    /// </summary>
+    public static Strings LoadFor(Func<Strings, string> choose, string? path = null)
+    {
+        path ??= Assets.PathOf("Localizable.xcstrings");
+        if (!File.Exists(path)) return new(new(StringComparer.Ordinal), ["en"]);
+        using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
+        var languages = LanguagesOf(doc);
+        var language = choose(new Strings(new(StringComparer.Ordinal), languages));
+        return Build(doc, languages, only: [language, "en"]);
+    }
+
+    private static IReadOnlyList<string> LanguagesOf(JsonDocument doc)
+    {
+        var languages = new SortedSet<string>(StringComparer.Ordinal) { "en" };
+        foreach (var key in doc.RootElement.GetProperty("strings").EnumerateObject())
+            if (key.Value.TryGetProperty("localizations", out var localizations))
+                foreach (var loc in localizations.EnumerateObject()) languages.Add(loc.Name);
+        return [.. languages];
+    }
+
+    private static Strings Build(JsonDocument doc, IReadOnlyList<string> languages, IReadOnlyCollection<string>? only)
+    {
+        var entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
         foreach (var key in doc.RootElement.GetProperty("strings").EnumerateObject())
         {
             var plain = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -36,7 +69,7 @@ public sealed class Strings
             {
                 foreach (var loc in localizations.EnumerateObject())
                 {
-                    languages.Add(loc.Name);
+                    if (only is not null && !only.Contains(loc.Name)) continue;
                     if (loc.Value.TryGetProperty("stringUnit", out var unit) && unit.TryGetProperty("value", out var value))
                         plain[loc.Name] = value.GetString() ?? "";
                     if (loc.Value.TryGetProperty("variations", out var variations) && variations.TryGetProperty("plural", out var plural))
@@ -49,7 +82,7 @@ public sealed class Strings
             }
             entries[key.Name] = new(plain, plurals);
         }
-        return new(entries, [.. languages]);
+        return new(entries, languages);
     }
 
     /// <summary>The text for <paramref name="key"/> in <paramref name="language"/>, else English, else null (the key).
@@ -108,6 +141,7 @@ public sealed class Strings
     /// <summary>Shows the app in <paramref name="language"/> from now on (a catalog code; "en" when it has none).</summary>
     public void Use(string language)
     {
+        Current = this;
         Loc.Language = Languages.Contains(language) ? language : "en";
         Loc.Lookup = key => Text(key, Loc.Language);
         Loc.PluralLookup = (key, count) => Plural(key, count, Loc.Language);
