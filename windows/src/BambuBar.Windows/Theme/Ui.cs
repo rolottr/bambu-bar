@@ -139,7 +139,11 @@ public static class Ui
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var label = Text(title.ToUpperInvariant(), Ramp.Caption, FontWeights.SemiBold, ThemeKeys.TextSecondary);
+        // The Mac tracks the label out (0.6 pt); WPF has no letter spacing, so hair spaces stand in. Screen readers get the
+        // plain words.
+        var upper = title.ToUpperInvariant();
+        var label = Text(string.Join('\u200A', upper.EnumerateRunes()), Ramp.Caption, FontWeights.SemiBold, ThemeKeys.TextSecondary);
+        AutomationProperties.SetName(label, upper);
         grid.Children.Add(label);
         if (trailing is not null)
         {

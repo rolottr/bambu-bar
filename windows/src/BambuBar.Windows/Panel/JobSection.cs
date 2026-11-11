@@ -48,7 +48,7 @@ internal sealed class JobSection : PanelSection
         _model = new PrinterModelView(Metrics.ArtWidth, Metrics.ArtHeight, modelScale) { VerticalAlignment = VerticalAlignment.Center };
 
         _pill = Ui.Pill(out _pillDot, out _pillText);
-        _name = Ui.Text("", Ramp.Title, FontWeights.SemiBold);
+        _name = Ui.Text("", Ramp.Title, FontWeights.Bold);
         _subtitle = Ui.Text("", Ramp.Body, null, ThemeKeys.TextSecondary);
         _jobTitles = new Stack { Spacing = 2, Children = { _name, _subtitle } };
 
@@ -111,7 +111,7 @@ internal sealed class JobSection : PanelSection
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -2, -2, 0),
             Padding = new Thickness(9, 4, 10, 5), CornerRadius = Metrics.Pill, Look = ButtonLook.Standard,
             // The Mac's: a yellow tint with a yellow edge when on.
-            CheckedLook = ButtonLook.Tinted(Palette.Lamp, 0.16, 0.22, 0.28) with { StrokeBrush = Palette.Brush(Palette.WithAlpha(Palette.Lamp, 0.45)) },
+            CheckedLook = ButtonLook.Tinted(Palette.Lamp, 0.12, 0.17, 0.22) with { StrokeBrush = Palette.Brush(Palette.WithAlpha(Palette.Lamp, 0.3)) },
         };
         AutomationProperties.SetName(toggle, Loc.T("Chamber light"));
         toggle.Click += (_, _) => Store.ToggleLight();

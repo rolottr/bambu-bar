@@ -38,9 +38,9 @@ internal sealed class HeaderSection : PanelSection, IDisposable
         _root = Ui.Columns("*", "Auto");
         _root.Margin = new Thickness(4, 2, 0, 0);
 
-        _allTitle = Ui.Text(Loc.T("All Printers"), Ramp.Title, FontWeights.SemiBold);
-        _plainTitle = Ui.Text("", Ramp.Title, FontWeights.SemiBold);
-        _pickerName = Ui.Text("", Ramp.Title, FontWeights.SemiBold);
+        _allTitle = Ui.Text(Loc.T("All Printers"), Ramp.Title, FontWeights.Bold);
+        _plainTitle = Ui.Text("", Ramp.Title, FontWeights.Bold);
+        _pickerName = Ui.Text("", Ramp.Title, FontWeights.Bold);
         var chevron = Icons.Glyph(Icons.ChevronDown, 10);
         chevron.Margin = new Thickness(6, 2, 0, 0);
         _picker = new ChromeButton
