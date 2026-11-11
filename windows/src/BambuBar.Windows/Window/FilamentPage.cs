@@ -120,6 +120,7 @@ internal sealed class FilamentPage(WindowContext ctx) : Page(ctx)
             CornerRadius = Metrics.Pill, Padding = new Thickness(7, 1, 7, 2), HorizontalAlignment = HorizontalAlignment.Right,
             Child = Ui.Text(spool.Label, 12, FontWeights.Bold, display: true),
         };
+        Ui.Capsule(label);
         label.SetResourceReference(Border.BackgroundProperty, ThemeKeys.Track);
         var badges = new Stack { Spacing = 4, HorizontalAlignment = HorizontalAlignment.Right, Children = { label } };
         if (active)

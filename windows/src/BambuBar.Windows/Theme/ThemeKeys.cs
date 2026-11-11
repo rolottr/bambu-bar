@@ -108,8 +108,10 @@ public static class Metrics
     public static readonly CornerRadius Button = new(11);
     /// <summary>Menus and tooltips (Fluent OverlayCornerRadius).</summary>
     public static readonly CornerRadius Overlay = new(8);
-    /// <summary>State pills, chips, the light switch: capsules, as on the Mac (StatePill, LightToggle).</summary>
-    public static readonly CornerRadius Pill = new(999);
+    /// <summary>State pills, chips, the light switch: capsules, as on the Mac (StatePill, LightToggle). A starting radius;
+    /// <see cref="Ui.Capsule{T}"/> keeps it at half the height (a radius larger than that draws elliptical corners in
+    /// WPF, not a capsule).</summary>
+    public static readonly CornerRadius Pill = new(12);
     /// <summary>Round icon buttons.</summary>
     public static readonly CornerRadius Round = new(999);
 

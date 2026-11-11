@@ -248,6 +248,7 @@ internal static class StateChip
         {
             Child = text, CornerRadius = Metrics.Pill, Padding = new Thickness(8, 1, 8, 2), VerticalAlignment = VerticalAlignment.Center,
         };
+        Ui.Capsule(chip);
         Ui.TintCapsule(chip, color, ctx.Dark);
         return chip;
     }

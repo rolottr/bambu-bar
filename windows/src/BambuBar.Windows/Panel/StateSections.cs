@@ -126,7 +126,7 @@ internal sealed class FleetSection : PanelSection
         private readonly PanelContext _ctx;
         private readonly Image _art = ArtImage.Element(Metrics.RowArtWidth, Metrics.RowArtHeight);
         private readonly TextBlock _name = Ui.Text("", Ramp.Footnote, FontWeights.SemiBold);
-        private readonly Border _chip = new() { CornerRadius = Metrics.Pill, Padding = new Thickness(7, 1, 7, 2), VerticalAlignment = VerticalAlignment.Center };
+        private readonly Border _chip = Ui.Capsule(new Border { CornerRadius = Metrics.Pill, Padding = new Thickness(7, 1, 7, 2), VerticalAlignment = VerticalAlignment.Center });
         private readonly TextBlock _chipText = Ui.Text("", Ramp.Caption, FontWeights.SemiBold);
         private readonly TextBlock _detail = Ui.Text("", Ramp.Caption, null, ThemeKeys.TextSecondary);
         private readonly Stack _progress = new() { Spacing = 3 };

@@ -109,11 +109,11 @@ public static class Ui
         label.Margin = new Thickness(4, 0, 0, 0);
         label.VerticalAlignment = VerticalAlignment.Center;
         var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { mark, label } };
-        return new Border
+        return Capsule(new Border
         {
             Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(5, 3, 10, 4),
             HorizontalAlignment = HorizontalAlignment.Left,
-        };
+        });
     }
 
     public static void SetPill(Border pill, Ellipse dot, TextBlock label, Color color, string text, bool dark)
@@ -131,6 +131,23 @@ public static class Ui
         capsule.Background = Palette.Brush(Palette.WithAlpha(color, dark ? 0.16 : 0.13));
         capsule.BorderBrush = null;
         capsule.BorderThickness = new Thickness(0);
+    }
+
+    /// <summary>Rounds <paramref name="element"/>'s ends fully, whatever its height: the radius follows half the height
+    /// (WPF draws a radius larger than the side as an ellipse, so a fixed 999 doesn't make a capsule).</summary>
+    public static T Capsule<T>(T element) where T : FrameworkElement
+    {
+        element.SizeChanged += (_, e) =>
+        {
+            var radius = new CornerRadius(e.NewSize.Height / 2);
+            switch (element)
+            {
+                case Border border: border.CornerRadius = radius; break;
+                case ChromeButton button: button.CornerRadius = radius; break;
+                case ChromeToggle toggle: toggle.CornerRadius = radius; break;
+            }
+        };
+        return element;
     }
 
     /// <summary>Small uppercase heading above a group, with an optional note on the right (the Mac's SectionLabel).</summary>

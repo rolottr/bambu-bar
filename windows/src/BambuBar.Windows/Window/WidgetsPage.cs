@@ -459,6 +459,7 @@ internal sealed class Showcase : IDisposable
                 Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { icon, label } },
                 CornerRadius = Metrics.Pill, Padding = new Thickness(9, 3, 10, 4), Margin = new Thickness(0, 0, 6, 6),
             };
+            Ui.Capsule(chip);
             if (on) chip.Background = Palette.Brush(Palette.WithAlpha(Palette.Accent, 0.13));
             else chip.SetResourceReference(Border.BackgroundProperty, ThemeKeys.SubtleHover);
             AutomationProperties.SetName(chip, feature.Title());

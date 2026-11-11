@@ -113,6 +113,7 @@ internal sealed class JobSection : PanelSection
             // The Mac's: a yellow tint with a yellow edge when on.
             CheckedLook = ButtonLook.Tinted(Palette.Lamp, 0.12, 0.17, 0.22) with { StrokeBrush = Palette.Brush(Palette.WithAlpha(Palette.Lamp, 0.3)) },
         };
+        Ui.Capsule(toggle);
         AutomationProperties.SetName(toggle, Loc.T("Chamber light"));
         toggle.Click += (_, _) => Store.ToggleLight();
         return toggle;

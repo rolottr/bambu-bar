@@ -337,6 +337,7 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
             Child = row, CornerRadius = Metrics.Pill, Padding = new Thickness(8, 2, 8, 3), Margin = new Thickness(8, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
         };
+        Ui.Capsule(chip);
         if (tint is { } c) chip.Background = Palette.Brush(Palette.WithAlpha(c, 0.12));
         else chip.SetResourceReference(Border.BackgroundProperty, ThemeKeys.ControlFill);
         return chip;
