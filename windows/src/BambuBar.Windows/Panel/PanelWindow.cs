@@ -60,6 +60,10 @@ public sealed class PanelWindow : Window
         {
             _hwnd = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(_hwnd)?.AddHook(WndProc);
+            // No system menu: with it, Windows draws a close button over the header (on the settings button, where a
+            // click never reached it). The flyout closes on Esc, Alt+F4 and a click outside.
+            var style = (long)Native.GetWindowLongPtr(_hwnd, Native.GWL_STYLE);
+            Native.SetWindowLongPtr(_hwnd, Native.GWL_STYLE, (nint)(style & ~(Native.WS_SYSMENU | Native.WS_MINIMIZEBOX | Native.WS_MAXIMIZEBOX)));
             ApplyBackdrop();
         };
         Deactivated += (_, _) =>
@@ -198,7 +202,7 @@ public sealed class PanelWindow : Window
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Handled) return;
-        if (e.Key == Key.Escape)
+        if (e.Key == Key.Escape || (e.Key == Key.System && e.SystemKey == Key.F4))
         {
             HidePanel();
             e.Handled = true;

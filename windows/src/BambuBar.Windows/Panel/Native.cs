@@ -54,6 +54,15 @@ internal static partial class Native
     /// <summary>Acrylic, for transient windows like flyouts (DWMSBT_TRANSIENTWINDOW).</summary>
     public const int DWMSBT_TRANSIENTWINDOW = 3;
 
+    public const int GWL_STYLE = -16;
+    public const long WS_SYSMENU = 0x00080000, WS_MINIMIZEBOX = 0x00020000, WS_MAXIMIZEBOX = 0x00010000;
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    public static partial nint GetWindowLongPtr(nint hwnd, int index);
+
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    public static partial nint SetWindowLongPtr(nint hwnd, int index, nint value);
+
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetCursorPos(out POINT point);
