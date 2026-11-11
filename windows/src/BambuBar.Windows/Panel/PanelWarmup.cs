@@ -16,8 +16,32 @@ namespace BambuBar.TrayPanel;
 /// after launch, then the device is made and the panel built and drawn once out of sight (PanelWindow.PrimeAsync),
 /// while the app sits in the tray, at idle priority so anything the person does comes first.
 /// </summary>
-public static class PanelWarmup
+public static partial class PanelWarmup
 {
+    /// <summary>Waits (up to a minute) for 1.5 s without keyboard or mouse input, then for the dispatcher to be idle.</summary>
+    private static async Task UserIdle()
+    {
+        for (var waited = 0; waited < 60000 && InputIdleMs() < 1500; waited += 300) await Task.Delay(300);
+        await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+    }
+
+    private static uint InputIdleMs()
+    {
+        var info = new LastInput { Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<LastInput>() };
+        return GetLastInputInfo(ref info) ? unchecked((uint)Environment.TickCount - info.Time) : uint.MaxValue;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct LastInput
+    {
+        public uint Size;
+        public uint Time;
+    }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool GetLastInputInfo(ref LastInput info);
+
     public static async Task RunAsync(PrinterStore store, Func<Task> preparePanel, TimeSpan delay)
     {
         try
@@ -34,9 +58,11 @@ public static class PanelWarmup
                     if (!Renderer3D.IsOff) PrinterScene.Model(shape);
                 }
             });
-            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            // The steps below each hold the UI thread for a moment (0.2–0.6 s on a machine without a graphics card): only
+            // while the person isn't typing or moving the mouse, so it never lands in the middle of something they do.
+            await UserIdle();
             if (!Renderer3D.IsOff) _ = Renderer3D.Effects;
-            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            await UserIdle();
             await preparePanel();
         }
         catch (Exception e) when (e is IOException or InvalidOperationException or InvalidDataException or UnauthorizedAccessException

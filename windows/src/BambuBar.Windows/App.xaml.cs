@@ -86,7 +86,8 @@ public partial class App : Application
             Settings = _settings,
             History = new HistoryStore(ephemeral ? null : Path.Combine(folder, "history.json")),
             Secrets = ephemeral ? new MemorySecretStore() : new CredentialStore(),
-            Widgets = _widgets?.State,
+            // Written on a worker: the art's PNG and Rainmeter's reload would freeze the UI (QueuedWidgetSink).
+            Widgets = _widgets is null ? null : new QueuedWidgetSink(_widgets.State),
             Confirmer = new StopConfirmer(() => _panel),
             Notifier = notifier,
             Arguments = args,
