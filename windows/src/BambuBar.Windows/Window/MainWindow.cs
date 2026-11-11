@@ -48,7 +48,7 @@ public sealed class MainWindow : Window
         {
             WindowChrome.SetWindowChrome(this, new WindowChrome
             {
-                CaptionHeight = WindowView.TitleHeight, GlassFrameThickness = new Thickness(-1), UseAeroCaptionButtons = true,
+                CaptionHeight = WindowView.DefaultTitleHeight, GlassFrameThickness = new Thickness(-1), UseAeroCaptionButtons = true,
                 ResizeBorderThickness = SystemParameters.WindowResizeBorderThickness, CornerRadius = new CornerRadius(0),
             });
             _view.CaptionReserve = 140;
@@ -62,7 +62,9 @@ public sealed class MainWindow : Window
             _hwnd = new WindowInteropHelper(this).Handle;
             ApplyBackdrop();
         };
-        StateChanged += (_, _) => FitMaximized();
+        StateChanged += (_, _) => { FitMaximized(); FitCaption(); };
+        ContentRendered += (_, _) => FitCaption();
+        DpiChanged += (_, _) => Dispatcher.BeginInvoke(FitCaption, System.Windows.Threading.DispatcherPriority.Loaded);
         PreviewKeyDown += OnPreviewKeyDown;
         IsVisibleChanged += (_, _) => _view.IsLive = IsVisible;
         // Closing the window only hides the app: nothing on the way out may take it down.
@@ -126,6 +128,23 @@ public sealed class MainWindow : Window
         FitMaximized();
     }
 
+    /// <summary>
+    /// Matches the title strip to Windows' caption buttons: as tall as they are (Windows draws them at its own height,
+    /// shorter than the strip was, so they sat high against the app's name and the supporter link, and the close
+    /// button's red looked cut short), the drag area the same, and the supporter link clear of their width.
+    /// </summary>
+    private void FitCaption()
+    {
+        if (!_chrome || _hwnd == 0 || !Native.CaptionButtonBounds(_hwnd, out var buttons)) return;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        // The buttons' bottom, measured from the top of the view (which a maximized window pads in).
+        var height = buttons.Bottom / dpi.DpiScaleY - _view.Margin.Top;
+        if (height is < 24 or > 80) return;
+        _view.TitleHeight = Math.Round(height);
+        _view.CaptionReserve = Math.Ceiling(buttons.Width / dpi.DpiScaleX) + 4;
+        if (WindowChrome.GetWindowChrome(this) is { IsFrozen: false } chrome) chrome.CaptionHeight = _view.TitleHeight;
+    }
+
     /// <summary>A maximized window with a custom frame hangs its resize border off the screen: pad it back in.</summary>
     private void FitMaximized()
     {
@@ -152,7 +171,7 @@ public sealed class MainWindow : Window
         var height = Math.Max(frame.Height, MinHeight);
         var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
             SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
-        var title = new Rect(frame.Left + 40, frame.Top, Math.Max(1, width - 80), WindowView.TitleHeight);
+        var title = new Rect(frame.Left + 40, frame.Top, Math.Max(1, width - 80), WindowView.DefaultTitleHeight);
         Width = width;
         Height = height;
         if (screen.IntersectsWith(title))

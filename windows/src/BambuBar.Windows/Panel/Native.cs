@@ -103,6 +103,18 @@ internal static partial class Native
     [LibraryImport("dwmapi.dll")]
     public static partial int DwmExtendFrameIntoClientArea(nint hwnd, ref MARGINS margins);
 
+    [LibraryImport("dwmapi.dll")]
+    public static partial int DwmGetWindowAttribute(nint hwnd, int attribute, out RECT value, int size);
+
+    /// <summary>Where Windows draws the caption buttons (minimize, maximize, close), relative to the window, in pixels
+    /// (DWMWA_CAPTION_BUTTON_BOUNDS); false when it can't say.</summary>
+    public static bool CaptionButtonBounds(nint hwnd, out RECT bounds)
+    {
+        bounds = default;
+        try { return DwmGetWindowAttribute(hwnd, 5, out bounds, Marshal.SizeOf<RECT>()) >= 0 && bounds.Height > 0 && bounds.Width > 0; }
+        catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException) { return false; }
+    }
+
     public static bool SetAttribute(nint hwnd, int attribute, int value)
     {
         try { return DwmSetWindowAttribute(hwnd, attribute, ref value, sizeof(int)) >= 0; }

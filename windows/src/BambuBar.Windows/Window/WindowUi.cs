@@ -149,6 +149,35 @@ internal static class W
         return button;
     }
 
+    private static readonly Dictionary<int, System.Windows.Media.Imaging.BitmapImage?> AppIcons = [];
+
+    /// <summary>Bambu Bar's icon (AppIcon.png beside the exe, as toasts show it) decoded at <paramref name="pixels"/>
+    /// wide; null in a build without the file.</summary>
+    public static System.Windows.Media.Imaging.BitmapImage? AppIcon(int pixels)
+    {
+        if (AppIcons.TryGetValue(pixels, out var cached)) return cached;
+        System.Windows.Media.Imaging.BitmapImage? image = null;
+        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "AppIcon.png");
+        if (System.IO.File.Exists(path))
+        {
+            try
+            {
+                image = new System.Windows.Media.Imaging.BitmapImage();
+                image.BeginInit();
+                image.UriSource = new Uri(path);
+                image.DecodePixelWidth = pixels;
+                image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                image.EndInit();
+                image.Freeze();
+            }
+            catch (Exception e) when (e is System.IO.IOException or NotSupportedException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                image = null;
+            }
+        }
+        return AppIcons[pixels] = image;
+    }
+
     /// <summary>A text button in the link colour (the Mac's .link buttons and Links).</summary>
     public static ChromeButton Link(string text, Action click, string? glyph = null, double size = WRamp.Detail)
     {

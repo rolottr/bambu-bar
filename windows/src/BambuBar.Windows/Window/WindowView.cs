@@ -29,8 +29,22 @@ namespace BambuBar.AppWindow;
 /// </summary>
 public sealed class WindowView : Border, IDisposable
 {
-    /// <summary>The strip at the top that is the window's caption (drag, double-click, Windows' own buttons).</summary>
-    public const double TitleHeight = 40;
+    /// <summary>The strip at the top that is the window's caption (drag, double-click, Windows' own buttons): 40 until
+    /// the window measures Windows' caption buttons and matches their height (MainWindow.FitCaption), so the buttons,
+    /// the app's name and the supporter link share one line.</summary>
+    public const double DefaultTitleHeight = 40;
+    private double _titleHeight = DefaultTitleHeight;
+    private RowDefinition? _titleRow;
+
+    public double TitleHeight
+    {
+        get => _titleHeight;
+        set
+        {
+            _titleHeight = value;
+            if (_titleRow is not null) _titleRow.Height = new GridLength(value);
+        }
+    }
 
     private readonly PrinterStore _store;
     private readonly AppSettings _settings;
@@ -180,7 +194,7 @@ public sealed class WindowView : Border, IDisposable
         };
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TitleHeight) });
+        root.RowDefinitions.Add(_titleRow = new RowDefinition { Height = new GridLength(TitleHeight) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(SidebarWidth()) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -215,8 +229,12 @@ public sealed class WindowView : Border, IDisposable
     private Grid TitleStrip()
     {
         var grid = Ui.Columns("Auto", "*", "Auto");
-        var mark = Icons.Glyph(Icons.Printer, 14, null, Palette.Brush(Palette.Accent));
-        mark.Margin = new Thickness(16, 0, 10, 0);
+        // Bambu Bar's icon, as the taskbar and Start show it; the printer glyph only without the file.
+        FrameworkElement mark = W.AppIcon(32) is { } icon
+            ? new Image { Source = icon, Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center }
+            : Icons.Glyph(Icons.Printer, 14, null, Palette.Brush(Palette.Accent));
+        RenderOptions.SetBitmapScalingMode(mark, BitmapScalingMode.HighQuality);
+        mark.Margin = new Thickness(14, 0, 9, 0);
         var name = Ui.Text("Bambu Bar", 12, null, ThemeKeys.TextSecondary);
         _appName = new StackPanel { Orientation = Orientation.Horizontal, Children = { mark, name }, Visibility = _showsAppName ? Visibility.Visible : Visibility.Collapsed };
         grid.Children.Add(Ui.At(_appName, 0));

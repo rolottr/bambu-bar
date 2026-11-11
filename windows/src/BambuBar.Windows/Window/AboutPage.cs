@@ -118,7 +118,7 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
     private Grid Hero()
     {
         // The app's icon beside its name: decoration (the Mac hides it from VoiceOver).
-        FrameworkElement icon = AppIcon() is { } picture
+        FrameworkElement icon = W.AppIcon(192) is { } picture
             ? new DecorativeImage
             {
                 Source = picture, Width = 96, Height = 96,
@@ -149,28 +149,6 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
         grid.Children.Add(Ui.At(icon, 0));
         grid.Children.Add(Ui.At(titles, 2));
         return grid;
-    }
-
-    /// <summary>Bambu Bar's icon (AppIcon.png beside the exe, as the toasts show it), decoded at twice its size here.</summary>
-    private static System.Windows.Media.Imaging.BitmapImage? AppIcon()
-    {
-        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "AppIcon.png");
-        if (!System.IO.File.Exists(path)) return null;
-        try
-        {
-            var image = new System.Windows.Media.Imaging.BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(path);
-            image.DecodePixelWidth = 192;
-            image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            image.EndInit();
-            image.Freeze();
-            return image;
-        }
-        catch (Exception e) when (e is System.IO.IOException or NotSupportedException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            return null;
-        }
     }
 
     private static Stack Section(string title, out Stack body)
