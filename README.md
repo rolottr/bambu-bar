@@ -14,7 +14,9 @@ Bambu Bar is a native macOS app that shows your 3D printer's progress, temperatu
 
 Built with Swift and SwiftUI. Printer data stays local, with no app analytics. The GitHub build is free to use. Optional supporter licenses enable automatic updates; the Mac App Store edition is independent.
 
-[Getting started](#getting-started) · [Features](#features) · [Widgets](#desktop-widgets) · [Compatibility](#compatibility) · [Building](#building-from-source)
+**Now on Windows too:** the same app lives in the notification area on Windows 10 and 11. See [Windows](#windows).
+
+[Getting started](#getting-started) · [Windows](#windows) · [Features](#features) · [Widgets](#desktop-widgets) · [Compatibility](#compatibility) · [Building](#building-from-source)
 
 > Independent, community-developed software. Not affiliated with or endorsed by Bambu Lab. The Bambu Lab models listed under [Compatibility](#compatibility) are verified on hardware; the H3C is supported from a real H3C report.
 
@@ -62,6 +64,17 @@ It talks to the printer directly over your network, the same way Bambu Studio do
 The access code is stored in your keychain and only ever sent to the printer. If it changes later (after a factory reset, say) and the slicer has the new one, Bambu Bar offers to use it.
 
 Closing the window keeps Bambu Bar running in the menu bar without a Dock icon. Opened at login, it starts quietly in the menu bar; open it from Spotlight or the menu bar to see the window. **Add Printer…** in the printer picker or in Settings adds another printer.
+
+### Windows
+
+- **Requirements:** Windows 10 version 1903 or later, or Windows 11, on x64 or ARM64, and a Bambu Lab printer on the same local network as the PC.
+- **Install:** get `Bambu-Bar-<version>-windows-x64.exe` (most PCs) or `…-windows-arm64.exe` (ARM PCs such as Snapdragon laptops) from the latest GitHub release and run it. It installs for your user account only, without administrator rights. The installers aren't code signed yet, so SmartScreen may say "Windows protected your PC": click **More info**, then **Run anyway**.
+- **Tray icon:** Bambu Bar lives in the notification area. If Windows hides the icon under the **^** arrow, drag it onto the taskbar to keep it in sight. A click opens the panel; the window has the same pages as on the Mac, with **Tray** in place of Menu Bar.
+- **Setup** works as on the Mac: pick a printer the app finds, and the access code comes from Bambu Studio or OrcaSlicer on the PC when they have used the printer. If Windows Firewall asks, allow Bambu Bar on private networks; when the firewall keeps the printers' announcements out, the search says so.
+- **Desktop widgets** are drawn by a private copy of [Rainmeter](https://www.rainmeter.net) that comes with the app (nothing else to install; a Rainmeter you use yourself is left alone). Add them from the **Widgets** page. On Windows 10 on ARM the widgets don't run, as Rainmeter needs x64 emulation.
+- **Updates** work like the direct Mac download: with an active website supporter license (the same key as on the Mac) the app checks GitHub once a day and installs the new version for you.
+
+Building the Windows app is described in [docs/windows.md](docs/windows.md).
 
 ### About downloaded builds
 

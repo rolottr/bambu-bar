@@ -25,7 +25,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "2.1.1"
+    MARKETING_VERSION: "2.2.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: PCZ6F8Q9DZ
     APP_GROUP: "$(DEVELOPMENT_TEAM).dev.rolottr.BambuBar"
