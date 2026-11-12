@@ -27,6 +27,8 @@ for arch in x64 arm64; do
   EXE="Bambu-Bar-$VERSION-windows-$arch.exe"
   DIR="$WORK/Bambu-Bar-windows-installer-win-$arch"
   [[ -f "$DIR/$EXE" ]] || { echo "Run $ID has no $EXE (another version?): $(ls "$DIR")" >&2; exit 2; }
+  # The Windows runner ends the line with CRLF, and shasum would then look for "<name>\r": LF, like the Mac's.
+  tr -d '\r' < "$DIR/$EXE.sha256" > "$DIR/$EXE.sha256.lf" && mv "$DIR/$EXE.sha256.lf" "$DIR/$EXE.sha256"
   (cd "$DIR" && shasum -a 256 -c "$EXE.sha256" >/dev/null) || { echo "$EXE doesn't match its checksum" >&2; exit 2; }
   cp "$DIR/$EXE" "$DIR/$EXE.sha256" "$ROOT/build/"
 done
