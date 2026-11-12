@@ -7,9 +7,17 @@ import WidgetKit
 /// stops that process and reloads every timeline, so placed widgets switch to the new design without being
 /// removed and added again. (The widget kind and its configuration intent never change, or placed widgets
 /// would lose their settings.)
+///
+/// Runs before the printers start, so the store's first reload already goes to the new extension rather than to
+/// an old one that is about to be stopped.
 @MainActor
 enum WidgetUpdate {
     private static let key = "widgetsRefreshedForBuild"
+
+    /// Seconds after launch at which an updated app reloads every widget. One reload wasn't always enough: people
+    /// found their widgets blank after an update. A reload that reaches WidgetKit before it has taken in the new
+    /// extension can be lost, and the next one otherwise waits for a printer change or the half-hour timeline.
+    private static let reloadDelays: [TimeInterval] = [1, 5, 15, 60]
 
     static func refreshIfUpdated() {
         guard !LaunchContext.isDeveloperRun else { return }
@@ -20,7 +28,9 @@ enum WidgetUpdate {
             stopOldExtensions()
         #endif
         // WidgetKit relaunches the extension from the new bundle when it next needs it.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { WidgetCenter.shared.reloadAllTimelines() }
+        for delay in reloadDelays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { WidgetCenter.shared.reloadAllTimelines() }
+        }
     }
 
     /// Version, build and when the executable was written, so reinstalling the same version counts too. (Every

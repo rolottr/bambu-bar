@@ -101,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         SingleInstance.handOverIfRunning(background: background)
         SingleInstance.listen()
+        WidgetUpdate.refreshIfUpdated()
         PrinterStore.shared.start()
         #if !APP_STORE
         LicenseStore.shared.onAccessChange = { _ in
@@ -109,7 +110,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LicenseStore.shared.start()
         #endif
         UpdateChecker.shared.start()
-        WidgetUpdate.refreshIfUpdated()
         observeAppWindows()
         if let dir = StoreMedia.directory {
             StoreMedia.run(into: dir)
