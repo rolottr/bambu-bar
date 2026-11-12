@@ -1,0 +1,172 @@
+{
+  "activeSpoolID" : 0,
+  "activeSpoolLabel" : "A1",
+  "ams" : [
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : null,
+      "humidityLevel" : 3,
+      "id" : 0,
+      "kind" : "ams",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "000000FF",
+          "colorName" : "Black",
+          "colors" : [
+            "000000FF"
+          ],
+          "gramsLeft" : 660,
+          "id" : 0,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A1",
+          "material" : "PA6-CF",
+          "name" : "PA6-CF",
+          "nozzleRange" : [
+            260,
+            300
+          ],
+          "preset" : "GFN05",
+          "remain" : 66,
+          "slot" : 0,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "489FDFFF",
+          "colorName" : "Azure",
+          "colors" : [
+            "489FDFFF"
+          ],
+          "gramsLeft" : 700,
+          "id" : 1,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A2",
+          "material" : "ABS",
+          "name" : "ABS",
+          "nozzleRange" : [
+            240,
+            280
+          ],
+          "preset" : "GFB00",
+          "remain" : 70,
+          "slot" : 1,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 2,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "A3",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 2,
+          "unit" : 0,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 3,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "A4",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 3,
+          "unit" : 0,
+          "weight" : null
+        }
+      ],
+      "temperature" : 26.699999999999999,
+      "title" : "AMS A"
+    }
+  ],
+  "auxFan" : 33,
+  "bed" : {
+    "current" : 100,
+    "target" : 100
+  },
+  "canceled" : false,
+  "chamber" : 45,
+  "chamberLightOn" : true,
+  "chamberTarget" : 45,
+  "circulationFan" : null,
+  "controlsLocked" : false,
+  "detailText" : "Layer 120 of 240",
+  "doorOpen" : false,
+  "exhaustFan" : 40,
+  "externalSpool" : {
+    "brand" : null,
+    "color" : "00000000",
+    "colorName" : null,
+    "colors" : [
+      "00000000"
+    ],
+    "gramsLeft" : null,
+    "id" : 254,
+    "isBambu" : false,
+    "isLoaded" : false,
+    "label" : "Ext",
+    "material" : "",
+    "name" : "",
+    "nozzleRange" : null,
+    "preset" : null,
+    "remain" : null,
+    "slot" : 0,
+    "unit" : 255,
+    "weight" : null
+  },
+  "firmware" : null,
+  "hasSDCard" : true,
+  "heatbreakFan" : 100,
+  "issues" : [
+
+  ],
+  "jobName" : "Fixture",
+  "layer" : 120,
+  "leftAuxFan" : null,
+  "leftNozzleInUse" : null,
+  "liveViewEnabled" : null,
+  "nozzle" : {
+    "current" : 290,
+    "target" : 290
+  },
+  "nozzleDiameter" : 0.40000000000000002,
+  "nozzleType" : "stainless_steel",
+  "partFan" : 87,
+  "plateIndex" : null,
+  "progress" : 50,
+  "remainingMinutes" : 60,
+  "secondNozzle" : null,
+  "speed" : 2,
+  "stageID" : 0,
+  "state" : "printing",
+  "stateTitle" : "Printing",
+  "taskID" : "100003",
+  "totalLayers" : 240,
+  "updateAvailable" : false,
+  "wifiSignal" : -67
+}

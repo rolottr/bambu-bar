@@ -548,13 +548,13 @@ final class PrinterStore {
     func pause() {
         guard let current, ensureControllable(current) else { return }
         current.pause()
-        showToast("Pausing…")
+        showToast(String(localized: "Pausing…"))
     }
 
     func resume() {
         guard let current, ensureControllable(current) else { return }
         current.resume()
-        showToast("Resuming…")
+        showToast(String(localized: "Resuming…"))
     }
 
     func stopPrint() {

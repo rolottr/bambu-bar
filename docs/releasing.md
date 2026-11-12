@@ -1,7 +1,17 @@
 # Releasing Bambu Bar
 
-Every version ships on two channels, built from the same commit on `main`. They differ only in what the
-`APP_STORE` compilation condition leaves out.
+Every version ships from the same commit on `main`: the Mac on two channels, which differ only in what the
+`APP_STORE` compilation condition leaves out, and Windows (x64 and ARM64) on GitHub beside the Mac zip. One version
+line (`MARKETING_VERSION` in `project.yml`), one GitHub release, one `appcast.xml` for both platforms.
+
+The release marked **latest** must always have the Mac zip and an `appcast.xml` with a Mac item for its version:
+every installed Mac copy updates from `releases/latest`. `scripts/check-release.sh` checks that (and, since every
+release ships both platforms, both Windows installers and their items) before a release becomes latest.
+
+Windows: see [windows.md](windows.md) for the build. CI builds both installers on every push; the release takes them
+from the run of the tagged commit. Updates on Windows come from the same `appcast.xml` (one item per architecture,
+`sparkle:os="windows-x64"` / `"windows-arm64"` on the enclosure, which Sparkle on the Mac skips), with the same
+supporter-license rule and the same signing key.
 
 | | GitHub (direct download) | Mac App Store |
 | --- | --- | --- |
@@ -19,13 +29,21 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 ## Cutting a release
 
 1. Raise `MARKETING_VERSION` in `project.yml`. Run `scripts/test.sh` and `scripts/integration-test.sh` (Docker).
-   Run `scripts/check-translations.sh`: command-line builds don't update `Resources/Localizable.xcstrings`, so new
+   Run `scripts/check-translations.sh`: command-line builds don't update `shared/Localizable.xcstrings`, so new
    text would otherwise ship in English. It fails on strings missing from the catalog, unused, or not in every
    language. Text built as a plain `String` doesn't reach it; give it `String(localized:)`.
 2. **GitHub:**
    - `NOTARY_PROFILE=notary scripts/package.sh` writes `build/Bambu-Bar-<version>-macos.zip` and its `.sha256`.
-   - `gh release create v<version>` with the zip and the checksum, then `UPLOAD=1 scripts/appcast.sh` to sign
-     the zip for Sparkle and attach `appcast.xml`. Supporters get the update from there.
+   - Push the commit and wait for CI to pass on it. `scripts/windows-artifacts.sh` downloads that run's Windows
+     installers (`build/Bambu-Bar-<version>-windows-x64.exe`, `-arm64.exe`, their `.sha256`) and the Rainmeter
+     source zip; it refuses a failed run or another version. When code signing exists (ledger §9), sign both
+     installers with Authenticode here, and write their `.sha256` again.
+   - `gh release create v<version> --latest=false` with the Mac zip, both installers, the three checksums and
+     `rainmeter-<ver>-source.zip` (the GPL source offer for the Rainmeter the Windows app bundles), then
+     `UPLOAD=1 scripts/appcast.sh` to sign the zip and the installers for the updaters and attach `appcast.xml`
+     (it adds the Windows items when both installers are in `build/`).
+   - `scripts/check-release.sh v<version> && gh release edit v<version> --latest`. Supporters on both platforms
+     get the update from there.
    - Tag the commit (`v<version>`, annotated) and push the tag.
 3. **App Store:**
    - `scripts/appstore.sh` archives and exports, checking that the app is sandboxed and has no Sparkle; run

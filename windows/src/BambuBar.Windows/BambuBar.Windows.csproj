@@ -1,0 +1,87 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Windows app: tray icon, panel, window, widgets host. Windows 10 1903+ and 11, x64 and ARM64 (ledger D9). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 19041 gives the WinRT APIs (toasts); the app still runs from 1903 (18362). -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.18362.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <!-- NotifyIcon for the tray (WPF has none). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- WFO0003 wants WinForms' DPI API; this is a WPF app, whose per-monitor DPI belongs in app.manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <!-- Lets the Mac and Linux build it too (CI runs the real build on Windows). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RootNamespace>BambuBar</RootNamespace>
+    <AssemblyName>BambuBar</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\BambuBar.ico</ApplicationIcon>
+    <AssemblyTitle>Bambu Bar</AssemblyTitle>
+    <!-- Source-generated Win32 interop (LibraryImport): tray, WM_COPYDATA, Credential Manager. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- dotnet publish -r win-x64|win-arm64: one self-contained folder, no .NET install needed. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <!-- Precompiled: the code the panel and the window run first isn't compiled at the first click (measured 35 % faster). -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BambuBar.Core\BambuBar.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The live 3D printer (Model3D/, P3.10): HelixToolkit over Direct3D 11. Roslyn comes along as a dependency of a
+       node type the app doesn't use; nothing of it is copied (Directory.Packages.props). -->
+  <ItemGroup>
+    <PackageReference Include="HelixToolkit.Wpf.SharpDX" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" ExcludeAssets="all" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The app icon toasts show (registered with the AppUserModelID, Notifications/AppIdentity.cs). -->
+  <ItemGroup>
+    <!-- The app icon, a tracked copy of the Mac's (Resources/Assets.xcassets is generated on the Mac and ignored). -->
+    <Content Include="Assets\AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- What the installer puts beside BambuBar.exe besides the build (P5.1): the widget skins in Skins\BambuBar\ with
+       Skins\version.txt (WidgetHost copies them to the user's widget folder when it changes), and the app's license.
+       Rainmeter\ and ffmpeg\ are added by CI (rainmeter/ci/payload.ps1, windows/ffmpeg/build.sh). -->
+  <ItemGroup>
+    <SkinFile Include="$(RepoRoot)rainmeter\Skins\BambuBar\**\*" Exclude="$(RepoRoot)rainmeter\Skins\BambuBar\README.md" />
+    <Content Include="@(SkinFile)" Link="Skins\BambuBar\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <Content Include="$(RepoRoot)LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <!-- Skins\version.txt: the app version and a hash of the skin files, so a rebuild with changed skins is copied too. -->
+  <Target Name="WriteSkinsVersion" BeforeTargets="AssignTargetPaths">
+    <GetFileHash Files="@(SkinFile)">
+      <Output TaskParameter="Items" ItemName="_SkinHash" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_SkinHashes>@(_SkinHash->'%(FileHash)', '')</_SkinHashes>
+      <_SkinsVersion>$(Version) $([MSBuild]::StableStringHash('$(_SkinHashes)'))</_SkinsVersion>
+      <_SkinsVersionFile>$(IntermediateOutputPath)skins-version.txt</_SkinsVersionFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_SkinsVersionFile)" Lines="$(_SkinsVersion)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Content Include="$(_SkinsVersionFile)" Link="Skins\version.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+      <FileWrites Include="$(_SkinsVersionFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- WinForms is only for the tray icon: keep its names out of the WPF code's global usings. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <!-- Program.cs has the Main: command-line runs (probe) never start WPF. -->
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
+</Project>

@@ -87,7 +87,7 @@ The widget shows what the app last saw, so keep Bambu Bar running (Open at Login
 
 ## Compatibility
 
-The first 14 models are verified on hardware; the H3C is supported from a real report (`scripts/emulator/h3c-sample.json`) and not yet confirmed by an owner. What each one shows still differs with its hardware (chamber sensor, nozzles, AMS type, camera transport):
+The first 14 models are verified on hardware; the H3C is supported from a real report (`shared/scripts/emulator/h3c-sample.json`) and not yet confirmed by an owner. What each one shows still differs with its hardware (chamber sensor, nozzles, AMS type, camera transport):
 
 | Printer | Camera | Notes |
 | --- | --- | --- |
@@ -100,7 +100,7 @@ The first 14 models are verified on hardware; the H3C is supported from a real r
 | **H2D, H2D Pro, H2C, H2S** | RTSPS (LAN Only Liveview) | Heated chamber; two nozzles except the H2S. Laser and cutting modules aren't controlled. |
 | **H3C** | RTSPS (LAN Only Liveview) | Heated chamber; nine-tool rack (shows the mounted nozzle); the built-in AMS 3H with nine slots and per-zone humidity. Its own render with the AMS 3H hood. |
 
-A sanitised A1 report is in `scripts/emulator/a1-sample.json`.
+A sanitised A1 report is in `shared/scripts/emulator/a1-sample.json`.
 
 The printer can be in cloud mode or LAN Only mode; controls need LAN Only with Developer Mode (see above). The camera on X1, H2, P2S and X2D printers needs **LAN Only Liveview** turned on in the printer's network settings.
 
@@ -139,7 +139,7 @@ cd bambu-bar
 
 `./scripts/test.sh` runs the unit tests, which cover the camera's protocol parsing (RTSP, SDP, Digest sign-in, H.264/H.265 packets and the JPEG stream) with recorded bytes, the Bambu Studio / OrcaSlicer import, network announcements and saved printers.
 
-`./scripts/integration-test.sh` runs the integration tests against two simulators in Docker (`scripts/integration/compose.yaml`), then stops them (`--keep` leaves them running, `ONLY=CameraIntegrationTests` picks a class). The mock fleet runs with serials in mixed case: its settings file keeps a stale code under each uppercase serial and the working one under the lowercase serial, and its printers announce themselves in both spellings, so each must still be one printer that comes online. The mock camera (`scripts/camera/camera.py`) plays good RTSPS (Basic and Digest, H.264 and H.265) and JPEG streams as well as broken and hostile ones: impossible `Content-Length`s, an unsupported codec, fragments from different frames, a stalled handshake, an untrusted certificate. The tests compile the real networking code without the app.
+`./scripts/integration-test.sh` runs the integration tests against two simulators in Docker (`shared/scripts/integration/compose.yaml`), then stops them (`--keep` leaves them running, `ONLY=CameraIntegrationTests` picks a class). The mock fleet runs with serials in mixed case: its settings file keeps a stale code under each uppercase serial and the working one under the lowercase serial, and its printers announce themselves in both spellings, so each must still be one printer that comes online. The mock camera (`shared/scripts/camera/camera.py`) plays good RTSPS (Basic and Digest, H.264 and H.265) and JPEG streams as well as broken and hostile ones: impossible `Content-Length`s, an unsupported codec, fragments from different frames, a stalled handshake, an untrusted certificate. The tests compile the real networking code without the app.
 
 ### Package and notarize a release
 
@@ -180,15 +180,15 @@ The **AppStore** configuration (scheme **BambuBar App Store**, also for Product 
 ### Developing without a printer
 
 - `--demo [printing|preparing|paused|finished|failed|idle|offline|unconfigured]` runs a simulated P2S; add `--fleet` for six printers. Nothing is saved and no network is used.
-- `scripts/emulator/printer.py` runs a pretend P2S on `127.0.0.1:8883` (needs `brew install mosquitto`): a TLS MQTT broker that replays a real P2S report, then prints, heats and obeys pause, resume, stop, speed and light. Connect with
+- `shared/scripts/emulator/printer.py` runs a pretend P2S on `127.0.0.1:8883` (needs `brew install mosquitto`): a TLS MQTT broker that replays a real P2S report, then prints, heats and obeys pause, resume, stop, speed and light. Connect with
   `"build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --connect 127.0.0.1 22E00EMULATOR0 12345678 --insecure-tls`
-- `scripts/fleet/run.sh` starts a mock fleet of 17 printers in Docker, one of every Bambu Lab FDM model (P2S, P1S, P1P, X1, X1C, X1E, X2D, H2D, H2D Pro, H2S, H2C, H3C, A1, A1 mini, A2L) plus an H3C with the AMS-B (reconstructed from Bambu Studio's source; no report of one yet), printing, paused, failed, finished, idle and one switched off. Each sends only what the real model reports, in its report format and with its placeholders (a P1S's chamber temperature of 5 without a sensor), from Bambu Studio's printer profiles and the real reports in `scripts/emulator`; `python3 scripts/fleet/fleet.py --dump Tests/BambuBarTests/ModelReports` refreshes the copies the unit tests check the app against and opens Bambu Bar against it with `--emulator`. Add `--import` to start on the Add Printer page and try **Add All**, `SSDP=1` to have the printers announce their names and models, `SERIAL_CASE=lower` or `mixed` for serials in another case than their certificates' (see `fleet.py`), `--stop` to stop it. The fleet writes `scripts/fleet/out/BambuStudio.conf` the way Bambu Studio saves LAN printers. Nothing from an `--emulator` run is saved: not the printers, their codes, the history or the widgets' data.
+- `shared/scripts/fleet/run.sh` starts a mock fleet of 17 printers in Docker, one of every Bambu Lab FDM model (P2S, P1S, P1P, X1, X1C, X1E, X2D, H2D, H2D Pro, H2S, H2C, H3C, A1, A1 mini, A2L) plus an H3C with the AMS-B (reconstructed from Bambu Studio's source; no report of one yet), printing, paused, failed, finished, idle and one switched off. Each sends only what the real model reports, in its report format and with its placeholders (a P1S's chamber temperature of 5 without a sensor), from Bambu Studio's printer profiles and the real reports in `shared/scripts/emulator`; `python3 shared/scripts/fleet/fleet.py --dump shared/ModelReports` refreshes the copies the unit tests check the app against and opens Bambu Bar against it with `--emulator`. Add `--import` to start on the Add Printer page and try **Add All**, `SSDP=1` to have the printers announce their names and models, `SERIAL_CASE=lower` or `mixed` for serials in another case than their certificates' (see `fleet.py`), `--stop` to stop it. The fleet writes `shared/scripts/fleet/out/BambuStudio.conf` the way Bambu Studio saves LAN printers. Nothing from an `--emulator` run is saved: not the printers, their codes, the history or the widgets' data.
 - `--probe <ip> <serial> <access-code|keychain> [seconds] [--raw-filament]` connects to a printer from Terminal and prints what it reports (`keychain` uses the code Bambu Bar saved).
 - `--probe-camera <ip> <serial> <access-code|keychain> [seconds] [--model P1S | --jpeg | --rtsp]` opens the camera from Terminal, logs the handshake (certificate, RTSP replies, SDP) and frame rate, and saves the first decoded frame to `$TMPDIR/bambubar-camera.png`. The transport follows the model from `--model` or the serial.
 - `scripts/showcase.sh <dir>` screenshots the panel, window and widgets in each demo state; `scripts/make-readme-animations.sh` renders the animations above, offscreen, from the demo printer.
-- `scripts/make-hms.py` regenerates the bundled error texts.
-- `scripts/make-filaments.py Resources/filaments.json` regenerates the filament presets and Bambu Lab colour names from Bambu Studio.
-- `artwork/generate_printers.py` builds the printer models in Blender and writes the 3D models (`Resources/Printers/*.usdz`) and the widget render layers. Run it headless with `Blender -b --factory-startup -P artwork/generate_printers.py` (add shape names such as `enclosed mini` to build only those), or from a running Blender through its MCP add-on.
+- `shared/scripts/make-hms.py` regenerates the bundled error texts.
+- `shared/scripts/make-filaments.py shared/filaments.json` regenerates the filament presets and Bambu Lab colour names from Bambu Studio.
+- `artwork/generate_printers.py` builds the printer models in Blender and writes the 3D models (`shared/Printers/*.usdz`) and the widget render layers. Run it headless with `Blender -b --factory-startup -P artwork/generate_printers.py` (add shape names such as `enclosed mini` to build only those), or from a running Blender through its MCP add-on.
 
 ## Keyboard shortcuts
 

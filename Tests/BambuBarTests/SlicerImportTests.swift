@@ -88,7 +88,8 @@ final class SlicerImportTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// `BBLCrossTalk::Encode_DevIp`, as scripts/fleet/fleet.py writes it: the inverse of `SlicerImport.decodeIP`.
+    /// `BBLCrossTalk::Encode_DevIp`, as shared/scripts/fleet/fleet.py writes it: the inverse of
+    /// `SlicerImport.decodeIP`.
     static func scrambled(_ ip: String, key: String) -> String {
         var seed: UInt32 = 2_166_136_261
         for byte in key.utf8 { seed = (seed ^ UInt32(byte)) &* 16_777_619 }

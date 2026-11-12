@@ -1,6 +1,6 @@
 import XCTest
 
-/// The camera clients over real TLS against the mock camera (scripts/camera/camera.py), one scenario per test:
+/// The camera clients over real TLS against the mock camera (shared/scripts/camera/camera.py), one scenario per test:
 /// the good streams of both protocols, and what a broken or hostile camera may send. Whatever arrives, the
 /// client must end with a failure the app can show, never crash it (review finding P1).
 final class CameraIntegrationTests: XCTestCase {

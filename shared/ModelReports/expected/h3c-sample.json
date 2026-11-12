@@ -1,0 +1,271 @@
+{
+  "activeSpoolID" : null,
+  "activeSpoolLabel" : null,
+  "ams" : [
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 46,
+      "humidityLevel" : 5,
+      "id" : 32,
+      "kind" : "ams3h",
+      "spools" : [
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1024,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "1",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 0,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1025,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "2",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 1,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1026,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "3",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 2,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1027,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "4",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 3,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1028,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "5",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 4,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1029,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "6",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 5,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1030,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "7",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 6,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1031,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "8",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 7,
+          "unit" : 32,
+          "weight" : null
+        },
+        {
+          "brand" : null,
+          "color" : "00000000",
+          "colorName" : null,
+          "colors" : [
+            "00000000"
+          ],
+          "gramsLeft" : null,
+          "id" : 1032,
+          "isBambu" : false,
+          "isLoaded" : false,
+          "label" : "9",
+          "material" : "",
+          "name" : "",
+          "nozzleRange" : null,
+          "preset" : null,
+          "remain" : null,
+          "slot" : 8,
+          "unit" : 32,
+          "weight" : null
+        }
+      ],
+      "temperature" : 25.199999999999999,
+      "title" : "AMS 3H"
+    }
+  ],
+  "auxFan" : 0,
+  "bed" : {
+    "current" : 25,
+    "target" : 0
+  },
+  "canceled" : false,
+  "chamber" : 22,
+  "chamberLightOn" : false,
+  "chamberTarget" : 0,
+  "circulationFan" : 0,
+  "controlsLocked" : true,
+  "detailText" : "Ready to print",
+  "doorOpen" : false,
+  "exhaustFan" : 0,
+  "externalSpool" : {
+    "brand" : null,
+    "color" : "00000000",
+    "colorName" : null,
+    "colors" : [
+      "00000000"
+    ],
+    "gramsLeft" : null,
+    "id" : 254,
+    "isBambu" : false,
+    "isLoaded" : false,
+    "label" : "Ext",
+    "material" : "",
+    "name" : "",
+    "nozzleRange" : null,
+    "preset" : null,
+    "remain" : null,
+    "slot" : 0,
+    "unit" : 255,
+    "weight" : null
+  },
+  "firmware" : "01.00.02.00",
+  "hasSDCard" : false,
+  "heatbreakFan" : 0,
+  "issues" : [
+
+  ],
+  "jobName" : "",
+  "layer" : 0,
+  "leftAuxFan" : 0,
+  "leftNozzleInUse" : null,
+  "liveViewEnabled" : false,
+  "nozzle" : {
+    "current" : 27,
+    "target" : 0
+  },
+  "nozzleDiameter" : 0.40000000000000002,
+  "nozzleType" : "HS01",
+  "partFan" : 0,
+  "plateIndex" : 0,
+  "progress" : 0,
+  "remainingMinutes" : 0,
+  "secondNozzle" : null,
+  "speed" : 2,
+  "stageID" : -1,
+  "state" : "idle",
+  "stateTitle" : "Ready",
+  "taskID" : null,
+  "totalLayers" : 0,
+  "updateAvailable" : false,
+  "wifiSignal" : -56
+}

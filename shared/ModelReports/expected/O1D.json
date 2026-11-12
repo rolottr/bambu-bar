@@ -1,0 +1,181 @@
+{
+  "activeSpoolID" : 2,
+  "activeSpoolLabel" : "A3",
+  "ams" : [
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 34,
+      "humidityLevel" : 3,
+      "id" : 0,
+      "kind" : "pro2",
+      "spools" : [
+        {
+          "brand" : "Bambu Lab",
+          "color" : "EAECEBFF",
+          "colorName" : "Silver",
+          "colors" : [
+            "EAECEBFF"
+          ],
+          "gramsLeft" : 350,
+          "id" : 0,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A1",
+          "material" : "PLA",
+          "name" : "PLA Silk",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA05",
+          "remain" : 35,
+          "slot" : 0,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "4CE4A0FF",
+          "colorName" : "Green",
+          "colors" : [
+            "4CE4A0FF"
+          ],
+          "gramsLeft" : 800,
+          "id" : 1,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A2",
+          "material" : "PLA",
+          "name" : "PLA Silk",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA05",
+          "remain" : 80,
+          "slot" : 1,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "000000FF",
+          "colorName" : "Charcoal",
+          "colors" : [
+            "000000FF"
+          ],
+          "gramsLeft" : 760,
+          "id" : 2,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A3",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 76,
+          "slot" : 2,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "eSUN",
+          "color" : "D23A3AFF",
+          "colorName" : null,
+          "colors" : [
+            "D23A3AFF"
+          ],
+          "gramsLeft" : null,
+          "id" : 3,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "A4",
+          "material" : "PLA",
+          "name" : "PLA+",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFL03",
+          "remain" : null,
+          "slot" : 3,
+          "unit" : 0,
+          "weight" : null
+        }
+      ],
+      "temperature" : 24.399999999999999,
+      "title" : "AMS 2 Pro A"
+    }
+  ],
+  "auxFan" : 30,
+  "bed" : {
+    "current" : 55,
+    "target" : 55
+  },
+  "canceled" : false,
+  "chamber" : 34,
+  "chamberLightOn" : true,
+  "chamberTarget" : 0,
+  "circulationFan" : null,
+  "controlsLocked" : false,
+  "detailText" : "Layer 120 of 240",
+  "doorOpen" : false,
+  "exhaustFan" : 40,
+  "externalSpool" : {
+    "brand" : null,
+    "color" : "00000000",
+    "colorName" : null,
+    "colors" : [
+      "00000000"
+    ],
+    "gramsLeft" : null,
+    "id" : 254,
+    "isBambu" : false,
+    "isLoaded" : false,
+    "label" : "Ext",
+    "material" : "",
+    "name" : "",
+    "nozzleRange" : null,
+    "preset" : null,
+    "remain" : null,
+    "slot" : 0,
+    "unit" : 255,
+    "weight" : null
+  },
+  "firmware" : null,
+  "hasSDCard" : true,
+  "heatbreakFan" : 100,
+  "issues" : [
+
+  ],
+  "jobName" : "Fixture",
+  "layer" : 120,
+  "leftAuxFan" : null,
+  "leftNozzleInUse" : false,
+  "liveViewEnabled" : false,
+  "nozzle" : {
+    "current" : 220,
+    "target" : 220
+  },
+  "nozzleDiameter" : 0.40000000000000002,
+  "nozzleType" : "HS01",
+  "partFan" : 90,
+  "plateIndex" : 1,
+  "progress" : 50,
+  "remainingMinutes" : 60,
+  "secondNozzle" : {
+    "current" : 170,
+    "target" : 170
+  },
+  "speed" : 2,
+  "stageID" : 0,
+  "state" : "printing",
+  "stateTitle" : "Printing",
+  "taskID" : "100004",
+  "totalLayers" : 240,
+  "updateAvailable" : false,
+  "wifiSignal" : -47
+}

@@ -1,11 +1,14 @@
 import XCTest
 
-/// Every Bambu Lab model's report, as the mock fleet sends it (ModelReports, written by
-/// `python3 scripts/fleet/fleet.py --dump Tests/BambuBarTests/ModelReports`), through the app's parser and the
+/// Every Bambu Lab model's report, as the mock fleet sends it (shared/ModelReports, written by
+/// `python3 shared/scripts/fleet/fleet.py --dump shared/ModelReports`), through the app's parser and the
 /// model's capabilities: the app shows what the printer has and nothing it doesn't, placeholders included (a P1S
 /// sends a chamber temperature of 5 without a sensor; an A1 sends "0" for fans it doesn't have).
 final class ModelReportTests: XCTestCase {
-    private static let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("ModelReports")
+    /// The repository's shared/ folder, three levels up from this file (Tests/BambuBarTests/ModelReportTests.swift).
+    private static let shared = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().appendingPathComponent("shared")
+    private static let folder = shared.appendingPathComponent("ModelReports")
 
     private func reports() throws -> [(model: PrinterModel, status: PrinterStatus, print: [String: Any])] {
         let files = try FileManager.default.contentsOfDirectory(at: Self.folder, includingPropertiesForKeys: nil)
@@ -67,11 +70,10 @@ final class ModelReportTests: XCTestCase {
         XCTAssertNotNil(x1e.status.chamberTarget)
     }
 
-    /// A real H3C report (scripts/emulator/h3c-sample.json, idle, from ha-bambulab issue 2209): its AMS 3H has nine
-    /// slots and measures humidity per drying zone, nine hotends sit in its rack, nine virtual slots, five fans.
+    /// A real H3C report (shared/scripts/emulator/h3c-sample.json, idle, from ha-bambulab issue 2209): its AMS 3H has
+    /// nine slots and measures humidity per drying zone, nine hotends sit in its rack, nine virtual slots, five fans.
     func testRealH3CReport() throws {
-        let file = Self.folder.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("scripts/emulator/h3c-sample.json")
+        let file = Self.shared.appendingPathComponent("scripts/emulator/h3c-sample.json")
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
         var doc = ReportDocument()
         doc.apply(try XCTUnwrap(json["get_version"] as? [String: Any]))

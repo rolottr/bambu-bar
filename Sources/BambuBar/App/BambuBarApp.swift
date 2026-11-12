@@ -94,6 +94,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Probe.run(host: probe.host, serial: probe.serial, code: probe.code, seconds: probe.seconds)
             return
         }
+        if let dump = Probe.dumpStatusArguments {
+            Probe.runDumpStatus(output: dump.output, inputs: dump.inputs)
+            return
+        }
         if let probe = Probe.cameraArguments {
             Probe.runCamera(host: probe.host, serial: probe.serial, code: probe.code, seconds: probe.seconds,
                             transport: probe.transport)

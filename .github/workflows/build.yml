@@ -31,3 +31,240 @@ jobs:
             build/Bambu-Bar-*-macos.zip
             build/Bambu-Bar-*-macos.zip.sha256
           if-no-files-found: error
+
+  # The Windows app (docs/windows.md). Core has no Windows APIs, so its tests run on Linux.
+  windows-core:
+    name: Windows Core tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DOTNET_NOLOGO: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: windows/global.json
+      - name: Test
+        run: dotnet test --solution BambuBar.slnx
+
+  # The camera's decoder (ledger D17): the minimal LGPL FFmpeg that windows/ffmpeg/build.sh cross-compiles for both
+  # arches from the source and toolchain pinned in windows/ffmpeg/version.txt (it checks their SHA-256, and that the
+  # DLLs export every function FFmpeg.cs binds). Cached until one of those three files changes.
+  ffmpeg:
+    name: FFmpeg for Windows (minimal, LGPL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/cache@v5
+        id: cache
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-windows-${{ hashFiles('windows/ffmpeg/version.txt', 'windows/ffmpeg/build.sh', 'windows/src/BambuBar.Core/Camera/Decoding/FFmpeg.cs') }}
+      - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: bash windows/ffmpeg/build.sh "$RUNNER_TEMP/ffmpeg-work" build/ffmpeg win-x64 win-arm64
+      - name: List
+        working-directory: build/ffmpeg
+        run: |
+          ls -l ./*/
+          sha256sum ./*/*.dll
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-windows
+          path: build/ffmpeg/
+          if-no-files-found: error
+
+  windows:
+    name: Windows (${{ matrix.rid }})
+    needs: ffmpeg
+    runs-on: windows-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+    env:
+      DOTNET_NOLOGO: 1
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: windows/global.json
+      - name: Check the version matches project.yml
+        run: |
+          $expected = ./tools/version.ps1
+          $built = dotnet msbuild src/BambuBar.Windows/BambuBar.Windows.csproj -getProperty:Version
+          if ($built -ne $expected) { throw "Build version '$built' isn't project.yml's '$expected'" }
+          "Version $built"
+      - uses: actions/download-artifact@v8
+        with:
+          name: ffmpeg-windows
+          path: build/ffmpeg
+      - name: Check the FFmpeg build
+        # Exactly the DLLs windows/ffmpeg/version.txt lists, with FFmpeg's license and the source offer.
+        run: |
+          $pin = @{}
+          Get-Content ffmpeg/version.txt | Where-Object { $_ -match '^([\w-]+)=(.+)$' } | ForEach-Object { $pin[$Matches[1]] = $Matches[2].Trim() }
+          $root = (Resolve-Path '../build/ffmpeg/${{ matrix.rid }}').Path
+          $expected = @($pin['dlls'] -split '\s+') + 'LICENSE.txt', 'SOURCE.txt' | Sort-Object
+          $found = Get-ChildItem $root -File | ForEach-Object Name | Sort-Object
+          if (Compare-Object $expected $found) { throw "FFmpeg for ${{ matrix.rid }} has $($found -join ', '), expected $($expected -join ', ')" }
+          Get-ChildItem $root | Format-Table Name, Length
+          "FFMPEG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Test
+        if: matrix.rid == 'win-x64'
+        # With the pinned FFmpeg, so the decoder tests run on Windows too (they skip without it).
+        run: |
+          $env:BAMBUBAR_FFMPEG = $env:FFMPEG_ROOT
+          dotnet test --solution BambuBar.slnx
+      - name: Publish (self-contained)
+        run: dotnet publish src/BambuBar.Windows -c Release -r ${{ matrix.rid }} -o ../build/windows/${{ matrix.rid }}
+      - name: Bundle FFmpeg into ffmpeg\
+        # The three DLLs the camera loads (avcodec, avutil, swscale), FFmpeg's license and the source offer.
+        run: |
+          $target = '../build/windows/${{ matrix.rid }}/ffmpeg'
+          New-Item -ItemType Directory -Force $target | Out-Null
+          Copy-Item (Join-Path $env:FFMPEG_ROOT '*') $target
+          Get-ChildItem $target | Format-Table Name, Length
+      - name: Bundle Rainmeter into Rainmeter\
+        # The pinned Rainmeter, trimmed to what the skins need (P5.2); x64 only, so the ARM64 app ships it too and runs it
+        # under emulation (D9). The x64 job also saves the matching source zip for the release (GPL-2.0).
+        run: |
+          $source = if ('${{ matrix.rid }}' -eq 'win-x64') { @{ SourceDir = '../build/release' } } else { @{} }
+          ../rainmeter/ci/payload.ps1 -Out ../build/windows/${{ matrix.rid }}/Rainmeter @source
+      - name: Third-party notices
+        run: ./installer/notices.ps1 -App ../build/windows/${{ matrix.rid }}
+      - name: Snapshot the UI (tray glyphs, pages, camera)
+        if: matrix.rid == 'win-x64'
+        # A WinExe: PowerShell wouldn't wait for it on its own. camera.png goes through the bundled FFmpeg; a problem
+        # there (it didn't load or decode) fails the job.
+        run: |
+          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--snapshot', "$PWD/../build/snapshots" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "snapshot exited with $($p.ExitCode)" }
+          Get-ChildItem ../build/snapshots
+          if (Test-Path ../build/snapshots/camera-errors.txt) { Get-Content ../build/snapshots/camera-errors.txt; throw "The camera snapshot failed" }
+          # A scene that threw (panel-errors.txt, window-errors.txt…) is a crash waiting in the real app.
+          $errors = Get-ChildItem ../build/snapshots -Filter '*-errors.txt' | Where-Object Name -ne 'camera-errors.txt'
+          if ($errors) { $errors | ForEach-Object { "== $($_.Name)"; Get-Content $_ -TotalCount 40 }; throw "Snapshot scenes threw: $($errors.Name -join ', ')" }
+      - name: Run the demo and screenshot the desktop
+        if: matrix.rid == 'win-x64'
+        run: |
+          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--demo', 'printing', '--fleet' -PassThru
+          Start-Sleep -Seconds 10
+          if ($p.HasExited) { throw "BambuBar.exe exited early with $($p.ExitCode)" }
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("$PWD/../build/snapshots/desktop-demo.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          Stop-Process $p
+      - name: Build the installer
+        # windows/installer/BambuBar.iss (P5.1) over the install image in build/windows/<rid>/. Inno Setup 6 is on the
+        # runner image; installed with Chocolatey if it ever isn't.
+        run: |
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          $version = ./tools/version.ps1
+          $arch = '${{ matrix.rid }}' -replace '^win-', ''
+          $image = (Resolve-Path '../build/windows/${{ matrix.rid }}').Path
+          $out = (New-Item -ItemType Directory -Force '../build/installer').FullName
+          & $iscc "/DAppVersion=$version" "/DArch=$arch" "/DSourceDir=$image" "/DOutputDir=$out" installer/BambuBar.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+          Get-ChildItem $out -Filter *.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+            "$($_.Name): $([math]::Round($_.Length / 1MB, 1)) MB, $hash"
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Bambu-Bar-windows-installer-${{ matrix.rid }}
+          path: build/installer/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: matrix.rid == 'win-x64'
+        with:
+          name: rainmeter-source
+          path: build/release/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        # Even when a step failed: the errors files and what did render say why.
+        if: always() && matrix.rid == 'win-x64'
+        with:
+          name: Bambu-Bar-windows-snapshots
+          path: build/snapshots/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Bambu-Bar-windows-${{ matrix.rid }}
+          path: build/windows/${{ matrix.rid }}/
+          if-no-files-found: error
+      - name: Accessibility check (UI Automation)
+        id: a11y
+        if: matrix.rid == 'win-x64'
+        timeout-minutes: 12
+        # BambuBar.exe --a11y-check (src/BambuBar.Windows/A11yCheck.cs, P3.12): the panel, its menus, the stop
+        # confirmation and every page of the window over the demo fleet, read through UI Automation and walked with Tab.
+        # Fails on a control without a name, a meaningless or duplicated name, one Tab never reaches, or Esc and Enter
+        # not doing their job; the report (each scene's tree with names, roles and states, and its Tab order) is an
+        # artifact either way.
+        run: |
+          $out = "$PWD/../build/a11y"
+          $p = Start-Process ../build/windows/win-x64/BambuBar.exe -ArgumentList '--a11y-check', $out -PassThru
+          if (-not $p.WaitForExit(600000)) { Stop-Process $p -Force; throw "The accessibility check didn't end within 10 minutes" }
+          if (Test-Path "$out/a11y-problems.txt") { Get-Content "$out/a11y-problems.txt" }
+          if ($p.ExitCode -ne 0) { throw "The accessibility check failed (exit $($p.ExitCode)): see a11y-report.txt in the a11y artifact" }
+      - uses: actions/upload-artifact@v7
+        if: always() && matrix.rid == 'win-x64'
+        with:
+          name: Bambu-Bar-windows-a11y
+          path: build/a11y/
+          if-no-files-found: ignore
+      # Last, so a failing install test never holds back the artifacts above (the installers people test by hand). It
+      # still runs when only the accessibility check failed.
+      - name: Install, snapshot and uninstall (silent)
+        if: ${{ !cancelled() && matrix.rid == 'win-x64' && (success() || steps.a11y.outcome == 'failure') }}
+        run: ./installer/smoke.ps1 -Installer (Get-ChildItem ../build/installer/*.exe)[0].FullName -Out ../build/install-smoke
+      - uses: actions/upload-artifact@v7
+        if: always() && matrix.rid == 'win-x64'
+        with:
+          name: Bambu-Bar-windows-install-smoke
+          path: build/install-smoke/
+          if-no-files-found: ignore
+
+  # The widget skins in the pinned Rainmeter on a real Windows desktop: screenshots and Rainmeter's log as artifacts.
+  widgets:
+    name: Widgets (Rainmeter smoke)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Load the skins and screenshot them
+        shell: pwsh
+        run: ./rainmeter/ci/smoke.ps1 -Out build/widgets
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Bambu-Bar-widgets-smoke
+          path: build/widgets/

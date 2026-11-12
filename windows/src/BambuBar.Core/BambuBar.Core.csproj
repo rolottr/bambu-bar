@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The printer layer and app logic, without Windows APIs: builds and tests on macOS and Linux too. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>BambuBar.Core</RootNamespace>
+    <!-- The FFmpeg bindings (Camera/Decoding) use function pointers and touch a few struct fields. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BambuBar.Core.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Verifies updates' Ed25519 signatures (Updates/UpdateSignature.cs). -->
+    <PackageReference Include="BouncyCastle.Cryptography" />
+  </ItemGroup>
+
+  <!-- The files the Mac app bundles too, copied to Assets\ beside every program that references Core (Assets.cs).
+       The Mac's 3D models (.usdz) stay out; Windows gets its own (.glb, P3.10). -->
+  <ItemGroup>
+    <None Include="$(SharedDir)HMS\*.json.deflate" Link="Assets\HMS\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)Certificates\*.pem" Link="Assets\Certificates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)Printers\*.png;$(SharedDir)Printers\*.json;$(SharedDir)Printers\*.glb" Link="Assets\Printers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)filaments.json" Link="Assets\filaments.json" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(SharedDir)Localizable.xcstrings" Link="Assets\Localizable.xcstrings" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+</Project>

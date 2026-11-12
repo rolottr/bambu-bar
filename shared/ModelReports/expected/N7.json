@@ -1,0 +1,178 @@
+{
+  "activeSpoolID" : 1,
+  "activeSpoolLabel" : "A2",
+  "ams" : [
+    {
+      "dryingMinutesLeft" : 0,
+      "humidity" : 51,
+      "humidityLevel" : 3,
+      "id" : 0,
+      "kind" : "pro2",
+      "spools" : [
+        {
+          "brand" : "SUNLU",
+          "color" : "F330F9FF",
+          "colorName" : null,
+          "colors" : [
+            "F330F9FF"
+          ],
+          "gramsLeft" : null,
+          "id" : 0,
+          "isBambu" : false,
+          "isLoaded" : true,
+          "label" : "A1",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFSNL02",
+          "remain" : null,
+          "slot" : 0,
+          "unit" : 0,
+          "weight" : null
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "61C680FF",
+          "colorName" : "Grass Green",
+          "colors" : [
+            "61C680FF"
+          ],
+          "gramsLeft" : 990,
+          "id" : 1,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A2",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 99,
+          "slot" : 1,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "000000FF",
+          "colorName" : "Charcoal",
+          "colors" : [
+            "000000FF"
+          ],
+          "gramsLeft" : 760,
+          "id" : 2,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A3",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 76,
+          "slot" : 2,
+          "unit" : 0,
+          "weight" : 1000
+        },
+        {
+          "brand" : "Bambu Lab",
+          "color" : "FFFFFFFF",
+          "colorName" : "Ivory White",
+          "colors" : [
+            "FFFFFFFF"
+          ],
+          "gramsLeft" : 480,
+          "id" : 3,
+          "isBambu" : true,
+          "isLoaded" : true,
+          "label" : "A4",
+          "material" : "PLA",
+          "name" : "PLA Matte",
+          "nozzleRange" : [
+            190,
+            230
+          ],
+          "preset" : "GFA01",
+          "remain" : 48,
+          "slot" : 3,
+          "unit" : 0,
+          "weight" : 1000
+        }
+      ],
+      "temperature" : 29.300000000000001,
+      "title" : "AMS 2 Pro A"
+    }
+  ],
+  "auxFan" : 30,
+  "bed" : {
+    "current" : 55,
+    "target" : 55
+  },
+  "canceled" : false,
+  "chamber" : 34,
+  "chamberLightOn" : true,
+  "chamberTarget" : null,
+  "circulationFan" : null,
+  "controlsLocked" : false,
+  "detailText" : "Layer 120 of 240",
+  "doorOpen" : false,
+  "exhaustFan" : 40,
+  "externalSpool" : {
+    "brand" : null,
+    "color" : "00000000",
+    "colorName" : null,
+    "colors" : [
+      "00000000"
+    ],
+    "gramsLeft" : null,
+    "id" : 254,
+    "isBambu" : false,
+    "isLoaded" : false,
+    "label" : "Ext",
+    "material" : "",
+    "name" : "",
+    "nozzleRange" : null,
+    "preset" : null,
+    "remain" : null,
+    "slot" : 0,
+    "unit" : 255,
+    "weight" : null
+  },
+  "firmware" : null,
+  "hasSDCard" : true,
+  "heatbreakFan" : 100,
+  "issues" : [
+
+  ],
+  "jobName" : "Fixture",
+  "layer" : 120,
+  "leftAuxFan" : null,
+  "leftNozzleInUse" : null,
+  "liveViewEnabled" : false,
+  "nozzle" : {
+    "current" : 220,
+    "target" : 220
+  },
+  "nozzleDiameter" : 0.40000000000000002,
+  "nozzleType" : "HS01",
+  "partFan" : 90,
+  "plateIndex" : 1,
+  "progress" : 50,
+  "remainingMinutes" : 60,
+  "secondNozzle" : null,
+  "speed" : 2,
+  "stageID" : 0,
+  "state" : "printing",
+  "stateTitle" : "Printing",
+  "taskID" : "100000",
+  "totalLayers" : 240,
+  "updateAvailable" : false,
+  "wifiSignal" : -70
+}

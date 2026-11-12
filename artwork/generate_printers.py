@@ -14,7 +14,8 @@ visual approximations of Bambu Lab's printer families at their published outer d
     bedSlinger  A1, A2L                    385 x 410 x 445 mm, AMS Lite on top
     mini        A1 mini                    312 x 296 x 365 mm, AMS Lite on top
 
-For every shape it writes, under Resources/Printers:
+For every shape it writes, under shared/Printers:
+    <shape>.glb             the same model for the Windows app (glTF binary, same node names).
     <shape>.usdz            the model for the app's interactive view. Nodes the app drives by name:
                             Part_00…Part_NN (print slices, bottom up), Filament_i / Reel_i (spools), Lamp,
                             Toolhead, BedCarriage (CoreXY: bed and print move down together), Gantry (bed slingers:
@@ -35,7 +36,7 @@ from mathutils import Vector
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent if '__file__' in globals() else Path(globals().get('ROOT_DIR', '.'))
-OUT = ROOT / 'Resources/Printers'
+OUT = ROOT / 'shared/Printers'
 SLICES = 32
 RES = (480, 576)  # 100 x 120 like the vector drawing
 
@@ -822,6 +823,34 @@ def export_usdz(kit, path):
             mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 1
 
 
+def export_glb(kit, path):
+    """The Windows app's model (HelixToolkit, DirectX 11): glTF binary with the same node names as the USDZ. Glass and
+    smoke as alpha-blended opacity, like the USDZ, since the viewer doesn't do transmission."""
+    blending = []
+    for name, opacity in (('Glass', .16), ('Smoke', .55)):
+        mat = kit.mats.get(name)
+        if mat:
+            mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = opacity
+            # glTF's alphaMode comes from how the material blends: Blender 4.2+ names it surface_render_method.
+            attr = 'surface_render_method' if hasattr(mat, 'surface_render_method') else 'blend_method'
+            blending.append((mat, attr, getattr(mat, attr)))
+            setattr(mat, attr, 'BLENDED' if attr == 'surface_render_method' else 'BLEND')
+    for ob in kit.scene.objects:
+        ob.select_set(False)
+    for ob in kit.model.objects:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = kit.model.objects[0]
+    bpy.ops.export_scene.gltf(filepath=str(path), export_format='GLB', use_selection=True, export_apply=True,
+                              export_yup=True, export_cameras=False, export_lights=False, export_animations=False,
+                              export_materials='EXPORT')
+    for mat, attr, value in blending:
+        setattr(mat, attr, value)
+    for name in ('Glass', 'Smoke'):
+        mat = kit.mats.get(name)
+        if mat:
+            mat.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 1
+
+
 SHAPES = ('enclosed', 'wide', 'h3c', 'openFrame', 'bedSlinger', 'mini')
 
 
@@ -850,7 +879,7 @@ def build(shape):
     return kit, m, info
 
 
-def output(kit, m, info, folder, usdz=True, layers=True):
+def output(kit, m, info, folder, usdz=True, layers=True, glb=True):
     folder.mkdir(parents=True, exist_ok=True)
     lo, hi = model_bounds(kit)
     size = max(hi - lo)
@@ -908,6 +937,8 @@ def output(kit, m, info, folder, usdz=True, layers=True):
         (folder / ('%s.json' % shape)).write_text(json.dumps(anchors, indent=1))
     if usdz:
         export_usdz(kit, folder / ('%s.usdz' % shape))
+    if glb:
+        export_glb(kit, folder / ('%s.glb' % shape))
     return anchors
 
 
@@ -915,11 +946,14 @@ def main(args):
     shapes = [a for a in args if a in SHAPES] or list(SHAPES)
     folder = Path(args[args.index('preview') + 1]) if 'preview' in args else OUT
     only_usdz = 'usdz' in args
+    # `glb`: only the Windows models; `noglb`: everything but them.
+    only_glb = 'glb' in args
     for shape in shapes:
         kit, m, info = build(shape)
         if 'build' in args:
             continue
-        output(kit, m, info, folder, usdz='nousdz' not in args, layers=not only_usdz)
+        output(kit, m, info, folder, usdz='nousdz' not in args and not only_glb, layers=not (only_usdz or only_glb),
+               glb='noglb' not in args and not only_usdz)
 
 
 if __name__ == '__main__':

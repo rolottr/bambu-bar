@@ -1,16 +1,16 @@
 #!/bin/zsh
-# Runs the integration tests against the Docker simulators (scripts/integration/compose.yaml): the mock fleet
-# (scripts/fleet, with serials in mixed case) and the mock camera (scripts/camera).
+# Runs the integration tests against the Docker simulators (shared/scripts/integration/compose.yaml): the mock
+# fleet (shared/scripts/fleet, with serials in mixed case) and the mock camera (shared/scripts/camera).
 #   scripts/integration-test.sh                 start the simulators, run every test, stop them
 #   scripts/integration-test.sh --keep          leave the simulators running afterwards
 #   ONLY=CameraIntegrationTests scripts/integration-test.sh
 #                                               one test class (or Class/testMethod)
 # Needs Docker, Xcode and XcodeGen. Loopback ports 322, 6000, 18080 and 18801-18817 must be free (stop
-# scripts/fleet/run.sh first), and UDP 2122.
+# shared/scripts/fleet/run.sh first), and UDP 2122.
 set -euo pipefail
 
 ROOT=${0:A:h:h}
-HERE="$ROOT/scripts/integration"
+HERE="$ROOT/shared/scripts/integration"
 COMPOSE=(docker compose -f "$HERE/compose.yaml")
 cd "$ROOT"
 

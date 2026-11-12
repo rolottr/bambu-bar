@@ -1,0 +1,9 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="#FFFFFF" xmlns="http://www.w3.org/2000/svg">
+<!-- Bambu Bar's own glyph: heated bed. -->
+<g id="s" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round">
+<path d="M4.6 2.2C3.5 3.5 5.7 4.7 4.6 6S5.7 8.5 4.6 9.8"/>
+<path d="M8 2.2C6.9 3.5 9.1 4.7 8 6S9.1 8.5 8 9.8"/>
+<path d="M11.4 2.2C10.3 3.5 12.5 4.7 11.4 6S12.5 8.5 11.4 9.8"/>
+<path d="M2.4 13.2H13.6"/>
+</g>
+</svg>

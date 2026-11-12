@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Bambu Bar</title>
+    <link>https://github.com/rolottr/bambu-bar</link>
+    <item>
+      <title>Bambu Bar 2.1.1</title>
+      <pubDate>Tue, 10 Nov 2026 12:54:06 +0000</pubDate>
+      <sparkle:version>202611101352</sparkle:version>
+      <sparkle:shortVersionString>2.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:fullReleaseNotesLink>https://github.com/rolottr/bambu-bar/releases</sparkle:fullReleaseNotesLink>
+      <description><![CDATA[
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 13px/1.45 -apple-system, sans-serif; margin: 10px 14px; }
+  ul { padding-left: 1.2em; } li { margin: 0.35em 0; }
+  code { font: 12px ui-monospace, monospace; }
+  a { color: #2fae66; }
+</style>
+<p dir="auto">Bambu Bar 2.1.1 speaks your language everywhere.</p>
+<p dir="auto"><strong>Translations</strong></p>
+<ul dir="auto">
+<li>Text added since 1.5.0 now shows in your language instead of English: the camera settings and messages, the supporter license screen, update messages, and the setup and privacy texts.</li>
+<li>Every translation in all 17 languages was reviewed, so wording is clearer and more consistent: printer stages, fan names, chamber and bed terms, and macOS's own names for Settings, Keychain and widgets.</li>
+<li>In German, Swedish, Japanese, Korean and Chinese, the <strong>Printers</strong> page has its own name in the sidebar, so it no longer reads the same as the <strong>Printer</strong> page.</li>
+</ul>
+<p dir="auto"><strong>Other changes</strong></p>
+<ul dir="auto">
+<li>The license screen's link to your purchase account is now called <strong>Manage Purchase</strong>: the supporter license is a one-time purchase, not a subscription.</li>
+</ul>
+<p dir="auto">Universal build for Apple silicon and Intel Macs, Developer ID signed and notarized by Apple. Requires macOS 26 or later.</p>
+      ]]></description>
+      <enclosure url="https://github.com/rolottr/bambu-bar/releases/download/v2.1.1/Bambu-Bar-2.1.1-macos.zip" type="application/octet-stream" sparkle:edSignature="/qJmg7Xjir59NXPuXVeb2ivHil0VNThHy88xSwqvf7ooLYA0vmpzT0vv3TgOR4Np9jsSC2a9eKlxVc3jsiiLBw==" length="25416645" />
+    </item>
+  </channel>
+</rss>

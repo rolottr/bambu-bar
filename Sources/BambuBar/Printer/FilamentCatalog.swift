@@ -1,7 +1,7 @@
 import Foundation
 
 /// Bambu Studio's filament presets and Bambu Lab colour names, so a slot reads "SUNLU PLA Matte" or "Grass Green"
-/// rather than a preset id or a hex code. Generated from Bambu Studio's profiles by scripts/make-filaments.py.
+/// rather than a preset id or a hex code. Generated from Bambu Studio's profiles by shared/scripts/make-filaments.py.
 enum FilamentCatalog {
     private struct Tables: Decodable {
         var presets: [String: [String]] = [:]

@@ -1,0 +1,5 @@
+# The Rainmeter we bundle, unmodified (ledger D4, P5.2). CI downloads exactly this file and checks its hash.
+version=5.0.0.5293
+url=https://github.com/rainmeter/rainmeter/releases/download/v5.0.0.5293/Rainmeter-5.0.0.5293-RC1.exe
+sha256=8d938e7b9c1376914895ce3fa34fc48e41b920c92f1b6ca3797d83553af8baee
+source=https://github.com/rainmeter/rainmeter/archive/refs/tags/v5.0.0.5293.zip
