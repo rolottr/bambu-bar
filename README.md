@@ -14,7 +14,7 @@ Bambu Bar is a native macOS app that shows your 3D printer's progress, temperatu
 
 Built with Swift and SwiftUI. Printer data stays local, with no app analytics. The GitHub build is free to use. Optional supporter licenses enable automatic updates; the Mac App Store edition is independent.
 
-**Linux (GNOME) development port:** native GTK 4/libadwaita, packaged as a local Flatpak. See [Linux build and validation notes](docs/linux.md). No Linux release has been published yet.
+**Linux:** native GTK 4/libadwaita for GNOME, KDE Plasma and Omarchy/Hyprland. Linux Flatpak packages and optional desktop companions will be offered on GitHub releases. See the [Linux installation guide](LINUX.md) for supported versions and setup.
 
 **Now on Windows too:** the same app lives in the notification area on Windows 10 and 11. See [Windows](#windows).
 
@@ -78,9 +78,38 @@ Closing the window keeps Bambu Bar running in the menu bar without a Dock icon. 
 
 Building the Windows app is described in [docs/windows.md](docs/windows.md).
 
+### Linux
+
+Linux releases use the same **Flatpak** on each distribution, plus optional desktop companions. Install Flatpak first:
+
+| Distribution | Install Flatpak |
+| --- | --- |
+| Ubuntu / Kubuntu / Debian / Mint / Pop!_OS | `sudo apt install flatpak` |
+| Fedora Workstation / Silverblue / Kinoite | Already included; other conventional Fedora installs: `sudo dnf install flatpak`. |
+| Arch / Manjaro / EndeavourOS / Omarchy | `sudo pacman -S --needed flatpak` |
+| openSUSE | `sudo zypper install flatpak` |
+
+Then download `Bambu-Bar-<version>-linux-x64.flatpak` from a [GitHub release](https://github.com/rolottr/bambu-bar/releases) that includes Linux assets. In the download directory:
+
+```sh
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --user flathub org.gnome.Platform//50
+version=2.2.1 # Replace with your downloaded release's version.
+flatpak install --user "./Bambu-Bar-$version-linux-x64.flatpak"
+flatpak run dev.rolottr.BambuBar
+```
+
+Sign out/in after first installing Flatpak so launchers and tray icons are discovered. No .NET SDK is needed to run the package. Until Linux assets are published, [build locally](docs/linux.md#build-locally-on-linux).
+
+- **GNOME 50:** optional Shell extension for the top-bar popup and desktop widgets.
+- **KDE Plasma 6.6+:** standard tray/anchored Quick view, plus optional native Plasma widgets.
+- **Omarchy 4.5 / Hyprland 0.56:** live active-theme colors, tray and Quick view through an optional host helper; desktop widgets are not supported.
+
+The [Linux guide](LINUX.md) covers checksums, companion installation, themes, startup, updates and removal. Tested hosts are Ubuntu GNOME, Ubuntu KDE and Omarchy on x86_64 Wayland; the other distribution commands describe Flatpak setup, not additional VM validation. ARM64 is not yet validated.
+
 ### About downloaded builds
 
-Direct distribution builds are **universal, Developer ID signed and notarized by Apple**, so they open normally after you download them. Builds you make yourself without a Developer ID certificate, and the artifacts of the [Actions](https://github.com/rolottr/bambu-bar/actions/workflows/build.yml) workflow, are ad-hoc signed: they run on the Mac that built them, but the desktop widget only loads in a Developer ID signed copy.
+Direct macOS distribution builds are **universal, Developer ID signed and notarized by Apple**, so they open normally after you download them. Builds you make yourself without a Developer ID certificate, and the artifacts of the [Actions](https://github.com/rolottr/bambu-bar/actions/workflows/build.yml) workflow, are ad-hoc signed: they run on the Mac that built them, but the desktop widget only loads in a Developer ID signed copy.
 
 ### Controlling prints
 

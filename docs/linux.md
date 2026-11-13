@@ -4,10 +4,12 @@ The Linux port lives in `linux/`. It uses GTK 4/libadwaita through GirCore and t
 
 ## Install
 
-The first port is a **local development build**, not a published release. On a GNOME or KDE Plasma desktop with Flatpak and Flathub configured:
+For release downloads and distribution-specific installation, see [LINUX.md](../LINUX.md). This page records developer setup and historical validation; earlier sections describe the revision tested at that time.
+
+The initial validation used local development builds. The consolidated branch produces GitHub-ready Flatpak and companion assets, but does not publish them. On a GNOME, KDE Plasma or Omarchy desktop with Flatpak and Flathub configured:
 
 ```sh
-flatpak install --user ./Bambu-Bar-2.2.0-linux-x64.flatpak
+flatpak install --user ./Bambu-Bar-2.2.1-linux-x64.flatpak
 flatpak run dev.rolottr.BambuBar
 ```
 
@@ -64,7 +66,7 @@ flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50
 linux/scripts/build.sh
 ```
 
-`DOTNET=/path/to/dotnet` selects an SDK outside PATH. The script publishes a self-contained x64 or ARM64 app, builds the pinned minimal LGPL FFmpeg shared libraries, copies notices, and creates a local Flatpak bundle under `build/linux/`. x86_64 was built and run; ARM64 is available in the recipe but not validated on hardware. The FFmpeg version/source/hash are shared with Windows; its Linux build uses pthreads and no Windows toolchain. It is compiled inside the GNOME SDK so host glibc changes cannot break the Flatpak camera. No web view or browser engine is embedded.
+`DOTNET=/path/to/dotnet` selects an SDK outside PATH. The script publishes a self-contained x64 or ARM64 app, builds the pinned minimal LGPL FFmpeg shared libraries, copies notices, and creates a local Flatpak bundle under `build/linux/`. Every build also packages all three desktop companions and stages the complete release set, checksums and source identity under `build/linux/release/<rid>/`. x86_64 was built and run; ARM64 is available in the recipe but not validated on hardware. The FFmpeg version/source/hash are shared with Windows; its Linux build uses pthreads and no Windows toolchain. It is compiled inside the GNOME SDK so host glibc changes cannot break the Flatpak camera. No web view or browser engine is embedded.
 
 The Flatpak grants network access for the printers, Wayland/fallback X11, GPU rendering, a Secret Service fallback and optional StatusNotifier watcher access. It can read the native slicers' two config directories; other files use the file chooser portal. It has no general home-directory access. The GNOME runtime supplies `secret-tool`, GTK and libadwaita. Native development can be installed with `linux/scripts/install.sh <publish-folder>`; installation switches an immutable build directory atomically.
 
@@ -258,7 +260,7 @@ hyprctl reload
 flatpak run dev.rolottr.BambuBar --version
 ```
 
-If Flatpak was just installed, sign out/in once so the bar inherits Flatpak's exported icon/desktop search paths from `/etc/profile.d/flatpak.sh`. No copied icons or temporary user icon overrides are required. Packaging works on Arch: native codecs/layer-shell are compiled in GNOME SDK 50, Plasma's optional archive uses Python, and GNOME extension packaging is conditional on its packaging tool being available.
+If Flatpak was just installed, sign out/in once so the bar inherits Flatpak's exported icon/desktop search paths from `/etc/profile.d/flatpak.sh`. No copied icons or temporary user icon overrides are required. Packaging works on Arch: native codecs/layer-shell are compiled in GNOME SDK 50, Plasma's optional archive uses Python, and GNOME extension packaging uses Python and works without GNOME tools on the build host.
 
 **Theme:** the installed Omarchy stages the current theme under `~/.local/state/omarchy/current/theme`, replacing the theme directory atomically. The legacy `~/.config/omarchy/current/theme` is also recognized if accessible. The app reads bounded, validated scalar colors from `colors.toml` and the optional `shell.toml`, never theme CSS/Lua or executable content. It uses actual background, foreground, accent, selection, border and surface colors; secondary/status text is contrast-adjusted. The GTK desktop font family remains in effect; square, shadow-free application chrome follows the tested Omarchy defaults. Filament colors retain their physical meaning. This is palette integration, not an interpreter for arbitrary shell layout or Hyprland Lua customization.
 

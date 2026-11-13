@@ -54,6 +54,22 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
      `appstore/listing.md` (not in git).
 4. Add a line to the log below.
 
+## Linux release assets
+
+Linux is distributed as a downloadable Flatpak, with optional companions for GNOME, Plasma and Hyprland. These assets are attached to the same versioned GitHub release; they do not add a Linux item to the Mac/Windows Sparkle appcast. Linux updates are manual downloads. User instructions are in [LINUX.md](../LINUX.md).
+
+On a Linux x86_64 builder with .NET 10, the dependencies in [linux.md](linux.md#build-locally-on-linux), and GNOME Platform/SDK 50:
+
+```sh
+BAMBUBAR_COMMIT=$(git rev-parse HEAD) linux/scripts/build.sh
+cd build/linux/release/linux-x64
+sha256sum -c SHA256SUMS-linux.txt
+```
+
+The build generates the Flatpak, GNOME extension, Plasma widget and standalone Hyprland helper archive on every builder, without requiring GNOME or Plasma packaging tools. `SOURCE-linux.txt` records the full source commit, version and runtime. The Flatpak contains FFmpeg/layer-shell licenses and source notices. Upload the complete contents of this release directory when publishing: `Bambu-Bar-<version>-linux-x64.flatpak`, `bambu-bar@rolottr.dev.shell-extension.zip`, `Bambu-Bar.plasmoid`, `Bambu-Bar-hyprland.tar.gz`, `SHA256SUMS-linux.txt` and `SOURCE-linux.txt`.
+
+Before publication, build the tagged source on the GNOME, KDE and Omarchy hosts; run portable-core, tray, GNOME widget and relevant helper/theme checks; verify version identity and install/run the resulting packages. Desktop companion versions must match the app's release. Build and packaging scripts only write local artifacts: they never push, create a GitHub release or upload files. The existing CI workflow does not yet produce these Linux assets; use the validated Linux builders. ARM64 is supported by the build recipe but must not be advertised or attached as tested until built and run on ARM64 hardware. Separate deb/rpm/AppImage packages are not part of this release format.
+
 ## Release log
 
 | Version | Channel | Build | Commit | Date | Status |

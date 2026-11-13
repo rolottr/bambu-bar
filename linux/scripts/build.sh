@@ -18,5 +18,7 @@ cp "$repo/LICENSE" "$out/BAMBU-BAR-LICENSE.txt"
 cp "$repo/linux/packaging/THIRD-PARTY-NOTICES.txt" "$out/THIRD-PARTY-NOTICES.txt"
 version="$("$out/bambu-bar" --version | awk '{print $3}')"
 ./scripts/package-flatpak.sh "$out" "$repo/build/linux/Bambu-Bar-$version-$rid.flatpak"
-if command -v gnome-extensions >/dev/null; then ./scripts/package-gnome-extension.sh; fi
+./scripts/package-gnome-extension.sh
 ./scripts/package-plasma-widget.sh
+./scripts/package-hyprland-integration.sh
+./scripts/package-release.sh "$rid" "$version" "$revision"
