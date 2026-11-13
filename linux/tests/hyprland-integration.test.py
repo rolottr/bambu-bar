@@ -29,6 +29,12 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(json.loads(bridge.anchor())['x'], 620)
             self.assertEqual(json.loads(bridge.anchor())['height'], 1280)
 
+    def test_reject_untrusted_popup_identity_and_dimensions(self):
+        popup = bridge.Popup()
+        for token, width, height in [('";os.execute()', 420, 300), ('a' * 32, 900, 300), ('a' * 32, 420, 0)]:
+            with self.assertRaises(ValueError):
+                popup.show(None, None, token, width, height, True, None)
+
     def test_autostart_and_preserve_unmanaged_file(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, XDG_CONFIG_HOME=folder):
             file = Path(folder) / 'autostart/dev.rolottr.BambuBar.desktop'

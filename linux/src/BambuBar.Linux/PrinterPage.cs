@@ -182,6 +182,7 @@ internal sealed partial class Shell
     }
     private void ShowPanel() => ShowPanelAt(-1, -1);
     private bool _positioningPanel;
+    private bool _panelFromTray;
     private async void ShowPanelAt(int x, int y)
     {
         if (_disposed || _positioningPanel) return;
@@ -191,7 +192,7 @@ internal sealed partial class Shell
         try
         {
             if (_trayPlacement is not null) _trayPlacement.Position(x, y);
-            if (_hyprlandPopup is not null && await HyprlandAnchor.Read() is { } anchor)
+            if (_hyprlandPopup is not null && await _hyprlandPopup.Prepare() is { } anchor)
                 _hyprlandAvailableHeight = Math.Max(100, anchor.Height - 70);
         }
         finally { _positioningPanel = false; }
@@ -204,7 +205,10 @@ internal sealed partial class Shell
         if (_hyprlandPopup is not null)
         {
             _panel.GetDefaultSize(out _, out var popupHeight);
-            var positioned = await _hyprlandPopup.Show(420, popupHeight, (x, y) != (-1, -1));
+            _panelFromTray = (x, y) != (-1, -1);
+            var positioned = await _hyprlandPopup.Show(420, popupHeight, _panelFromTray);
+            _panel.GetDefaultSize(out _, out var latestHeight);
+            if (positioned && latestHeight != popupHeight) positioned = await _hyprlandPopup.Show(420, latestHeight, _panelFromTray);
             _positioningPanel = false;
             if (_disposed) return;
             if (!positioned)
@@ -222,6 +226,16 @@ internal sealed partial class Shell
             clock.OnAfterPaint += painted;
         }
         Refresh();
+    }
+    private async void ResizeHyprlandPanel()
+    {
+        _positioningPanel = true;
+        try
+        {
+            _panel!.GetDefaultSize(out _, out var height);
+            if (!await _hyprlandPopup!.Show(420, height, _panelFromTray)) _panel.SetVisible(false);
+        }
+        finally { _positioningPanel = false; }
     }
     private void BuildPanel()
     {
@@ -253,6 +267,7 @@ internal sealed partial class Shell
         scroll.SetMaxContentHeight(availableHeight); scroll.SetChild(root); _panel.SetContent(scroll);
         root.Measure(Gtk.Orientation.Vertical, 420, out _, out var naturalHeight, out _, out _);
         _panel.SetDefaultSize(420, Math.Min(naturalHeight, availableHeight));
+        if (_hyprlandPopup is not null && _panel.GetVisible() && !_positioningPanel) ResizeHyprlandPanel();
         Platform.Trace($"panel natural={naturalHeight}, available={availableHeight}");
     }
 }

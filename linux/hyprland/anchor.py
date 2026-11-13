@@ -14,6 +14,8 @@ from gi.repository import Gio, GLib
 NAME = 'dev.rolottr.BambuBar.Hyprland'
 XML = f'''<node><interface name="{NAME}"><method name="GetAnchor">
 <arg type="s" name="geometry" direction="out"/></method>
+<method name="PreparePopup"><arg type="s" name="token" direction="in"/>
+<arg type="s" name="geometry" direction="out"/></method>
 <method name="SetAutostart"><arg type="b" name="enabled" direction="in"/>
 <arg type="b" name="accepted" direction="out"/></method>
 <method name="ShowPopup"><arg type="s" name="token" direction="in"/>
@@ -91,6 +93,7 @@ class Popup:
         self.token = None
         self.owner = None
         self.generation = 0
+        self.prepared = None
         self.events = None
         self.event_watch = None
 
@@ -121,7 +124,13 @@ class Popup:
         self.clear()
         self.token, self.owner = token, sender
         generation = self.generation
-        geometry = json.loads(anchor())
+        def monitor_layout():
+            return [(m['name'], m['x'], m['y'], m['width'], m['height'], m['scale'], m.get('transform', 0))
+                    for m in query('monitors')]
+        layout = monitor_layout()
+        if self.prepared is None or self.prepared[:2] != (sender, token):
+            raise ValueError('Popup was not prepared')
+        geometry = json.loads(self.prepared[2])
         px = geometry['x'] if from_tray else geometry['width'] - 32
         py = geometry['y'] if from_tray else 13
         distances = [px, geometry['width'] - px, py, geometry['height'] - py]
@@ -208,15 +217,26 @@ class Popup:
                         dismiss()
                         return False
                     try:
-                        pending += self.events.recv(65536)
+                        data = self.events.recv(65536)
+                        if not data:
+                            self.event_watch = None
+                            dismiss()
+                            return False
+                        pending += data
                     except BlockingIOError:
                         return True
                     lines = pending.split(b'\n')
                     pending = lines.pop()
                     for line in lines:
                         name, _, value = line.partition(b'>>')
-                        lost_focus = name == b'activewindowv2' and value.decode() != address.removeprefix('0x')
-                        if lost_focus or name in (b'monitorremoved', b'monitoradded', b'configreloaded'):
+                        lost_focus = name == b'activewindowv2' and value.decode().removeprefix('0x') != address.removeprefix('0x')
+                        geometry_changed = name in (b'monitorremoved', b'monitoradded')
+                        if name == b'configreloaded':
+                            try:
+                                geometry_changed = monitor_layout() != layout
+                            except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+                                geometry_changed = True
+                        if lost_focus or geometry_changed:
                             self.event_watch = None
                             dismiss()
                             return False
@@ -238,6 +258,13 @@ def method(connection, sender, path, interface, name, parameters, invocation):
     try:
         if name == 'GetAnchor':
             invocation.return_value(GLib.Variant('(s)', (anchor(),)))
+        elif name == 'PreparePopup':
+            token = parameters.unpack()[0]
+            if not re.fullmatch('[a-f0-9]{32}', token):
+                raise ValueError('Invalid popup identity')
+            geometry = anchor()
+            popup.prepared = (sender, token, geometry)
+            invocation.return_value(GLib.Variant('(s)', (geometry,)))
         elif name == 'SetAutostart':
             invocation.return_value(GLib.Variant('(b)', (set_autostart(parameters.unpack()[0]),)))
         elif name == 'ShowPopup':

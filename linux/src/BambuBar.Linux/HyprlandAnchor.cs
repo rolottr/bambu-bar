@@ -6,6 +6,7 @@ namespace BambuBar.Linux;
 public interface IHyprlandAnchor : IDBusObject
 {
     Task<string> GetAnchorAsync();
+    Task<string> PreparePopupAsync(string token);
     Task<bool> SetAutostartAsync(bool enabled);
     Task<bool> ShowPopupAsync(string token, int width, int height, bool fromTray);
     Task HidePopupAsync(string token);

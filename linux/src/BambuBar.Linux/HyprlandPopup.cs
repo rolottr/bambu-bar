@@ -11,7 +11,7 @@ internal sealed class HyprlandPopup(Action dismiss) : IDisposable
     private IHyprlandAnchor? _proxy;
     private bool _disposed;
     internal string Token { get; } = Guid.NewGuid().ToString("N");
-    public async Task<bool> Show(int width, int height, bool fromTray)
+    public async Task<HyprlandAnchor?> Prepare()
     {
         try
         {
@@ -24,8 +24,14 @@ internal sealed class HyprlandPopup(Action dismiss) : IDisposable
                     if (token == Token) _context?.Post(_ => { if (!_disposed) dismiss(); }, null);
                 });
             }
-            return await _proxy.ShowPopupAsync(Token, width, height, fromTray).WaitAsync(TimeSpan.FromSeconds(5));
+            var json = await _proxy.PreparePopupAsync(Token).WaitAsync(TimeSpan.FromSeconds(2));
+            return System.Text.Json.JsonSerializer.Deserialize<HyprlandAnchor>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
+        catch (Exception) { return null; }
+    }
+    public async Task<bool> Show(int width, int height, bool fromTray)
+    {
+        try { return _proxy is not null && await _proxy.ShowPopupAsync(Token, width, height, fromTray).WaitAsync(TimeSpan.FromSeconds(5)); }
         catch (Exception) { return false; }
     }
     public async Task Hide()
