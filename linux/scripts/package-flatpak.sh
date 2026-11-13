@@ -29,6 +29,8 @@ filesystems=xdg-config/BambuStudio:ro;xdg-config/OrcaSlicer:ro;
 [Session Bus Policy]
 org.freedesktop.secrets=talk
 org.kde.StatusNotifierWatcher=talk
+dev.rolottr.BambuBar.Shell=talk
+dev.rolottr.BambuBar.Desktop=own
 META
 flatpak build-finish "$stage"
 flatpak build-export "$work/repo" "$stage" linux-local

@@ -193,6 +193,7 @@ internal sealed partial class Shell
     }
     private void BuildPanel()
     {
+        _desktop?.Queue();
         if (_panel is null) return;
         _panelUpdates.Clear();
         var root = Column(12); root.SetMarginTop(12); root.SetMarginBottom(14); root.SetMarginStart(14); root.SetMarginEnd(14);

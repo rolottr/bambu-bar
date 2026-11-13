@@ -13,6 +13,18 @@ flatpak run dev.rolottr.BambuBar
 
 Find **Bambu Bar** in the app launcher. Closing the window continues monitoring. Open it again from the launcher, the optional tray icon, or a notification. The tray menu and the launcher offer **Quick view** and **Quit**. `Ctrl+Q` quits completely.
 
+For the native GNOME top-bar popup, also install the companion bundle:
+
+```sh
+gnome-extensions install --force ./bambu-bar@rolottr.dev.shell-extension.zip
+# Sign out and back in after the first installation or an update.
+gnome-extensions enable bambu-bar@rolottr.dev
+```
+
+From a source checkout, `linux/scripts/install-gnome-extension.sh` packages, installs and enables it for the next session. GNOME 50 is validated. Clicking its Bambu Bar icon opens live status, cached printer artwork, progress, temperatures, filament, a printer selector when needed, refresh/settings, camera/light, and state-appropriate print controls. The app still checks capabilities and Developer Mode before executing commands; stop confirmation stays in the app. The extension follows the app's Quick view content preferences and translations.
+
+The extension is an optional integration installed outside the sandbox. The app remains usable through its launcher and standard tray without it. While the native panel is enabled, the generic tray item is passive so there is one Bambu Bar icon. Disabling the extension restores the generic tray. The three-item generic tray menu is a fallback, not the GNOME popup.
+
 ```sh
 flatpak run dev.rolottr.BambuBar --panel
 flatpak run dev.rolottr.BambuBar --quit
@@ -34,9 +46,11 @@ Updates belong to the package channel; this port does not change the Mac/Windows
 
 ## Deliberate desktop differences
 
-One GTK build serves all three desktops. It probes services instead of branching on `XDG_CURRENT_DESKTOP`. **Only GNOME is validated in this port.** KDE Plasma and Omarchy still need their own application integration/look rounds; their VM displays were set to 1920×1080 as requested.
+One GTK build serves all three desktops, with a companion Shell extension for GNOME's rich panel popup. It probes services instead of branching on `XDG_CURRENT_DESKTOP`. **Only GNOME is validated in this port.** KDE Plasma and Omarchy still need their own application integration/look rounds; their VM displays were set to 1920×1080 as requested.
 
-GNOME has no standard desktop-widget host or Wayland API for forced window placement/always-on-top. There are no fake widget controls, required Shell extensions, forced top-bar text, absolute panel coordinates or always-on-top switches. Quick view is a small, scrollable window. Plasma widgets and Hyprland layer-shell integration are separate follow-up work. The status tray is optional, including on GNOME without AppIndicator.
+GNOME has no standard desktop-widget host or Wayland API for forced window placement/always-on-top. There are no fake widget controls, absolute panel coordinates or always-on-top switches. The companion uses Shell's own panel/menu layout, with a scrolling body on smaller logical displays. Standalone Quick view is also available as a small, scrollable GTK window. Plasma widgets and Hyprland layer-shell integration are separate follow-up work. The app does not require AppIndicator.
+
+The native Shell integration receives a small versioned JSON snapshot and sends explicit actions over a dedicated session D-Bus interface. It never receives access codes or video frames. Updates are coalesced, identical snapshots are suppressed, the closed popup does not rebuild its contents, and printer artwork is generated off GTK's thread only when the popup is open and its scene changes. There is no polling timer in the extension. This uses the documented [GNOME popup components](https://gjs.guide/extensions/topics/popup-menu.html) and [GJS D-Bus proxy API](https://gjs.guide/guides/gio/dbus.html).
 
 ## Build locally on Linux
 

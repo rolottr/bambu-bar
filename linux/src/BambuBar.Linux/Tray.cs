@@ -46,6 +46,8 @@ internal sealed class Tray : IStatusItem, IDisposable
     private readonly Action _panel, _show, _quit;
     private readonly Menu _menu;
     private IDisposable? _watcher;
+    private IDisposable? _shellWatcher;
+    private bool _nativePanel;
     private bool _disposed;
     private readonly Signal _icon = new(), _title = new(), _tooltip = new();
     private readonly Signal<string> _status = new();
@@ -63,6 +65,11 @@ internal sealed class Tray : IStatusItem, IDisposable
         await _connection.ConnectAsync();
         await _connection.RegisterObjectAsync(this);
         await _connection.RegisterObjectAsync(_menu);
+        _shellWatcher = await _connection.ResolveServiceOwnerAsync(DesktopPanel.ShellName, owner =>
+        {
+            _nativePanel = !string.IsNullOrEmpty(owner.NewOwner);
+            _status.Emit(Status);
+        }, _ => { _nativePanel = false; _status.Emit(Status); });
         _watcher = await _connection.ResolveServiceOwnerAsync("org.kde.StatusNotifierWatcher", owner =>
         {
             Available = !string.IsNullOrEmpty(owner.NewOwner);
@@ -81,7 +88,7 @@ internal sealed class Tray : IStatusItem, IDisposable
         if (_last == Title || _disposed) return; _last = Title;
         _title.Emit(); _icon.Emit(); _tooltip.Emit(); _status.Emit(Status);
     }
-    private string Status => _store.MenuBarSession?.Status?.State is BambuBar.Core.Model.JobState.Paused or BambuBar.Core.Model.JobState.Failed ? "NeedsAttention" : "Active";
+    private string Status => _nativePanel ? "Passive" : _store.MenuBarSession?.Status?.State is BambuBar.Core.Model.JobState.Paused or BambuBar.Core.Model.JobState.Failed ? "NeedsAttention" : "Active";
     private IDictionary<string, object> Properties => new Dictionary<string, object>
     {
         ["Category"] = "Hardware",
@@ -113,7 +120,7 @@ internal sealed class Tray : IStatusItem, IDisposable
     public Task<IDisposable> WatchNewTitleAsync(Action handler) => Task.FromResult(_title.Watch(handler));
     public Task<IDisposable> WatchNewToolTipAsync(Action handler) => Task.FromResult(_tooltip.Watch(handler));
     public Task<IDisposable> WatchNewStatusAsync(Action<string> handler) => Task.FromResult(_status.Watch(handler));
-    public void Dispose() { _disposed = true; _store.PropertyChanged -= Changed; _watcher?.Dispose(); _connection.Dispose(); }
+    public void Dispose() { _disposed = true; _store.PropertyChanged -= Changed; _watcher?.Dispose(); _shellWatcher?.Dispose(); _connection.Dispose(); }
 
     private sealed class Menu(Action panel, Action show, Action quit) : ITrayMenu
     {

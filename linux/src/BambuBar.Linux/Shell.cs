@@ -30,6 +30,7 @@ internal sealed partial class Shell : IDisposable
     private string _page = "Printer";
     private bool _queued, _ready, _disposed;
     private Tray? _tray;
+    private DesktopPanel? _desktop;
     private Adw.ApplicationWindow? _panel;
     private readonly List<Action> _panelUpdates = [];
 
@@ -101,7 +102,30 @@ internal sealed partial class Shell : IDisposable
     private void HideMain() { _window.SetVisible(false); }
     public void Present() { Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
     public void ShowQuickView() => ShowPanel();
-    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); PreparePanel(); _tray = new Tray(_store, ShowPanel, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); PreparePanel(); if (!_ephemeral) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _ = StartDesktop(); } _tray = new Tray(_store, ShowPanel, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    private async Task StartDesktop() { try { await _desktop!.Start(); } catch (Exception) { Platform.Log("Native desktop panel unavailable; standard tray remains available."); } }
+    private void DesktopAction(string action, PrinterSession? session)
+    {
+        switch (action)
+        {
+            case "select": break;
+            case "show": Navigate("Printer"); Present(); break;
+            case "settings": Navigate("Settings"); Present(); break;
+            case "filament": Navigate("Filament"); Present(); break;
+            case "fleet": Navigate("All Printers"); Present(); break;
+            case "quit": _app.Quit(); break;
+            case "refresh": session?.Refresh(); break;
+            case "camera" when session?.ShowsCamera == true && session.IsOnline: OpenCamera(session); break;
+            case "light" when session?.IsOnline == true && (session.Config.Model?.HasChamberLight == true || session.Status?.ChamberLightOn is not null): session.ToggleLight(); break;
+            case "pause" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false, State: JobState.Printing }: session.Pause(); break;
+            case "resume" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false, State: JobState.Paused }: session.Resume(); break;
+            case var speed when speed.StartsWith("speed:", StringComparison.Ordinal) && int.TryParse(speed[6..], out var raw) && Enum.IsDefined(typeof(SpeedLevel), raw) && _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false }: session.SetSpeed((SpeedLevel)raw); break;
+            case "stop" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false } s && s.State.IsActive():
+                if (_store.ConfirmStop) { Present(); Confirm(Loc.T("Stop this print?"), s.JobName, Loc.T("Stop"), session.StopPrint); }
+                else session.StopPrint();
+                break;
+        }
+    }
     private async Task RequestBackground()
     {
         try { if (await _background.Request(false, permissionOnly: true)) await _background.Status(Loc.T("Printers")); }
@@ -202,6 +226,6 @@ internal sealed partial class Shell : IDisposable
         if (_disposed) return; Platform.Trace("shell dispose"); _disposed = true;
         foreach (var clean in _cleanup) clean();
         foreach (var camera in _cameraWindows.Values.ToArray()) { camera.Surface.Dispose(); camera.Window.Destroy(); }
-        _background.Dispose(); _license.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
+        _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
     }
 }
