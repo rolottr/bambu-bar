@@ -99,7 +99,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         var controls = online && status?.ControlsLocked == false && _store.ShowPrinterActions;
         var tray = _store.MenuBarSession;
         if (_open && session is not null) RenderArt(session);
-        var labelKeys = new[] { "Bambu Bar", "No printer set up", "Connected", "Printer", "Settings", "Refresh", "Open Bambu Bar", "Quit", "Camera", "Filament", "All Printers", "Nozzle", "Right", "Left", "Bed", "Chamber", "Fans", "Part cooling", "Auxiliary", "Light", "Turn light on", "Turn light off", "Pause", "Resume", "Stop", "Speed", "Enable Developer Mode on the printer to use controls", "Add Printer…", "Not connected" };
+        var labelKeys = new[] { "Bambu Bar", "No printer set up", "Connected", "Printer", "Settings", "Refresh", "Open Bambu Bar", "Quit", "Camera", "Filament", "All Printers", "Nozzle", "Right", "Left", "Bed", "Chamber", "Fans", "Part cooling", "Auxiliary", "Light", "Turn light on", "Turn light off", "Pause", "Resume", "Stop", "Speed", "Enable Developer Mode on the printer to use controls", "Add Printer…", "Not connected", "Needs attention", "layers", "Support this project", "Manage License…", "Wiki", "Copy code", "Dismiss" };
         var payload = new
         {
             version = 1,
@@ -110,12 +110,19 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
             printer = session is null ? null : new
             {
                 id = session.Id, name = session.Config.Name, model = session.Config.ModelName,
-                online, link = session.LinkSummary, state = session.ShortState,
+                online, link = online && status?.WifiSignal is { } wifi ? Loc.T(wifi >= -55 ? "Wi-Fi excellent" : wifi >= -67 ? "Wi-Fi good" : wifi >= -75 ? "Wi-Fi fair" : "Wi-Fi weak") : session.LinkSummary, state = session.ShortState,
                 kind = online ? status?.State.ToString().ToLowerInvariant() ?? "idle" : "offline",
                 job = status?.JobName is { Length: > 0 } job ? job : online ? Loc.T("Ready to print") : session.LinkSummary,
                 progress = status?.Progress ?? 0,
+                stage = status?.State == JobState.Failed ? status.TotalLayers > 0 ? Loc.F("Stopped at layer %lld of %lld", status.Layer, status.TotalLayers) : Loc.T("Stopped") : status?.DetailText ?? "",
+                layer = status?.Layer ?? 0, totalLayers = status?.TotalLayers ?? 0,
                 detail = status?.State.IsActive() == true ? Format.Duration(status.RemainingMinutes) + " " + Loc.T("left") : status is { TotalLayers: > 0 } ? Loc.F("Layer %lld of %lld", status.Layer, status.TotalLayers) : session.LinkSummary,
                 issue = status?.MostSevereIssue?.Message ?? "",
+                issueId = status?.MostSevereIssue?.Id ?? "",
+                issueSeverity = (int?)status?.MostSevereIssue?.Severity,
+                issueWiki = status?.MostSevereIssue?.WikiUrl?.ToString() ?? "",
+                ams = !_settings.Get(AppSettings.Keys.PanelFilament, true) ? [] : status?.Ams.Select(a => new { title = a.Title, humidity = a.Humidity, temperature = a.Temperature, spools = a.Spools.Select(SpoolState).ToArray() }).ToArray(),
+                external = _settings.Get(AppSettings.Keys.PanelFilament, true) && status?.ExternalSpool is { IsLoaded: true } ext ? SpoolState(ext) : null,
                 art = _artSerial == session.Id ? _art : "",
                 temperatures = !_settings.Get(AppSettings.Keys.PanelTemperatures, true) ? [] : new[]
                 {
@@ -144,6 +151,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         Volatile.Write(ref _state, json);
         StateChanged?.Invoke(json);
     }
+    private static object SpoolState(Spool s) => new { slot = s.SlotName, name = s.Material, color = s.Color, remaining = s.AmountText, loaded = s.IsLoaded, detail = s.DisplayName + " · " + s.RemainDetail };
     private static string TemperatureText(Temperature? temperature) => temperature is { } t ? t.Target > 0 && !t.IsAtTarget ? $"{t.Current:0}° → {t.Target:0}°" : $"{t.Current:0}°" : "—";
     private async void RenderArt(PrinterSession session)
     {

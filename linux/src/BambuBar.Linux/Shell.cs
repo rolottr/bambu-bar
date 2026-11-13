@@ -110,6 +110,8 @@ internal sealed partial class Shell : IDisposable
         {
             case "select": break;
             case "show": Navigate("Printer"); Present(); break;
+            case "license": Navigate("About"); Present(); break;
+            case "dismiss-issue" when session?.Status?.MostSevereIssue is { } issue: session.Dismiss(issue); break;
             case "settings": Navigate("Settings"); Present(); break;
             case "filament": Navigate("Filament"); Present(); break;
             case "fleet": Navigate("All Printers"); Present(); break;

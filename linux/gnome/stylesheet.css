@@ -1,31 +1,67 @@
 .bambu-panel { spacing: 6px; }
-.bambu-content { width: 340px; spacing: 12px; padding: 8px 4px; }
-.bambu-heading { spacing: 8px; }
-.bambu-identity { spacing: 3px; }
+.bambu-menu .popup-menu-content { background-color: #282828; color: #eeeeee; border: 1px solid #5b5b5b; border-radius: 18px; padding: 10px 0; }
+.bambu-menu .bambu-container { padding: 0 10px; margin: 0; background-color: transparent; }
+.bambu-content { width: 348px; spacing: 10px; padding: 0; }
+.bambu-heading { spacing: 8px; padding: 4px 4px 10px; }
+.bambu-identity { spacing: 1px; }
 .bambu-name { font-size: 14px; font-weight: 700; }
-.bambu-muted { color: inherit; opacity: 0.64; }
+.bambu-connection { spacing: 5px; }
+.bambu-connection-dot { width: 6px; height: 6px; border-radius: 3px; }
+.bambu-muted { color: #adadad; }
 .bambu-small { font-size: 11px; }
-.bambu-hero { spacing: 14px; padding: 12px; border-radius: 16px; background-color: rgba(128,128,128,0.10); }
-.bambu-art { width: 110px; height: 144px; }
-.bambu-job { width: 180px; spacing: 7px; }
-.bambu-status { font-size: 11px; font-weight: 700; }
-.bambu-state-failed { color: #d95555; }
-.bambu-state-paused { color: #cf961b; }
-.bambu-state-printing, .bambu-state-finished { color: #26a269; }
-.bambu-job-name { font-size: 13px; font-weight: 600; }
-.bambu-progress-number { font-size: 29px; font-weight: 700; }
-.bambu-progress-rail { height: 4px; border-radius: 2px; background-color: rgba(128,128,128,0.22); }
-.bambu-progress-fill { background-color: #26a269; border-radius: 2px; }
-.bambu-issue { padding: 9px 10px; border-radius: 10px; background-color: rgba(207,150,27,0.12); }
+.bambu-hero { spacing: 12px; padding: 10px; border-radius: 20px; background-color: #353535; border: 1px solid #424242; }
+.bambu-art { width: 92px; height: 144px; }
+.bambu-job { width: 222px; spacing: 4px; }
+.bambu-hero-top { spacing: 5px; }
+.bambu-status { font-size: 10px; font-weight: 700; padding: 3px 6px; border-radius: 10px; color: #bdbdbd; background-color: rgba(255,255,255,0.08); }
+.bambu-state-failed { color: #ff5555; background-color: rgba(255,75,75,0.18); }
+.bambu-state-paused { color: #ffc45c; background-color: rgba(255,196,92,0.15); }
+.bambu-state-printing, .bambu-state-finished { color: #32d074; background-color: rgba(50,208,116,0.15); }
+.bambu-job-name { font-size: 14px; font-weight: 700; }
+.bambu-progress-number { font-size: 34px; font-weight: 800; }
+.bambu-numbers { padding: 2px 0 8px; }
+.bambu-layer-count { font-size: 11px; text-align: right; color: #bdbdbd; }
+.bambu-progress-rail { height: 5px; border-radius: 3px; background-color: #515151; }
+.bambu-progress-fill { background-color: #32d074; border-radius: 3px; }
+.bambu-attention { font-size: 11px; font-weight: 600; color: #ff5555; padding-top: 3px; }
+.bambu-issue { padding: 10px; spacing: 10px; border-radius: 13px; background-color: #2d3a49; border: 1px solid #3b4b5d; }
+.bambu-issue-body { spacing: 4px; }
+.bambu-issue-message { font-size: 11px; font-weight: 600; }
+.bambu-info { color: #4aa3ff; padding-top: 2px; }
+.bambu-issue-links { spacing: 8px; }
+.bambu-code { font-family: monospace; font-size: 9px; color: #b2bdca; }
+.bambu-dismiss { color: #adadad; padding: 0; }
 .bambu-temperatures { spacing: 8px; }
-.bambu-temperature { padding: 10px; border-radius: 12px; spacing: 5px; background-color: rgba(128,128,128,0.10); }
-.bambu-temperature-value { font-size: 17px; font-weight: 600; }
-.bambu-spools { spacing: 9px; padding: 3px 2px; }
-.bambu-spool { spacing: 8px; }
-.bambu-spool-dot { width: 10px; height: 10px; border-radius: 5px; border: 1px solid rgba(128,128,128,0.35); }
+.bambu-temperature { width: 88px; padding: 10px; border-radius: 14px; spacing: 5px; background-color: #353535; border: 1px solid #424242; }
+.bambu-temperature-value { font-size: 18px; font-weight: 700; }
+.bambu-spools { spacing: 8px; }
+.bambu-ams { spacing: 8px; padding: 11px; border-radius: 16px; background-color: #353535; border: 1px solid #424242; }
+.bambu-ams-heading { spacing: 6px; }
+.bambu-ams-title { font-size: 10px; font-weight: 700; color: #adadad; }
+.bambu-spool-row { spacing: 6px; }
+.bambu-spool { spacing: 4px; }
+.bambu-spool-rim { padding: 4px; border: 2px solid #646464; border-radius: 20px; }
+.bambu-spool-disc { width: 24px; height: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.35); }
+.bambu-spool-hub { width: 6px; height: 6px; border-radius: 3px; background-color: rgba(0,0,0,0.5); }
+.bambu-spool-material { font-size: 10px; font-weight: 700; text-align: center; }
+.bambu-spool-amount { font-size: 10px; text-align: center; }
+.bambu-spool-divider { width: 1px; height: 40px; background-color: #595959; y-align: center; margin: 12px 4px; }
 .bambu-actions { spacing: 8px; }
-.bambu-action, .bambu-icon-button { border-radius: 10px; background-color: rgba(128,128,128,0.12); padding: 9px 10px; }
-.bambu-action { font-size: 12px; font-weight: 600; }
-.bambu-action:hover, .bambu-icon-button:hover { background-color: rgba(128,128,128,0.25); }
-.bambu-action:focus, .bambu-icon-button:focus { box-shadow: inset 0 0 0 2px #26a269; }
+.bambu-action, .bambu-icon-button { border-radius: 10px; background-color: rgba(255,255,255,0.07); padding: 7px 10px; }
+.bambu-icon-button { border-radius: 16px; padding: 7px; }
+.bambu-action { font-size: 11px; font-weight: 600; }
+.bambu-light { padding: 3px 8px; border: 1px solid #555555; border-radius: 12px; color: #bdbdbd; }
+.bambu-action:hover, .bambu-icon-button:hover, .bambu-footer-button:hover { background-color: rgba(255,255,255,0.14); }
+.bambu-action:focus, .bambu-icon-button:focus, .bambu-footer-button:focus, .bambu-link:focus, .bambu-code:focus, .bambu-license:focus, .bambu-dismiss:focus { box-shadow: inset 0 0 0 2px #4aa3ff; }
 .bambu-icon-button:checked, .bambu-action:checked { background-color: rgba(38,162,105,0.3); }
+.bambu-footer-body { padding-top: 10px; spacing: 8px; }
+.bambu-footer { spacing: 6px; }
+.bambu-link { color: #4aa3ff; font-size: 10px; }
+.bambu-license { color: #adadad; font-size: 10px; }
+.bambu-footer-button { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 6px 10px; }
+.bambu-menu StButton { color: #eeeeee; }
+.bambu-menu .bambu-link { color: #4aa3ff; }
+.bambu-menu .bambu-license, .bambu-menu .bambu-light, .bambu-menu .bambu-dismiss { color: #adadad; }
+.bambu-menu .bambu-code { color: #b2bdca; }
+.bambu-menu { font-family: Sans; }
+.bambu-inline-icon { spacing: 6px; }
