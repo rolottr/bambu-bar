@@ -271,3 +271,24 @@ The helper also manages only Bambu Bar's fixed `flatpak run dev.rolottr.BambuBar
 **Widgets:** Hyprland has no Bambu Bar desktop companion. GNOME actors and Plasma QML applets cannot be reused as Hyprland desktop widgets; Quickshell plugins are not interchangeable with Waybar or a stable cross-shell widget API. The Widgets page states the limitation before its illustrative previews and exposes no GNOME/Plasma sharing or placement controls. Quick view provides live status. The existing sanitized printer-status D-Bus boundary is unchanged; neither printer credentials nor camera frames are exposed to companions or the geometry helper.
 
 Evidence and reproducible validation are saved locally under `build/linux/evidence/omarchy/`, including individual macOS comparisons, native desktop screenshots, app captures, build/tests, package/process hashes, reboot checks and 60-second resource samples. This is a local development build; no remote push or publication is part of this work.
+
+### Omarchy verified results and resource use
+
+The main window now opens at a compact 960×700, with an optional floating/centering rule matching only its exact class/title. This fixes Hyprland expanding it across the desktop. Hide/reopen and notification click-to-open retain the compact geometry. Settings remains readable and scrollable at the 760×460 minimum. The rule is an explicit user-requested configuration change; backups are retained.
+
+Visually checked all eight pages, all four lower Printer cards, the six-printer overview (one All Printers entry), Quick view and real camera video. Live Tokyo Night ↔ Catppuccin Latte switching updated main, popup and camera consistently; explicit Dark remained selected. Quickshell and a temporary Waybar host exercised the packaged macOS printer glyph, tooltip and tray actions; popup dismissal, 150%/200% scale, scrolling and a secondary output were checked. Notification click-to-open and real reboot autostart worked. Real P2S MQTT, AMS 2 Pro/external spools and camera video were verified without sending a printer-control command. Camera decoded 432/432 frames in 15 seconds and released its connection when closed.
+
+Portable core: 269 passed, two optional exporters skipped, zero failures. Tray assets/state: 1,230 checks. GNOME: seven widget tests and both JavaScript syntax checks. Omarchy: 329 palette checks over 23 installed themes and four host-bridge tests. Actual GNOME/KDE VM captures verified native page styling; their installed app versions/settings were preserved. This is not a complete repeat of their earlier lifecycle/performance testing.
+
+| Scenario, 60 seconds each | App CPU | App RSS / PSS, MiB | Hyprland CPU | Quickshell CPU |
+| --- | ---: | ---: | ---: | ---: |
+| Cold hidden | 1.270% | 179.68 / 171.81 | 0.165% | 0.016% |
+| Main Printer, initial tiled 1896×1030 | 0.395% | 398.72 / 384.43 | 0.165% | 0.049% |
+| Warm hidden after 24 page visits | 0.197% | 555.02 / 529.20 | 0.197% | 0.016% |
+| Warm main Printer, compact 960×700 | 0.231% | 561.73 / 549.61 | 0.149% | 0.017% |
+| Printing demo, model visible, 960×606 | 16.856% | 368.16 / 354.70 | 59.090% | 0.115% |
+| Same demo/window, model offscreen | 0.429% | 390.43 / 376.98 | 1.485% | 0.082% |
+
+CPU is percent of one logical CPU, on four vCPUs with Mesa llvmpipe (LLVM 23.1.3), display 1920×1080 at scale 1. Builds/captures/navigation were stopped during every interval. Samples used app revision `1198d86`, before the compact default and final popup cleanup guards; the compact rule was active for the last three samples. Cold is a fresh background process, not typical warm usage. The first main sample's raw scenario label mistakenly says 1120×940; recorded compositor geometry proves 1896×1030. The compact sample is a separate, verified 960×700 run after further UI visits. Model-offscreen memory includes the extra page content rendered while scrolling; it is the same process, not a fresh low-memory run. Rendering resumed when scrolled back.
+
+The host helper stayed at 0.000% CPU and approximately 31.4 MiB RSS/17.2 MiB PSS. Full process identities, peaks and shell RSS/PSS are in `performance/`; Quickshell reached about 1.2 GiB RSS during the long test session, so desktop overhead should not be attributed solely to Bambu Bar. Waybar was stopped for these production-desktop measurements. No widget-visible sample exists because Hyprland widgets are unsupported. These short software-rendered VM intervals do not establish hardware-GPU performance or absence of a memory leak. Production licensing, a real print lifecycle and manual delayed keyring unlock remain unverified.
