@@ -9,6 +9,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {DesktopWidgets} from './widgets.js';
 
 const BUS = 'dev.rolottr.BambuBar.Desktop';
 const PATH = '/dev/rolottr/BambuBar/Desktop';
@@ -45,6 +46,7 @@ export default class BambuBarExtension extends Extension {
         this._indicator.accessible_name = 'Bambu Bar';
         Main.panel.addToStatusArea(this.uuid, this._indicator);
         this._build();
+        this._widgets = new DesktopWidgets((action, printer) => this._proxy?.InvokeRemote(action, printer, () => {}));
         this._indicator.menu.connect('open-state-changed', (_menu, open) => {
             if (this._proxy?.g_name_owner)
                 this._proxy.SetOpenRemote(open, () => {});
@@ -245,6 +247,7 @@ export default class BambuBarExtension extends Extension {
             return;
         if (!this._proxy?.g_name_owner) {
             this._state = {};
+            this._widgets?.update([]);
             this._paint();
             return;
         }
@@ -264,6 +267,7 @@ export default class BambuBarExtension extends Extension {
             if (state.version !== 1)
                 return;
             this._state = state;
+            this._widgets?.update(state.widgets ?? []);
             this._panelLabel.text = state.panelText ?? '';
             this._panelLabel.visible = this._panelLabel.text.length > 0;
             this._indicator.accessible_name = state.title ?? 'Bambu Bar';
@@ -433,6 +437,8 @@ export default class BambuBarExtension extends Extension {
 
     disable() {
         this._alive = false;
+        this._widgets?.destroy();
+        this._widgets = null;
         this._cancellable?.cancel();
         if (this._proxy) {
             if (this._proxy.g_name_owner)

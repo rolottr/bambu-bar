@@ -77,25 +77,19 @@ internal sealed partial class Shell
     {
         Header(Loc.T("Filament"));
         if (_store.Current is not { } session) { _pageHost.Append(Label(Loc.T("No printer set up"), "muted")); return; }
-        var spools = session.Status?.AllSpools.ToArray() ?? [];
-        var total = Module(); Detail(total, "Filament remaining", () => $"≈ {session.Status?.AllSpools.Sum(s => s.GramsLeft ?? 0):N0} g"); _pageHost.Append(total);
-        if (spools.Length == 0) { _pageHost.Append(Live(() => session.IsOnline ? Loc.T("Empty") : session.LinkSummary, null, "muted")); return; }
+        _pageHost.Append(Live(() => $"{session.Status?.AllSpools.Count(s => s.IsLoaded) ?? 0} spools loaded · {Format.Grams(session.Status?.AllSpools.Sum(s => s.GramsLeft ?? 0) ?? 0)} of filament on hand", null, "muted"));
         foreach (var unit in session.Status?.Ams ?? [])
         {
-            var group = Module(Label(unit.Title, "section-title"));
-            foreach (var spool in unit.Spools) SpoolRow(group, spool.Id);
-            if (unit.Humidity is not null) Detail(group, "Humidity", () => $"{session.Status?.Ams.FirstOrDefault(a => a.Id == unit.Id)?.Humidity}%");
-            _pageHost.Append(group);
+            var heading = Row(); var title = Label(unit.Title, "heading"); title.SetHexpand(true); heading.Append(title);
+            heading.Append(Live(() => Climate(session.Status?.Ams.FirstOrDefault(a => a.Id == unit.Id)), null, "muted")); _pageHost.Append(heading);
+            var grid = CardGrid();
+            foreach (var spool in unit.Spools) grid.Insert(SpoolCard(session, spool.Id), -1);
+            _pageHost.Append(grid);
         }
-        if (session.Status?.ExternalSpool is { } external) { var group = Module(Label(Loc.T("External spool"), "section-title")); SpoolRow(group, external.Id); _pageHost.Append(group); }
-        void SpoolRow(Gtk.Box group, int id)
+        if (session.Status?.ExternalSpool is { } external)
         {
-            Spool? Current() => session.Status?.AllSpools.FirstOrDefault(s => s.Id == id);
-            var row = Row(); var dot = Label("●", "spool-dot"); row.Append(dot);
-            var text = Column(3); text.SetHexpand(true); text.Append(Live(() => Current()?.Name is { Length: > 0 } n ? n : Current()?.Material ?? "—"));
-            text.Append(Live(() => $"{Current()?.SlotName} · {Current()?.ColorName ?? Current()?.Brand ?? Current()?.Material}", null, "muted")); row.Append(text);
-            row.Append(Live(() => Current()?.RemainDetail ?? "—")); group.Append(row);
-            _updates.Add(() => { var c = Current()?.Color ?? "888888"; var rgb = c.Length >= 6 && c[..6].All(Uri.IsHexDigit) ? c[..6] : "888888"; dot.SetMarkup($"<span foreground=\"#{rgb}\">●</span>"); });
+            _pageHost.Append(Label(Loc.T("External spool"), "heading"));
+            var grid = CardGrid(); grid.Insert(SpoolCard(session, external.Id), -1); _pageHost.Append(grid);
         }
     }
     private void FleetPage()
@@ -126,16 +120,22 @@ internal sealed partial class Shell
     }
     private void NotificationsPage()
     {
-        Header(Loc.T("Notifications")); var box = Module();
+        Header(Loc.T("Notifications"), Loc.T("Bambu Bar tells you when a print needs you, even while its window is closed."));
+        _pageHost.Append(Label(Loc.T("Notify me when"), "heading")); var box = Module();
         Toggle(box, "Print finished", _store.NotifyFinished, value => _store.NotifyFinished = value);
-        Toggle(box, "Print failed or canceled", _store.NotifyFailed, value => _store.NotifyFailed = value);
-        Toggle(box, "Print paused", _store.NotifyPaused, value => _store.NotifyPaused = value);
+        Toggle(box, "Print failed, canceled or an error", _store.NotifyFailed, value => _store.NotifyFailed = value);
+        Toggle(box, "Print paused (filament runout, user)", _store.NotifyPaused, value => _store.NotifyPaused = value);
         Toggle(box, "Print started", _store.NotifyStarted, value => _store.NotifyStarted = value);
         _pageHost.Append(box); _pageHost.Append(Button("preferences-system-notifications-symbolic", Loc.T("Send test notification"), () => _notifier.Post("Bambu Bar", Loc.T("Your printer notifications will appear here."), "test"), true));
     }
     private void SettingsPage()
     {
-        Header(Loc.T("Settings")); var general = Module(Label(Loc.T("General"), "section-title"));
+        Header(Loc.T("Settings"));
+        var appearance = Gtk.DropDown.NewFromStrings([Loc.T("Dark"), Loc.T("Light"), Loc.T("System")]);
+        appearance.SetSelected((uint)_settings.Get("linuxAppearance", 0));
+        appearance.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") { _settings.Set("linuxAppearance", (int)appearance.GetSelected()); ApplyAppearance(); } };
+        _pageHost.Append(Module(Label(Loc.T("Appearance"), "heading"), appearance));
+        var general = Module(Label(Loc.T("General"), "section-title"));
         if (!_ephemeral) Toggle(general, "Open at Login", Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? _settings.Get("openAtLogin", false) : Platform.Autostart, value => Async(async () =>
         {
             if (Environment.GetEnvironmentVariable("FLATPAK_ID") is not null)

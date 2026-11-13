@@ -29,7 +29,7 @@ internal sealed partial class Shell
         if (snapshot >= 0 && snapshot + 1 < args.Length)
         {
             var scenes = _pages.ToArray(); var index = 0; Navigate(scenes[0]); Present();
-            GLib.Functions.TimeoutAdd(200, 200, () =>
+            GLib.Functions.TimeoutAdd(200, 1200, () =>
             {
                 Capture(Path.Combine(args[snapshot + 1], "window-" + scenes[index].ToLowerInvariant().Replace(' ', '-') + ".png"), _window);
                 index++;

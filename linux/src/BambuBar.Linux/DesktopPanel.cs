@@ -6,6 +6,7 @@ using BambuBar.Core.App;
 using BambuBar.Core.Imaging;
 using BambuBar.Core.Model;
 using Tmds.DBus;
+using BambuBar.Core.Widgets;
 
 namespace BambuBar.Linux;
 
@@ -103,6 +104,11 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         var payload = new
         {
             version = 1,
+            widgets = !_settings.Get("linuxWidgetsEnabled", false) ? [] : (_settings.Get<List<DesktopWidgetConfig>>("linuxWidgets") ?? []).Take(8).Select(w => new
+            {
+                id = w.Id, size = w.Size, corner = w.Corner,
+                state = JsonSerializer.SerializeToElement(WidgetStateWriter.Build(_store.Fleet.For(w.Printer), DateTimeOffset.Now), WidgetState.Json),
+            }).ToArray(),
             labels = labelKeys.ToDictionary(k => k, k => Loc.T(k)),
             panelText = tray?.Status is { } t && tray.IsOnline && t.State.IsActive() ? _store.MenuBarStyle.Text(t) ?? "" : "",
             title = tray is null ? "Bambu Bar" : tray.Config.Name + " · " + tray.ShortState,
@@ -110,7 +116,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
             printer = session is null ? null : new
             {
                 id = session.Id, name = session.Config.Name, model = session.Config.ModelName,
-                online, link = online && status?.WifiSignal is { } wifi ? Loc.T(wifi >= -55 ? "Wi-Fi excellent" : wifi >= -67 ? "Wi-Fi good" : wifi >= -75 ? "Wi-Fi fair" : "Wi-Fi weak") : session.LinkSummary, state = session.ShortState,
+                online, link = online && status?.WifiSignal is { } wifi ? Loc.T(wifi == -90 ? "Ethernet" : wifi >= -55 ? "Wi-Fi excellent" : wifi >= -67 ? "Wi-Fi good" : wifi >= -75 ? "Wi-Fi fair" : wifi >= -89 ? "Wi-Fi weak" : "Wi-Fi poor") : session.LinkSummary, state = session.ShortState,
                 kind = online ? status?.State.ToString().ToLowerInvariant() ?? "idle" : "offline",
                 job = status?.JobName is { Length: > 0 } job ? job : online ? Loc.T("Ready to print") : session.LinkSummary,
                 progress = status?.Progress ?? 0,
@@ -129,10 +135,10 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
                     new { name = Loc.T(status?.SecondNozzle is null ? "Nozzle" : "Right"), value = TemperatureText(status?.Nozzle) },
                     status?.SecondNozzle is null ? null : new { name = Loc.T("Left"), value = TemperatureText(status.SecondNozzle) },
                     new { name = Loc.T("Bed"), value = TemperatureText(status?.Bed) },
-                    status?.Chamber is null ? null : new { name = Loc.T("Chamber"), value = $"{status.Chamber:0}°" },
+                    !_settings.Get(AppSettings.Keys.PanelChamber, true) || status?.Chamber is null ? null : new { name = Loc.T("Chamber"), value = $"{status.Chamber:0}°" },
                 }.OfType<object>().ToArray(),
                 spools = !_settings.Get(AppSettings.Keys.PanelFilament, true) ? [] : status?.AllSpools.Where(s => s.IsLoaded).Select(s => new { slot = s.SlotName, name = s.DisplayName, color = s.Color, remaining = s.RemainDetail }).ToArray(),
-                fans = !_settings.Get(AppSettings.Keys.PanelFans, false) ? "" : Loc.T("Part cooling") + " " + (status?.PartFan is { } fan ? $"{fan}%" : "—"),
+                fans = !_settings.Get(AppSettings.Keys.PanelFans, false) ? "" : FanText(status),
                 camera = session.ShowsCamera && online,
                 light = online && (session.Config.Model?.HasChamberLight == true || status?.ChamberLightOn is not null),
                 lightOn = session.ChamberLightOn,
@@ -151,6 +157,9 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         Volatile.Write(ref _state, json);
         StateChanged?.Invoke(json);
     }
+    internal static string FanText(PrinterStatus? s) => string.Join(" · ", new (string Name, int? Value)[]
+    { ("Part", s?.PartFan), ("Aux", s?.AuxFan), ("Chamber", s?.ExhaustFan), ("Hotend", s?.HeatbreakFan) }
+        .Where(f => f.Value is not null).Select(f => $"{Loc.T(f.Name)} {f.Value}%"));
     private static object SpoolState(Spool s) => new { slot = s.SlotName, name = s.Material, color = s.Color, remaining = s.AmountText, loaded = s.IsLoaded, detail = s.DisplayName + " · " + s.RemainDetail };
     private static string TemperatureText(Temperature? temperature) => temperature is { } t ? t.Target > 0 && !t.IsAtTarget ? $"{t.Current:0}° → {t.Target:0}°" : $"{t.Current:0}°" : "—";
     private async void RenderArt(PrinterSession session)

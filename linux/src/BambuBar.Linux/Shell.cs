@@ -23,7 +23,7 @@ internal sealed partial class Shell : IDisposable
     private readonly Gtk.ListBox _nav;
     private readonly List<Action> _updates = [];
     private readonly List<Action> _cleanup = [];
-    private readonly string[] _pages = ["Printer", "Filament", "All Printers", "Printers", "Notifications", "Settings", "Quick view", "About"];
+    private readonly string[] _pages = ["Printer", "Filament", "Menu Bar", "Notifications", "Printers", "Widgets", "Settings", "About", "All Printers"];
     private PrinterConfig? _setupConfig;
     private string? _error;
     private string _schema = "";
@@ -38,23 +38,26 @@ internal sealed partial class Shell : IDisposable
     {
         _app = app; _store = store; _settings = settings; _secrets = secrets; _notifier = notifier;
         _ephemeral = PrinterStore.IsEphemeralRun(args);
+        ApplyAppearance();
         var css = Gtk.CssProvider.New(); css.LoadFromPath(Path.Combine(AppContext.BaseDirectory, "style.css"));
         Gtk.StyleContext.AddProviderForDisplay(Gdk.Display.GetDefault()!, css, 600);
         _window = Adw.ApplicationWindow.New(app);
+        UpdateAppearanceClass();
+        Adw.StyleManager.GetDefault().OnNotify += (_, e) => { if (e.Pspec.GetName() == "dark") UpdateAppearanceClass(); };
         WindowSize.Track(_window);
-        _window.SetTitle("Bambu Bar"); _window.SetDefaultSize(1040, 800); _window.SetSizeRequest(760, 460);
+        _window.SetTitle("Bambu Bar"); _window.SetDefaultSize(1120, 940); _window.SetSizeRequest(760, 460);
         _window.SetHideOnClose(true);
         var root = Column(0);
         var header = Adw.HeaderBar.New();
         header.SetTitleWidget(Label("Bambu Bar", "heading"));
         header.PackStart(Button("view-grid-symbolic", "Quick view", ShowPanel));
         header.PackEnd(Button("application-exit-symbolic", "Quit Bambu Bar", app.Quit));
-        header.PackEnd(Button("emblem-favorite-symbolic", "Support this project", () => Open("https://bambubar.app/download")));
+        var support = Button("emblem-favorite-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); header.PackEnd(support);
         root.Append(header);
         var split = Row(0); split.SetVexpand(true);
         var sidebar = Column(6); sidebar.SetSizeRequest(210, -1); sidebar.AddCssClass("sidebar");
         _nav = Gtk.ListBox.New(); _nav.SetSelectionMode(Gtk.SelectionMode.Single); _nav.AddCssClass("navigation-sidebar");
-        var icons = new[] { "printer-symbolic", "media-optical-symbolic", "view-grid-symbolic", "network-wired-symbolic", "preferences-system-notifications-symbolic", "emblem-system-symbolic", "view-grid-symbolic", "help-about-symbolic" };
+        var icons = new[] { "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "network-wired-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "help-about-symbolic", "view-grid-symbolic" };
         for (var i = 0; i < _pages.Length; i++)
         {
             var row = Gtk.ListBoxRow.New(); var content = Row(10);
@@ -73,7 +76,7 @@ internal sealed partial class Shell : IDisposable
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) =>
         {
             if ((e.State & Gdk.ModifierType.ControlMask) == 0) return false;
-            if (e.Keyval is >= 49 and <= 56) { _nav.SelectRow(_nav.GetRowAtIndex((int)e.Keyval - 49)); return true; }
+            if (e.Keyval is >= 49 and <= 57) { _nav.SelectRow(_nav.GetRowAtIndex((int)e.Keyval - 49)); return true; }
             switch (e.Keyval) { case 114: _store.Refresh(); return true; case 108: _store.ToggleLight(); return true; case 113: _app.Quit(); return true; case 107: if (_store.Current is { } camera) OpenCamera(camera); return true; case 119: _window.Close(); return true; case 44: _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, "Settings"))); return true; }
             return false;
         }; _window.AddController(keys);
@@ -110,6 +113,7 @@ internal sealed partial class Shell : IDisposable
         {
             case "select": break;
             case "show": Navigate("Printer"); Present(); break;
+            case "widgets": Navigate("Widgets"); Present(); break;
             case "license": Navigate("About"); Present(); break;
             case "dismiss-issue" when session?.Status?.MostSevereIssue is { } issue: session.Dismiss(issue); break;
             case "settings": Navigate("Settings"); Present(); break;
@@ -135,6 +139,7 @@ internal sealed partial class Shell : IDisposable
     }
     private async Task StartTray() { try { await _tray!.Start(); } catch (Exception) { Console.Error.WriteLine("Tray host unavailable; launcher remains available."); } }
     private string Schema => _store.Current is { } s ? $"{s.Id}:{s.Status?.SecondNozzle is not null}:{s.Status?.Chamber is not null}:{s.Status?.DoorOpen is not null}:{s.Status?.NozzleDiameter is not null}:" + string.Join(',', s.Status?.AllSpools.Select(p => p.Id) ?? []) : "";
+    private string _panelSchema = "";
     private void Changed(object? sender, PropertyChangedEventArgs e)
     {
         if (_disposed) return;
@@ -145,6 +150,7 @@ internal sealed partial class Shell : IDisposable
     }
     private void Refresh()
     {
+        if (_panel?.GetVisible() == true && _panelSchema != Schema) BuildPanel();
         if (_ready && _schema != Schema) { Rebuild(); return; }
         _footer.SetText(_store.IsConfigured ? $"{_store.PrinterName}\n{_store.Current?.ShortState}" : Loc.T("No printer set up"));
         if (_window.GetVisible()) foreach (var update in _updates.ToArray()) update();
@@ -172,7 +178,8 @@ internal sealed partial class Shell : IDisposable
         else if (_page == "Printers") PrintersPage();
         else if (_page == "Notifications") NotificationsPage();
         else if (_page == "Settings") SettingsPage();
-        else if (_page == "Quick view") QuickViewPage();
+        else if (_page is "Menu Bar" or "Quick view") QuickViewPage();
+        else if (_page == "Widgets") WidgetsPage();
         else AboutPage();
         Refresh();
     }
