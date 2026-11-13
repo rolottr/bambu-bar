@@ -8,6 +8,7 @@ from pathlib import Path
 import time
 import re
 import sys
+import socket
 from gi.repository import Gio, GLib
 
 NAME = 'dev.rolottr.BambuBar.Hyprland'
@@ -90,9 +91,17 @@ class Popup:
         self.token = None
         self.owner = None
         self.generation = 0
+        self.events = None
+        self.event_watch = None
 
     def clear(self):
         self.generation += 1
+        if self.event_watch is not None:
+            GLib.source_remove(self.event_watch)
+            self.event_watch = None
+        if self.events is not None:
+            self.events.close()
+            self.events = None
         for window in self.windows:
             window.destroy()
         self.windows.clear()
@@ -183,6 +192,36 @@ class Popup:
                     region = cairo.Region(cairo.RectangleInt(0, 0, bounds.width, bounds.height))
                     region.subtract(cairo.Region(cairo.RectangleInt(x - bounds.x - 3, y - bounds.y - 3, width + 6, height + 6)))
                     window.get_window().input_shape_combine_region(region, 0, 0)
+                # Compositor focus events also cover GTK's stale is-active state on
+                # reused toplevels. Close on output/config changes: old input holes
+                # must never outlive the geometry they were calculated for.
+                environment = hypr_env()
+                self.events = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.events.connect(str(Path(environment['XDG_RUNTIME_DIR']) / 'hypr' /
+                                        environment['HYPRLAND_INSTANCE_SIGNATURE'] / '.socket2.sock'))
+                self.events.setblocking(False)
+                pending = b''
+                def event_ready(_fd, condition):
+                    nonlocal pending
+                    if condition & (GLib.IO_HUP | GLib.IO_ERR):
+                        self.event_watch = None
+                        dismiss()
+                        return False
+                    try:
+                        pending += self.events.recv(65536)
+                    except BlockingIOError:
+                        return True
+                    lines = pending.split(b'\n')
+                    pending = lines.pop()
+                    for line in lines:
+                        name, _, value = line.partition(b'>>')
+                        lost_focus = name == b'activewindowv2' and value.decode() != address.removeprefix('0x')
+                        if lost_focus or name in (b'monitorremoved', b'monitoradded', b'configreloaded'):
+                            self.event_watch = None
+                            dismiss()
+                            return False
+                    return True
+                self.event_watch = GLib.io_add_watch(self.events.fileno(), GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, event_ready)
                 invocation.return_value(GLib.Variant('(b)', (True,)))
             except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
                 print("Quick view positioning failed:", type(error).__name__, str(error), file=sys.stderr)
