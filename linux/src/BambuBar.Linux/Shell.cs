@@ -54,7 +54,7 @@ internal sealed partial class Shell : IDisposable
         UpdateAppearanceClass();
         Adw.StyleManager.GetDefault().OnNotify += (_, e) => { if (e.Pspec.GetName() == "dark") UpdateAppearanceClass(); };
         WindowSize.Track(_window);
-        _window.SetTitle("Bambu Bar"); _window.SetDefaultSize(1120, 940); _window.SetSizeRequest(760, 460);
+        _window.SetTitle("Bambu Bar"); _window.SetDefaultSize(Platform.IsOmarchy ? 960 : 1120, Platform.IsOmarchy ? 700 : 940); _window.SetSizeRequest(760, 460);
         _window.SetHideOnClose(true);
         var root = Column(0);
         var header = Adw.HeaderBar.New();

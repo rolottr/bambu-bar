@@ -207,6 +207,7 @@ internal sealed partial class Shell
             _panel.GetDefaultSize(out _, out var popupHeight);
             _panelFromTray = (x, y) != (-1, -1);
             var positioned = await _hyprlandPopup.Show(420, popupHeight, _panelFromTray);
+            if (_disposed) { _positioningPanel = false; return; }
             _panel.GetDefaultSize(out _, out var latestHeight);
             if (positioned && latestHeight != popupHeight) positioned = await _hyprlandPopup.Show(420, latestHeight, _panelFromTray);
             _positioningPanel = false;
@@ -233,7 +234,8 @@ internal sealed partial class Shell
         try
         {
             _panel!.GetDefaultSize(out _, out var height);
-            if (!await _hyprlandPopup!.Show(420, height, _panelFromTray)) _panel.SetVisible(false);
+            var positioned = await _hyprlandPopup!.Show(420, height, _panelFromTray);
+            if (!positioned && !_disposed) _panel.SetVisible(false);
         }
         finally { _positioningPanel = false; }
     }

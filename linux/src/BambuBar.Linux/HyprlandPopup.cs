@@ -25,7 +25,7 @@ internal sealed class HyprlandPopup(Action dismiss) : IDisposable
                 });
             }
             var json = await _proxy.PreparePopupAsync(Token).WaitAsync(TimeSpan.FromSeconds(2));
-            return System.Text.Json.JsonSerializer.Deserialize<HyprlandAnchor>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return HyprlandAnchor.Parse(json);
         }
         catch (Exception) { return null; }
     }

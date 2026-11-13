@@ -169,8 +169,8 @@ class Popup:
                 # Only this freshly identified Bambu Bar popup is a dispatch target.
                 # Numeric geometry is computed above; caller supplies no Lua/selector.
                 lua = (f'hl.dispatch(hl.dsp.window.float({{window="address:{address}",action="on"}}));'
-                       f'hl.dispatch(hl.dsp.window.resize({{window="address:{address}",x={width},y={height}}}));'
-                       f'hl.dispatch(hl.dsp.window.move({{window="address:{address}",x={x},y={y}}}));'
+                       f'hl.dispatch(hl.dsp.window.resize({{window="address:{address}",x={width},y={height},relative=false}}));'
+                       f'hl.dispatch(hl.dsp.window.move({{window="address:{address}",x={x},y={y},relative=false}}));'
                        f'hl.dispatch(hl.dsp.focus({{window="address:{address}"}}))')
                 subprocess.run(['hyprctl', 'eval', lua], env=hypr_env(), check=True, stdout=subprocess.DEVNULL, timeout=2)
                 display = Gdk.Display.get_default()
@@ -225,6 +225,14 @@ class Popup:
                         pending += data
                     except BlockingIOError:
                         return True
+                    except OSError:
+                        self.event_watch = None
+                        dismiss()
+                        return False
+                    if len(pending) > 131072:
+                        self.event_watch = None
+                        dismiss()
+                        return False
                     lines = pending.split(b'\n')
                     pending = lines.pop()
                     for line in lines:
