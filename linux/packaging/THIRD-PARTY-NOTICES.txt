@@ -2,6 +2,8 @@ Bambu Bar is Copyright 2026 NINA LABS, LLC, MIT licensed (BAMBU-BAR-LICENSE.txt)
 
 The Linux app uses:
 - .NET 10, Microsoft and .NET contributors, MIT. https://github.com/dotnet/runtime
+- GTK4 Layer Shell 1.3.0, William Wold and contributors, MIT. https://github.com/wmww/gtk4-layer-shell
+  License/source in layer-shell/; pinned SDK build recipe: linux/scripts/build-layer-shell.sh
 - GirCore 0.8.1, GirCore contributors, MIT. https://github.com/gircore/gir.core
 - Tmds.DBus 0.94.2, Tom Deseyn and contributors, MIT. https://github.com/tmds/Tmds.DBus
 - Silk.NET 2.23.0, .NET Foundation and contributors, MIT. https://github.com/dotnet/Silk.NET

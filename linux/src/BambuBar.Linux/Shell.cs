@@ -119,7 +119,7 @@ internal sealed partial class Shell : IDisposable
     private void HideMain() { _window.SetVisible(false); }
     public void Present() { Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
     public void ShowQuickView() => ShowPanel();
-    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (!_ephemeral) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _ = StartDesktop(); } _tray = new Tray(_store, ShowPanel, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (!_ephemeral) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _ = StartDesktop(); } _tray = new Tray(_store, ShowPanelAt, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
     private async Task StartDesktop() { try { await _desktop!.Start(); } catch (Exception) { Platform.Log("Native desktop panel unavailable; standard tray remains available."); } }
     private void DesktopAction(string action, PrinterSession? session)
     {
@@ -151,7 +151,7 @@ internal sealed partial class Shell : IDisposable
         try { if (await _background.Request(_settings.Get("openAtLogin", false))) await _background.Status(Loc.T("Printers")); }
         catch (Exception) { /* Launcher and optional SNI remain usable when a portal is absent. */ }
     }
-    private async Task StartTray() { try { await _tray!.Start(); } catch (Exception) { Console.Error.WriteLine("Tray host unavailable; launcher remains available."); } }
+    private async Task StartTray() { try { await TrayPlacement.ReadCoordinateMode(); await _tray!.Start(); } catch (Exception) { Console.Error.WriteLine("Tray host unavailable; launcher remains available."); } }
     private string Schema => _store.Current is { } s ? $"{s.Id}:{s.Status?.SecondNozzle is not null}:{s.Status?.Chamber is not null}:{s.Status?.DoorOpen is not null}:{s.Status?.NozzleDiameter is not null}:" + string.Join(',', s.Status?.AllSpools.Select(p => p.Id) ?? []) : "";
     private string _panelSchema = "";
     private void Changed(object? sender, PropertyChangedEventArgs e)

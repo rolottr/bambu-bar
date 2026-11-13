@@ -111,3 +111,6 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 .fleet-failed .badge { background: alpha(#ff5c5c,.14); color: #ff5c5c; }
 .fleet-printing .badge, .fleet-finished .badge { background: alpha(#21cc6b,.14); color: #21cc6b; }
 .fleet-preparing .badge { background: alpha(#5ca8ff,.14); color: #5ca8ff; }
+
+/* Layer-shell windows have no compositor decoration or rounded background. */
+window.tray-popup { border-radius: 14px; }

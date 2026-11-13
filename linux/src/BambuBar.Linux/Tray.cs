@@ -45,7 +45,8 @@ internal sealed class Tray : IStatusItem, IDisposable
 {
     private readonly Connection _connection = new(Address.Session);
     private readonly PrinterStore _store;
-    private readonly Action _panel, _show, _quit;
+    private readonly Action<int, int> _panel;
+    private readonly Action _show, _quit;
     private readonly Menu _menu;
     private IDisposable? _watcher;
     private IDisposable? _shellWatcher;
@@ -57,12 +58,12 @@ internal sealed class Tray : IStatusItem, IDisposable
     public ObjectPath ObjectPath => new("/StatusNotifierItem");
     public bool Available { get; private set; }
 
-    public Tray(PrinterStore store, Action panel, Action show, Action quit)
+    public Tray(PrinterStore store, Action<int, int> panel, Action show, Action quit)
     {
         var context = SynchronizationContext.Current ?? throw new InvalidOperationException("Create the tray on the GTK thread.");
         Action Dispatch(Action action) => () => context.Post(_ => { if (!_disposed) action(); }, null);
-        _store = store; _panel = Dispatch(panel); _show = Dispatch(show); _quit = Dispatch(quit);
-        _menu = new Menu(_panel, _show, _quit);
+        _store = store; _panel = (x, y) => context.Post(_ => { if (!_disposed) panel(x, y); }, null); _show = Dispatch(show); _quit = Dispatch(quit);
+        _menu = new Menu(() => _panel(-1, -1), _show, _quit);
     }
     public async Task Start()
     {
@@ -131,7 +132,7 @@ internal sealed class Tray : IStatusItem, IDisposable
     };
     public Task<object> GetAsync(string property) => Task.FromResult(Properties[property]);
     public Task<IDictionary<string, object>> GetAllAsync() => Task.FromResult(Properties);
-    public Task ActivateAsync(int x, int y) { _panel(); return Task.CompletedTask; }
+    public Task ActivateAsync(int x, int y) { _panel(x, y); return Task.CompletedTask; }
     public Task SecondaryActivateAsync(int x, int y) { _show(); return Task.CompletedTask; }
     public Task ContextMenuAsync(int x, int y) => Task.CompletedTask;
     public Task ScrollAsync(int delta, string orientation) => Task.CompletedTask;

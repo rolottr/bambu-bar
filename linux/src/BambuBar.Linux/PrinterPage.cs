@@ -152,18 +152,24 @@ internal sealed partial class Shell
         foreach (var update in updates.ToArray()) update();
         return result;
     }
+    private TrayPlacement? _trayPlacement;
     private void PreparePanel()
     {
         if (_panel is not null) return;
         _panel = Adw.ApplicationWindow.New(_app); WindowSize.Track(_panel);
-        _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 700); _panel.SetHideOnClose(true); _panel.SetResizable(false);
+        _trayPlacement = TrayPlacement.Create(_panel);
+        if (_trayPlacement is not null) _panel.AddCssClass("tray-popup");
+        _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 1); _panel.SetHideOnClose(true); _panel.SetResizable(false);
         BuildPanel();
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) => { if (e.Keyval != 65307) return false; _panel.SetVisible(false); return true; }; _panel.AddController(keys);
         _panel.OnNotify += (_, e) => { if (e.Pspec.GetName() == "is-active" && !_panel.GetIsActive()) _panel.SetVisible(false); };
     }
-    private void ShowPanel()
+    private void ShowPanel() => ShowPanelAt(-1, -1);
+    private void ShowPanelAt(int x, int y)
     {
         PreparePanel();
+        if (_panel!.GetVisible()) { _panel.SetVisible(false); return; }
+        _trayPlacement?.Position(x, y);
         if (_store.MenuBarSession is { } session) _store.Select(session.Id);
         BuildPanel();
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -201,6 +207,10 @@ internal sealed partial class Shell
         {
             monitor.GetGeometry(out var geometry); using (geometry) availableHeight = Math.Max(300, geometry.Height - 70);
         }
+        if (_trayPlacement is not null) availableHeight = _trayPlacement.AvailableHeight;
         scroll.SetMaxContentHeight(availableHeight); scroll.SetChild(root); _panel.SetContent(scroll);
+        root.Measure(Gtk.Orientation.Vertical, 420, out _, out var naturalHeight, out _, out _);
+        _panel.SetDefaultSize(420, Math.Min(naturalHeight, availableHeight));
+        Platform.Trace($"panel natural={naturalHeight}, available={availableHeight}");
     }
 }

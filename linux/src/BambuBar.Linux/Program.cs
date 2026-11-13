@@ -28,6 +28,7 @@ internal static class Program
         var ephemeral = PrinterStore.IsEphemeralRun(args);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => { if (!ephemeral && e.ExceptionObject is Exception error) Platform.Log(error.GetType().Name + "\n" + error.StackTrace); };
         var timer = Stopwatch.StartNew();
+        TrayPlacement.LoadBeforeGtk();
         var application = Adw.Application.New(Platform.AppId, Gio.ApplicationFlags.HandlesCommandLine | (ephemeral ? Gio.ApplicationFlags.NonUnique : Gio.ApplicationFlags.DefaultFlags));
         var launchArgs = args;
         application.OnCommandLine += (_, e) =>
