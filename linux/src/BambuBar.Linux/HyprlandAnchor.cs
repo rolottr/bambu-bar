@@ -3,7 +3,7 @@ using Tmds.DBus;
 namespace BambuBar.Linux;
 
 [DBusInterface("dev.rolottr.BambuBar.Hyprland")]
-public interface IHyprlandAnchor : IDBusObject { Task<string> GetAnchorAsync(); }
+public interface IHyprlandAnchor : IDBusObject { Task<string> GetAnchorAsync(); Task<bool> SetAutostartAsync(bool enabled); }
 internal sealed record HyprlandAnchor(string Connector, int X, int Y, int Width, int Height)
 {
     internal static async Task<HyprlandAnchor?> Read()

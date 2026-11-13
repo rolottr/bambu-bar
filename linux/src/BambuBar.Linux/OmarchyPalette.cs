@@ -37,6 +37,8 @@ internal sealed record OmarchyPalette(string Background, string Foreground, stri
         if (Contrast(surface, fg) < 4.5) surface = Mix(bg, fg, .045);
         var selection = adapted ? Mix(bg, accent, .2) : Color(c, "selection") ?? Mix(bg, accent, .2);
         var border = Color(s, "controls.normal-border") ?? Color(c, "border") ?? Color(c, "muted") ?? Mix(bg, fg, .3);
+        var borderAlpha = Regex.Match(shell, @"(?m)^\s*normal-border-alpha\s*=\s*(0(?:\.\d+)?|1(?:\.0+)?)\s*(?:#.*)?$");
+        if (borderAlpha.Success && double.TryParse(borderAlpha.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var alpha)) border = Mix(bg, border, alpha);
         if (Contrast(border, bg) < 1.5) border = Mix(bg, fg, .35);
         return new(bg, fg, accent, selection, border, surface, Readable(Mix(bg, fg, .75), bg),
             Readable(Color(c, "red") ?? "#c01c28", bg), Readable(Color(c, "yellow") ?? "#ae7b03", bg),

@@ -4,11 +4,15 @@ import json
 import math
 import os
 import subprocess
+from pathlib import Path
+import time
 from gi.repository import Gio, GLib
 
 NAME = 'dev.rolottr.BambuBar.Hyprland'
 XML = f'''<node><interface name="{NAME}"><method name="GetAnchor">
-<arg type="s" name="geometry" direction="out"/></method></interface></node>'''
+<arg type="s" name="geometry" direction="out"/></method>
+<method name="SetAutostart"><arg type="b" name="enabled" direction="in"/>
+<arg type="b" name="accepted" direction="out"/></method></interface></node>'''
 
 
 def query(command):
@@ -42,9 +46,37 @@ def anchor():
     raise ValueError('Cursor monitor unavailable')
 
 
+AUTOSTART = """[Desktop Entry]
+Type=Application
+Name=Bambu Bar
+Exec=flatpak run dev.rolottr.BambuBar --background
+Icon=dev.rolottr.BambuBar
+X-BambuBar-Hyprland=true
+"""
+
+
+def set_autostart(enabled):
+    directory = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'autostart'
+    path = directory / 'dev.rolottr.BambuBar.desktop'
+    if path.exists() and path.read_text() != AUTOSTART:
+        # Never overwrite an independently managed login entry.
+        return False
+    if enabled:
+        directory.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            with path.open('x') as output:
+                output.write(AUTOSTART)
+    elif path.exists():
+        path.rename(path.with_suffix('.desktop.backup-' + str(time.time_ns())))
+    return True
+
+
 def method(connection, sender, path, interface, name, parameters, invocation):
     try:
-        invocation.return_value(GLib.Variant('(s)', (anchor(),)))
+        if name == 'GetAnchor':
+            invocation.return_value(GLib.Variant('(s)', (anchor(),)))
+        elif name == 'SetAutostart':
+            invocation.return_value(GLib.Variant('(b)', (set_autostart(parameters.unpack()[0]),)))
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         invocation.return_dbus_error(NAME + '.Unavailable', 'Desktop geometry unavailable')
 

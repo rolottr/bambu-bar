@@ -22,6 +22,13 @@ internal sealed class Background : IDisposable
     public async Task<bool> Request(bool autostart)
     {
         if (!_connected) { _localName = (await _connection.ConnectAsync()).LocalName; _connected = true; }
+        // xdg-desktop-portal-hyprland/gtk have no Background interface. The
+        // optional host companion manages only our fixed Flatpak login command.
+        if (Platform.IsHyprland)
+        {
+            try { return await _connection.CreateProxy<IHyprlandAnchor>("dev.rolottr.BambuBar.Hyprland", "/dev/rolottr/BambuBar/Hyprland").SetAutostartAsync(autostart).WaitAsync(TimeSpan.FromSeconds(3)); }
+            catch (Exception) { throw new IOException("Install the Bambu Bar Hyprland integration to manage startup at login on this desktop."); }
+        }
         var portal = _connection.CreateProxy<IBackgroundPortal>("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop");
         var token = "bambubar" + Guid.NewGuid().ToString("N");
         var request = _connection.CreateProxy<IPortalRequest>("org.freedesktop.portal.Desktop", $"/org/freedesktop/portal/desktop/request/{_localName.TrimStart(':').Replace('.', '_')}/{token}");
