@@ -9,6 +9,7 @@ namespace BambuBar.Linux;
 internal sealed class Licensing : IDisposable
 {
     private readonly SerialContext _worker = new("BambuBar.License");
+    private readonly CancellationTokenSource _lifetime = new();
     private readonly LicenseStore _store;
     public bool HasAccess { get; private set; }
     public bool Busy { get; private set; }
@@ -19,7 +20,7 @@ internal sealed class Licensing : IDisposable
     public Licensing(bool ephemeral)
     {
         var ui = SynchronizationContext.Current!;
-        _store = _worker.Invoke(() => new LicenseStore(new PolarClient(activationLabel: id => $"Linux · {id[..Math.Min(8, id.Length)]}"), ephemeral ? new MemoryLicenseVault() : new Vault()));
+        _store = _worker.Invoke(() => new LicenseStore(new PolarClient(activationLabel: id => $"Linux · {id[..Math.Min(8, id.Length)]}"), ephemeral ? new MemoryLicenseVault() : new Vault(_lifetime.Token)));
         _worker.Post(_ =>
         {
             _store.PropertyChanged += (_, _) =>
@@ -33,17 +34,17 @@ internal sealed class Licensing : IDisposable
     public void Activate(string key) => _worker.Post(async _ => await _store.ActivateAsync(key), null);
     public void Deactivate() => _worker.Post(async _ => await _store.DeactivateAsync(), null);
     public void Refresh() => _worker.Post(async _ => await _store.RefreshAsync(), null);
-    public void Dispose() { _disposed = true; _worker.Post(_ => _store.Stop(), null); _worker.Dispose(); }
-    private sealed class Vault : ILicenseVault
+    public void Dispose() { if (_disposed) return; _disposed = true; _lifetime.Cancel(); _worker.Post(_ => _store.Stop(), null); _worker.Dispose(); _lifetime.Dispose(); }
+    private sealed class Vault(CancellationToken lifetime) : ILicenseVault
     {
         public LicenseRecord? Load()
         {
-            var result = Task.Run(() => Platform.Run("secret-tool", ["lookup", "application", Platform.AppId, "kind", "supporter-license"])).GetAwaiter().GetResult();
+            var result = Task.Run(() => Platform.Run("secret-tool", ["lookup", "application", Platform.AppId, "kind", "supporter-license"], waitForUser: true, cancellationToken: lifetime)).GetAwaiter().GetResult();
             return result.Exit == 0 && result.Output.Length > 0 ? LicenseRecord.FromJson(result.Output.TrimEnd('\r', '\n')) : null;
         }
         public void Save(LicenseRecord? record)
         {
-            var result = Task.Run(() => record is null ? Platform.Run("secret-tool", ["clear", "application", Platform.AppId, "kind", "supporter-license"]) : Platform.Run("secret-tool", ["store", "--label=Bambu Bar supporter license", "application", Platform.AppId, "kind", "supporter-license"], record.ToJson())).GetAwaiter().GetResult();
+            var result = Task.Run(() => record is null ? Platform.Run("secret-tool", ["clear", "application", Platform.AppId, "kind", "supporter-license"], waitForUser: true, cancellationToken: lifetime) : Platform.Run("secret-tool", ["store", "--label=Bambu Bar supporter license", "application", Platform.AppId, "kind", "supporter-license"], record.ToJson(), waitForUser: true, cancellationToken: lifetime)).GetAwaiter().GetResult();
             if (result.Exit != 0) throw new IOException("Unlock your keyring to save the supporter license.");
         }
     }

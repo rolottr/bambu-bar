@@ -28,10 +28,16 @@ internal static class Platform
         if (input is not null) { await process.StandardInput.WriteAsync(input); process.StandardInput.Close(); }
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (!waitForUser) timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        // Shutdown stops GTK's synchronization context. Kill synchronously in the
+        // cancellation callback rather than relying on an async continuation there.
+        using var cancelProcess = timeout.Token.Register(() =>
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { /* Already exited. */ }
+        });
         try { await process.WaitForExitAsync(timeout.Token); }
         catch (OperationCanceledException)
         {
-            if (!process.HasExited) process.Kill(entireProcessTree: true);
             cancellationToken.ThrowIfCancellationRequested();
             throw new IOException($"{file} did not respond");
         }
