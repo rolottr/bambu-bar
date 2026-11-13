@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.rolottr.BambuBar</id>
+  <name>Bambu Bar</name>
+  <summary>Monitor Bambu Lab printers on your local network</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="ai.ninalabs"><name>NINA LABS, LLC</name></developer>
+  <description><p>Follow print progress, temperatures, filament and live camera feeds without opening your slicer. Connect directly to your printers with no cloud account.</p></description>
+  <launchable type="desktop-id">dev.rolottr.BambuBar.desktop</launchable>
+  <url type="homepage">https://bambubar.app</url>
+  <url type="bugtracker">https://github.com/rolottr/bambu-bar/issues</url>
+  <content_rating type="oars-1.1"/>
+</component>

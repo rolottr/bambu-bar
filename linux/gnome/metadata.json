@@ -1,0 +1,8 @@
+{
+  "uuid": "bambu-bar@rolottr.dev",
+  "name": "Bambu Bar",
+  "description": "Live Bambu Bar printer status and controls in the GNOME panel. Requires the Bambu Bar desktop app.",
+  "shell-version": ["50"],
+  "version": 1,
+  "url": "https://bambubar.app"
+}
