@@ -15,7 +15,8 @@ internal static class Platform
     public static string State => Path.Combine(Environment.GetEnvironmentVariable("XDG_STATE_HOME") ?? Path.Combine(Home, ".local", "state"), "bambu-bar");
     public static string Commit => typeof(Platform).Assembly.GetCustomAttributes(false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion.Split('+').ElementAtOrDefault(1) is { Length: > 0 } revision ? revision[..Math.Min(7, revision.Length)] : "development";
 
-    public static async Task<(int Exit, string Output)> Run(string file, IEnumerable<string> args, string? input = null)
+    public static async Task<(int Exit, string Output)> Run(string file, IEnumerable<string> args, string? input = null,
+        bool waitForUser = false, CancellationToken cancellationToken = default)
     {
         var bundled = Path.Combine(AppContext.BaseDirectory, "libexec", file);
         if (File.Exists(bundled)) file = bundled;
@@ -25,9 +26,15 @@ internal static class Platform
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
         if (input is not null) { await process.StandardInput.WriteAsync(input); process.StandardInput.Close(); }
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (!waitForUser) timeout.CancelAfter(TimeSpan.FromSeconds(30));
         try { await process.WaitForExitAsync(timeout.Token); }
-        catch (OperationCanceledException) { process.Kill(entireProcessTree: true); throw new IOException($"{file} did not respond"); }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new IOException($"{file} did not respond");
+        }
         await error; // Consume errors without printing: services can include private data.
         return (process.ExitCode, await output);
     }
@@ -55,21 +62,26 @@ internal static class Platform
 
 /// <summary>Secret Service through libsecret's supported CLI. Values travel over stdin, never command arguments.
 /// All IPC is awaited before connecting; the core reads this in-memory cache without blocking GTK.</summary>
-internal sealed class SecretStore : ISecretStore
+internal sealed class SecretStore : ISecretStore, IDisposable
 {
+    private readonly CancellationTokenSource _lifetime = new();
+    public bool IsDisposed { get; private set; }
     private readonly ConcurrentDictionary<string, string> _codes = new(StringComparer.Ordinal);
     public string? AccessCode(string serial) => _codes.GetValueOrDefault(serial);
     public async Task Load(IEnumerable<string> serials)
     {
         foreach (var serial in serials)
         {
-            var result = await Platform.Run("secret-tool", ["lookup", "application", Platform.AppId, "serial", serial]);
+            // Wallet unlock/authorization is interactive, especially with desktop autologin.
+            var result = await Platform.Run("secret-tool", ["lookup", "application", Platform.AppId, "serial", serial],
+                waitForUser: true, cancellationToken: _lifetime.Token);
             if (result.Exit == 0) _codes[serial] = result.Output.TrimEnd('\r', '\n');
         }
     }
     public async Task Save(string serial, string code)
     {
-        var result = await Platform.Run("secret-tool", ["store", "--label=Bambu Bar printer", "application", Platform.AppId, "serial", serial], code);
+        var result = await Platform.Run("secret-tool", ["store", "--label=Bambu Bar printer", "application", Platform.AppId, "serial", serial], code,
+            waitForUser: true, cancellationToken: _lifetime.Token);
         if (result.Exit != 0) throw new IOException("Unlock your keyring or enable a Secret Service provider, then try again.");
         _codes[serial] = code;
     }
@@ -82,10 +94,18 @@ internal sealed class SecretStore : ISecretStore
         _codes.TryRemove(serial, out _);
         _ = Clear(serial);
     }
-    private static async Task Clear(string serial)
+    private async Task Clear(string serial)
     {
-        try { await Platform.Run("secret-tool", ["clear", "application", Platform.AppId, "serial", serial]); }
+        try { await Platform.Run("secret-tool", ["clear", "application", Platform.AppId, "serial", serial],
+            waitForUser: true, cancellationToken: _lifetime.Token); }
         catch (Exception) { Platform.Log("Secret removal unavailable; keyring entry retained."); }
+    }
+    public void Dispose()
+    {
+        if (IsDisposed) return;
+        IsDisposed = true;
+        _lifetime.Cancel();
+        _lifetime.Dispose();
     }
 }
 

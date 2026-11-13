@@ -72,6 +72,7 @@ internal static class Program
                 _shell.Started();
                 if (!ephemeral) Platform.Log($"ready {timer.ElapsedMilliseconds} ms; {Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")}; {AppVersion.Marketing} ({Platform.Commit})");
             }
+            catch (OperationCanceledException) when (secrets.IsDisposed) { }
             catch (Exception e) { _shell.Error(e.Message); store.Start(); _shell.Started(); }
         };
         application.OnShutdown += (_, _) => _shell?.Dispose();

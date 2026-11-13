@@ -277,6 +277,6 @@ internal sealed partial class Shell : IDisposable
         foreach (var clean in _cleanup) clean();
         foreach (var clean in _panelCleanup) clean();
         foreach (var camera in _cameraWindows.Values.ToArray()) { camera.Surface.Dispose(); camera.Window.Destroy(); }
-        _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
+        _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
     }
 }
