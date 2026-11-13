@@ -107,6 +107,9 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         var payload = new
         {
             version = 1,
+            widgetPrinters = !Platform.IsPlasma || !_settings.Get("linuxWidgetsEnabled", false) ? [] :
+                new[] { new { id = "", state = JsonSerializer.SerializeToElement(WidgetSnapshot(null), WidgetState.Json) } }
+                    .Concat(_store.Sessions.Select(s => new { id = s.Id, state = JsonSerializer.SerializeToElement(WidgetSnapshot(s.Id), WidgetState.Json) })).ToArray(),
             widgets = !_settings.Get("linuxWidgetsEnabled", false) ? [] : (_settings.Get<List<DesktopWidgetConfig>>("linuxWidgets") ?? []).Take(8).Select(w => new
             {
                 id = w.Id, size = w.Size, corner = w.Corner,

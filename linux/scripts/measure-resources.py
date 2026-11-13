@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sample Bambu Bar and GNOME Shell without requiring an attached profiler.
+"""Sample Bambu Bar, GNOME Shell and Plasma without an attached profiler.
 
 Usage: python3 measure-resources.py SCENARIO SECONDS OUTPUT.json
 CPU is percent of one logical CPU, measured from process CPU-time deltas.
@@ -46,7 +46,7 @@ def main():
             name = (process / 'comm').read_text().strip()
         except OSError:
             continue
-        if name in ('bambu-bar', 'gnome-shell'):
+        if name in ('bambu-bar', 'gnome-shell', 'plasmashell', 'kwin_wayland'):
             processes[process.name] = {'name': name, 'samples': []}
     for index in range(duration + 1):
         for pid, process in processes.items():

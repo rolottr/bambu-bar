@@ -9,6 +9,7 @@ internal sealed partial class Shell
     private void QuickViewPage()
     {
         Header(Loc.T("Menu Bar"), Loc.T("What the menu bar shows while you print, and what you see when you click it."));
+        if (Platform.IsPlasma) _pageHost.Append(Note("Plasma shows a tray icon; progress and time appear in its tooltip, not as panel text. Click the icon for Quick view, middle-click to open Bambu Bar, or right-click for Open and Quit. The preview below illustrates the content, not a native Plasma popup."));
         var layout = Gtk.FlowBox.New(); layout.SetSelectionMode(Gtk.SelectionMode.None); layout.SetMinChildrenPerLine(1); layout.SetMaxChildrenPerLine(2);
         layout.AddCssClass("menu-layout"); layout.SetColumnSpacing(16); layout.SetRowSpacing(18); layout.SetValign(Gtk.Align.Start); layout.SetHalign(Gtk.Align.Start);
         var options = Column(22); options.SetSizeRequest(300, -1); options.SetHexpand(false); options.SetValign(Gtk.Align.Start);

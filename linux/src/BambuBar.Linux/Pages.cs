@@ -196,7 +196,8 @@ internal sealed partial class Shell
         _pageHost.Append(SettingsSection("General", "emblem-system-symbolic", general));
 
         var languages = Strings.Current?.Languages.ToArray() ?? ["en"];
-        var language = Gtk.DropDown.NewFromStrings([Loc.T("System") + " (" + CultureInfo.CurrentUICulture.NativeName + ")", .. languages.Select(c => CultureInfo.GetCultureInfo(c).NativeName)]);
+        var systemLanguage = CultureInfo.CurrentUICulture.Equals(CultureInfo.InvariantCulture) ? "English" : CultureInfo.CurrentUICulture.NativeName;
+        var language = Gtk.DropDown.NewFromStrings([Loc.T("System") + " (" + systemLanguage + ")", .. languages.Select(c => CultureInfo.GetCultureInfo(c).NativeName)]);
         var selectedLanguage = _settings.Get<string>("appLanguage");
         language.SetSelected((uint)(selectedLanguage is null ? 0 : Math.Max(0, Array.IndexOf(languages, selectedLanguage) + 1)));
         language.OnNotify += (_, e) =>
@@ -262,7 +263,7 @@ internal sealed partial class Shell
         var state = Live(() => _license.Busy ? Loc.T("Checking…") : _license.HasAccess ? Loc.T("Hero Supporter") : _license.Message ?? Loc.T("Support this project")); state.SetWrap(true); license.Append(state);
         _updates.Add(() => { activate.SetVisible(!_license.HasRecord); key.SetVisible(!_license.HasRecord); check.SetVisible(_license.HasRecord); deactivate.SetVisible(_license.HasRecord); activate.SetSensitive(!_license.Busy && !_license.HasRecord); check.SetSensitive(!_license.Busy && _license.HasRecord); deactivate.SetSensitive(!_license.Busy && _license.HasRecord); key.SetSensitive(!_license.Busy && !_license.HasRecord); });
         _pageHost.Append(AboutSection("Your license", "application-certificate-symbolic", license));
-        _pageHost.Append(AboutSection("How it works", "network-wireless-symbolic", Module(Note("Bambu Bar connects straight to your printer on the local network over encrypted MQTT, using the printer’s access code. The printer streams its status; the app shows it in the top bar and shares a snapshot with the GNOME desktop widgets."))));
+        _pageHost.Append(AboutSection("How it works", "network-wireless-symbolic", Module(Note("Bambu Bar connects straight to your printer on the local network over encrypted MQTT, using the printer’s access code. The printer streams its status; the app shows it in the tray and shares a snapshot with the companion desktop widgets."))));
         _pageHost.Append(AboutSection("Privacy", "changes-prevent-symbolic", Module(Note("Printer data stays on your local network. No app analytics. Printer access codes and supporter license credentials are stored in your desktop keyring. Supporter licenses are validated online."))));
         var about = Label(Loc.T("Bambu Lab, Bambu Studio and P2S are trademarks of Bambu Lab. Bambu Bar is an independent project, not affiliated with or endorsed by Bambu Lab."), "muted"); about.SetWrap(true); _pageHost.Append(AboutSection("Credits", "help-about-symbolic", Module(Note("Protocol details and HMS error texts come from the open-source ha-bambulab project. The printer models are visual approximations built for this project in Blender."), about)));
     }

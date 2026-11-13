@@ -156,7 +156,7 @@ internal sealed partial class Shell
     {
         if (_panel is not null) return;
         _panel = Adw.ApplicationWindow.New(_app); WindowSize.Track(_panel);
-        _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 500); _panel.SetHideOnClose(true); _panel.SetResizable(false);
+        _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 700); _panel.SetHideOnClose(true); _panel.SetResizable(false);
         BuildPanel();
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) => { if (e.Keyval != 65307) return false; _panel.SetVisible(false); return true; }; _panel.AddController(keys);
         _panel.OnNotify += (_, e) => { if (e.Pspec.GetName() == "is-active" && !_panel.GetIsActive()) _panel.SetVisible(false); };

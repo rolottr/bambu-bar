@@ -89,6 +89,22 @@ internal sealed partial class Shell
     {
         Header(Loc.T("Widgets"), Loc.T("Your printers on the desktop, in three sizes."));
         WidgetShowcase();
+        if (Platform.IsPlasma)
+        {
+            var instructions = Module(Label("KDE Plasma", "heading"));
+            instructions.Append(Note("Install the companion Bambu Bar Plasma widget, then right-click the desktop, enter Edit Mode and choose Add Widgets → Bambu Bar. Keep Bambu Bar running."));
+            instructions.Append(Note("Right-click each widget and choose Configure Bambu Bar to select Small, Medium or Large and a printer. Automatic follows the active printer. Move and resize widgets in Plasma Edit Mode; click a card to open its printer."));
+            Toggle(instructions, "Share printer status with Plasma widgets", _settings.Get("linuxWidgetsEnabled", false), enabled => { _settings.Set("linuxWidgetsEnabled", enabled); _desktop?.Queue(); });
+            instructions.Append(Note("Turning sharing off clears printer data from the cards. Remove cards in Plasma Edit Mode."));
+            instructions.Append(Note("Requires Plasma 6.6 or newer. Install from the local companion package with: kpackagetool6 --type Plasma/Applet --install Bambu-Bar.plasmoid"));
+            _pageHost.Append(instructions);
+            return;
+        }
+        if (!Platform.IsGnome)
+        {
+            _pageHost.Append(Module(Note("Desktop widgets require the GNOME Shell companion extension or the KDE Plasma companion widget. This desktop is not supported; Quick view remains available from the tray.")));
+            return;
+        }
         _pageHost.Append(Label(Loc.T("ADD A WIDGET"), "section-title"));
         var steps = Module();
         foreach (var (number, text) in new[] { ("1", "Enable desktop widgets below. Keep the Bambu Bar GNOME extension enabled."), ("2", "Choose Add widget, then pick a size and a desktop corner."), ("3", "Choose a printer for each widget, or Automatic to follow the active printer."), ("4", "Click a desktop widget to open its printer. Bambu Bar keeps it updated in the background.") })

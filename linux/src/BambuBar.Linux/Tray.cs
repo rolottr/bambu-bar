@@ -1,6 +1,7 @@
 using Tmds.DBus;
 using BambuBar.Core;
 using BambuBar.Core.App;
+using BambuBar.Core.Model;
 
 namespace BambuBar.Linux;
 
@@ -57,8 +58,10 @@ internal sealed class Tray : IStatusItem, IDisposable
 
     public Tray(PrinterStore store, Action panel, Action show, Action quit)
     {
-        _store = store; _panel = panel; _show = show; _quit = quit;
-        _menu = new Menu(panel, show, quit);
+        var context = SynchronizationContext.Current ?? throw new InvalidOperationException("Create the tray on the GTK thread.");
+        Action Dispatch(Action action) => () => context.Post(_ => { if (!_disposed) action(); }, null);
+        _store = store; _panel = Dispatch(panel); _show = Dispatch(show); _quit = Dispatch(quit);
+        _menu = new Menu(_panel, _show, _quit);
     }
     public async Task Start()
     {
@@ -82,7 +85,8 @@ internal sealed class Tray : IStatusItem, IDisposable
             catch (Exception) { Available = false; }
         }
     }
-    private string Title => _store.MenuBarSession is { } s ? $"{s.Config.Name} · {s.ShortState}" : "Bambu Bar";
+    private string Title => _store.MenuBarSession is { } s ? $"{s.Config.Name} · {s.ShortState}" +
+        (s.IsOnline && s.Status is { } status && status.State.IsActive() && _store.MenuBarStyle.Text(status) is { Length: > 0 } text ? " · " + text : "") : "Bambu Bar";
     private void Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
         if (_last == Title || _disposed) return; _last = Title;

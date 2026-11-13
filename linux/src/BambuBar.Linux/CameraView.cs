@@ -40,6 +40,7 @@ internal sealed partial class Shell
         public Gtk.Box Content { get; } = Column(8);
         private readonly Gtk.Picture _picture = Gtk.Picture.New();
         private readonly Gtk.Label _status = Label("", "muted");
+        private readonly Gtk.Button _retry;
         private readonly CameraFeed _feed;
         private readonly CameraViewer _viewer;
         private bool _disposed;
@@ -48,7 +49,8 @@ internal sealed partial class Shell
             _feed = feed;
             _picture.SetSizeRequest(-1, 250); _picture.SetCanShrink(true); _picture.SetContentFit(Gtk.ContentFit.Contain); _picture.SetAlternativeText(Loc.T("Live View")); _picture.SetVexpand(true);
             _status.SetWrap(true); _status.SetMarginStart(12); _status.SetMarginEnd(12); Content.Append(_picture); Content.Append(_status);
-            Content.Append(Button("view-refresh-symbolic", Loc.T("Try Again"), feed.TryAgain, true));
+            _retry = Button("view-refresh-symbolic", Loc.T("Try Again"), feed.TryAgain, true);
+            _retry.SetVisible(false); Content.Append(_retry);
             _viewer = new CameraViewer(_picture, feed, visible);
             feed.FrameChanged += Frame; feed.PropertyChanged += Changed;
         }
@@ -56,6 +58,7 @@ internal sealed partial class Shell
         private void Frame()
         {
             if (_disposed) return;
+            _retry.SetVisible(_feed.State is CameraFeed.FeedState.Failed or CameraFeed.FeedState.Unavailable);
             if (_feed.Frame is { } frame)
             {
                 using var bytes = GLib.Bytes.New(frame.Pixels);

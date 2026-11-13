@@ -7,6 +7,9 @@ namespace BambuBar.Linux;
 internal static class Platform
 {
     public const string AppId = "dev.rolottr.BambuBar";
+    // Only presentation/install guidance depends on the desktop; IPC still probes services.
+    public static bool IsPlasma => (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "").Split(':').Contains("KDE", StringComparer.OrdinalIgnoreCase);
+    public static bool IsGnome => (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "").Split(':').Any(s => s.Contains("GNOME", StringComparison.OrdinalIgnoreCase));
     public static string Home => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     public static string Config => Path.Combine(Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") ?? Path.Combine(Home, ".config"), "bambu-bar");
     public static string State => Path.Combine(Environment.GetEnvironmentVariable("XDG_STATE_HOME") ?? Path.Combine(Home, ".local", "state"), "bambu-bar");
