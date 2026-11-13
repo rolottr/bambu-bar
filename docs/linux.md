@@ -1,17 +1,17 @@
 # Bambu Bar on Linux
 
-The GNOME port lives in `linux/`. It uses GTK 4/libadwaita through GirCore and the existing, tested .NET 10 printer core in `windows/src/BambuBar.Core`. The Mac and Windows apps stay in the same repository and use the same version, assets, certificates, reports and string catalog.
+The Linux port lives in `linux/`. It uses GTK 4/libadwaita through GirCore and the existing, tested .NET 10 printer core in `windows/src/BambuBar.Core`. The Mac and Windows apps stay in the same repository and use the same version, assets, certificates, reports and string catalog.
 
 ## Install
 
-The first port is a **local development build**, not a published release. On a GNOME desktop with Flatpak and Flathub configured:
+The first port is a **local development build**, not a published release. On a GNOME or KDE Plasma desktop with Flatpak and Flathub configured:
 
 ```sh
 flatpak install --user ./Bambu-Bar-2.2.0-linux-x64.flatpak
 flatpak run dev.rolottr.BambuBar
 ```
 
-Find **Bambu Bar** in the app launcher. Closing the window continues monitoring. Open it again from the launcher, the optional tray icon, or a notification. The tray menu and the launcher offer **Quick view** and **Quit**. `Ctrl+Q` quits completely.
+Find **Bambu Bar** in the app launcher. Closing the window continues monitoring. Open it again from the launcher, the optional tray icon, or a notification. The tray menu and the launcher offer **Quick view** and **Quit**. `Ctrl+Q` in the main window quits completely; Quick view has its own Quit button.
 
 For the native GNOME top-bar popup, also install the companion bundle:
 
@@ -46,9 +46,9 @@ Updates belong to the package channel; this port does not change the Mac/Windows
 
 ## Deliberate desktop differences
 
-One GTK build serves all three desktops, with a companion Shell extension for GNOME's rich panel popup. It probes services instead of branching on `XDG_CURRENT_DESKTOP`. **Only GNOME is validated in this port.** KDE Plasma and Omarchy still need their own application integration/look rounds; their VM displays were set to 1920×1080 as requested.
+One GTK build serves all three desktops, with a companion Shell extension for GNOME's rich panel popup. Tray IPC probes services. Desktop-specific widget instructions and the KDE icon-theme fallback use `XDG_CURRENT_DESKTOP`. GNOME 50 and KDE Plasma 6.6 have been exercised on Ubuntu 26.04 VMs; see the separate KDE results below. Omarchy remains unvalidated.
 
-The companion GNOME Shell extension now supplies desktop widgets. In **Widgets**, add a Small, Medium or Large card, choose a printer (or Automatic), and pick a desktop corner. Cards update from the existing printer core, stay beneath normal windows, hide in the overview/lock screen, and open their printer when clicked. The app must remain running and the extension enabled. Widget settings survive app restarts. Placement currently uses the primary monitor and corner stacks; free dragging and Plasma/Hyprland integration are not implemented.
+The companion GNOME Shell extension now supplies desktop widgets. In **Widgets**, add a Small, Medium or Large card, choose a printer (or Automatic), and pick a desktop corner. Cards update from the existing printer core, stay beneath normal windows, hide in the overview/lock screen, and open their printer when clicked. The app must remain running and the extension enabled. Widget settings survive app restarts. Placement currently uses the primary monitor and corner stacks; free dragging is not implemented by the GNOME companion. Plasma uses its own native draggable widgets (below); Hyprland widgets are unsupported.
 
 Standalone Quick view remains available as a small, scrollable GTK window. The Shell popup and the Menu Bar settings preview share content preferences for temperatures, chamber temperature, fans, filament and print controls.
 
@@ -161,3 +161,51 @@ Resource observations (CPU is percent of **one logical CPU**, RSS is resident me
 The earlier three-widget sample, before skipping redundant restacking, averaged 4.13% GNOME Shell CPU; the final sample averaged 0.54%. These are observed VM intervals, not a controlled hardware benchmark. The demo and real app ran as separate processes during the animation check; the table reports the demo process for those two rows. The 3D model displayed again when scrolled back into view.
 
 Memory remains substantial after opening the UI: the clean navigation run rose from 164.5 MiB at startup to 494.4, 504.4 and 532.6 MiB after successive eight-page cycles. The cold widget figure is not the warm UI footprint, and these short samples do not prove absence of a leak. Raw CPU/RSS/PSS measurements and methodology are saved in `build/linux/evidence/page-audit/performance/`. No builds or application captures ran during the measurement intervals. Nothing was pushed.
+
+
+### KDE Plasma companion
+
+On Plasma **6.6 or newer**, install the local companion package outside the Flatpak:
+
+```sh
+linux/scripts/install-plasma-widget.sh
+# Or use the bundle produced by linux/scripts/build.sh:
+kpackagetool6 --type Plasma/Applet --install Bambu-Bar.plasmoid
+# For subsequent versions:
+kpackagetool6 --type Plasma/Applet --upgrade Bambu-Bar.plasmoid
+```
+
+Enable **Share printer status with Plasma widgets** in the app's Widgets page. Right-click the desktop, enter **Edit Mode**, then **Add Widgets → Bambu Bar**. Right-click each card and choose **Configure Bambu Bar** to pick Small, Medium or Large and a printer. Automatic follows the active printer. Plasma owns placement, resizing, and per-widget settings; the GNOME corner controls are not shown here. Keep Bambu Bar running. Disabling sharing clears the cards' printer data; remove cards in Plasma Edit Mode.
+
+The native QML companion reads one initial D-Bus snapshot and then listens for state and service-owner changes. It has no polling timer or helper process, and never receives printer credentials or camera frames. It clears live data when the app exits, reconnects when it starts, and uses cached printer artwork. Small cards have a progress ring, state, job and filament; Medium adds printer artwork and temperatures; Large adds AMS colors/amounts, humidity and one issue message. Long text is elided within small cards; open the printer for the complete message.
+
+Plasma's standard StatusNotifier tray is used directly: left-click opens the GTK Quick view, middle-click opens the main window, and right-click offers Quick view, Open and Quit. Plasma does not display the app's inline progress/time text next to the tray icon; the four Menu Bar modes affect its tooltip. The page now states this limitation. Quick view is a separate scrollable GTK window, not a native anchored Plasma popup. GNOME's richer Shell popup remains unchanged.
+
+Implementation follows KDE's [widget configuration](https://develop.kde.org/docs/plasma/widget/configuration/) and [desktop scripting](https://develop.kde.org/docs/plasma/scripting/api/) interfaces, and the installed Plasma 6.6 `org.kde.plasma.workspace.dbus` module. That module's signal handler naming and callback behavior are covered by KDE's [D-Bus tests](https://github.com/KDE/plasma-workspace/tree/Plasma/6.6/components/dbus/autotests).
+
+
+### KDE validation (November 13, 2026)
+
+Built and installed on `ubuntu-kde`: Ubuntu 26.04.1, Plasma/KWin 6.6.6, Wayland, 1920×1080, two vCPUs and 3904 MiB RAM, using Mesa llvmpipe. The final application code is `a549f23`; the installed DLL matched the published DLL by SHA-256. Evidence, raw measurements and the individual macOS/KDE page comparison are in `build/linux/evidence/kde/` (`results.md` and `comparison.html`).
+
+Fixed a GTK GL-context crash by dispatching tray actions onto GTK's main context; missing icons caused by Breeze not being inside the GNOME runtime; duplicated tray progress/state text; Quick view height; a retry button incorrectly visible over streaming video; medium desktop-card clipping; and excessive shell/compositor work from a permanently pulsing attention icon. Failed/paused printers now retain a static warning overlay. The native Plasma companion uses the existing sanitized snapshot and leaves the GNOME extension's interface intact.
+
+KDE's background portal also exposed two lifecycle bugs: background registration could remove the saved autostart entry, and a wallet unlock after 30 seconds left startup offline. Registration now always includes the saved autostart value. Interactive credential/license lookup waits for wallet unlock and kills pending helper processes synchronously on quit. Autostart was exercised through a real VM reboot; unlocking KWallet after 60 seconds connected successfully. Automatic login on this VM still requires unlocking KWallet manually.
+
+All eight pages, the four lower Printer cards and the six-printer demo overview were visually inspected. There is one All Printers entry. Tested native tray left/middle/right actions, Quick view options, launch/hide/quit, notification display and click-to-open, settings persistence, live Light/Dark/System changes, 200% scaling, window resizing, all three native widget sizes, printer configuration, drag/resize, click-to-open and clearing/reconnecting. Real P2S MQTT telemetry, four AMS 2 Pro slots plus external spool and humidity were verified. The trusted RTSPS camera decoded 130/130 frames in five seconds (~25.9 fps), displayed live video, and released its TCP connection when closed. No real print command was sent.
+
+The portable core suite reported 269 passed, two opt-in sample exporters skipped, zero failed (271 total), including codec tests using the bundled FFmpeg libraries; all seven GNOME widget state/layout tests and both extension syntax checks passed. A full GNOME desktop visual rerun was not performed for this KDE pass. Production licensing and a real print lifecycle remain untested. Plasma cards require 6.6+ and show cached artwork rather than live video/interactive 3D; the tray uses a separate GTK Quick view and tooltip text, not GNOME's rich anchored popup or inline panel text.
+
+| Scenario (60 seconds each) | App CPU | App RSS, end | Plasma CPU | KWin CPU |
+| --- | ---: | ---: | ---: | ---: |
+| Cold hidden, three widgets | 1.37% | 191.9 MiB | 0.26% | 0.03% |
+| Main Printer view, three widgets | 2.17% | 468.3 MiB | 0.26% | 1.50% |
+| Warm hidden, after 24 page visits, three widgets | 0.33% | 533.8 MiB | 0.44% | 5.81% |
+| Warm hidden, after capture pass, no widgets | 0.18% | 625.2 MiB | 0.07% | 0.03% |
+| Printing demo, model visible, 1120×940 | 21.51% | 426.6 MiB | 0.18% | 6.45% |
+| Printing demo, model visible, 1120×606 | 15.66% | 426.9 MiB | 0.12% | 2.35% |
+| Same demo, model offscreen, 1120×606 | 0.10% | 426.9 MiB | 0.08% | 0.02% |
+
+CPU percentages are per logical CPU. Cold memory is a fresh background process, not typical warmed-up use. The 24-page run reached 500.2, 544.9 and 544.7 MiB RSS after its three eight-page cycles; it ended the following hidden interval at 533.8 MiB. The no-widget run follows additional page captures and UI checks, so its 625.2 MiB RSS cannot isolate widget memory overhead. The warm KWin sample included a one-second 166.93% spike; this was not attributed to the app. These short llvmpipe VM intervals do not establish hardware-GPU performance or absence of a memory leak. Visible animation is substantially more expensive here than in the GNOME baseline. In the same 1120×606 window, scrolling it completely out of view reduced app CPU from 15.66% to 0.10%; rendering returned when scrolled back.
+
+No builds or application captures ran inside these intervals. Raw process RSS/PSS, peaks and CPU figures are in `build/linux/evidence/kde/performance/`. Test demos/fixtures and temporary desktop cards were removed; camera, autostart and widget sharing were restored off, app appearance to Dark, desktop to BreezeLight and scale to 100%. The real app remains installed and monitoring in the background. Nothing was pushed.
