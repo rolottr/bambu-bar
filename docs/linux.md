@@ -46,7 +46,7 @@ Updates belong to the package channel; this port does not change the Mac/Windows
 
 ## Deliberate desktop differences
 
-One GTK build serves all three desktops, with a companion Shell extension for GNOME's rich panel popup. Tray IPC probes services. Desktop-specific widget instructions and the KDE icon-theme fallback use `XDG_CURRENT_DESKTOP`. GNOME 50 and KDE Plasma 6.6 have been exercised on Ubuntu 26.04 VMs; see the separate KDE results below. Omarchy remains unvalidated.
+One GTK build serves all three desktops, with a companion Shell extension for GNOME's rich panel popup. Tray IPC probes services. Desktop-specific widget instructions and the KDE icon-theme fallback use `XDG_CURRENT_DESKTOP`. GNOME 50 and KDE Plasma 6.6 have been exercised on Ubuntu 26.04 VMs; see the separate KDE results below. Omarchy 4.5 / Hyprland 0.56 is validated below.
 
 The companion GNOME Shell extension now supplies desktop widgets. In **Widgets**, add a Small, Medium or Large card, choose a printer (or Automatic), and pick a desktop corner. Cards update from the existing printer core, stay beneath normal windows, hide in the overview/lock screen, and open their printer when clicked. The app must remain running and the extension enabled. Widget settings survive app restarts. Placement currently uses the primary monitor and corner stacks; free dragging is not implemented by the GNOME companion. Plasma uses its own native draggable widgets (below); Hyprland widgets are unsupported.
 
@@ -222,7 +222,7 @@ Rebuilt and visually checked on the VM with bottom and top panels, 100% and 200%
 
 ### Linux desktop themes
 
-Settings now starts with **Theme**, with four choices: **Follow desktop**, **GNOME (Adwaita)**, **KDE (Breeze)** and **Bambu Bar**. Follow desktop is the default and resolves to Breeze on Plasma and Adwaita elsewhere. **Color mode** independently selects Dark, Light or System. Existing light/dark preferences are preserved; new installations follow the system. Both selections persist, and changes apply immediately to the main window, GTK Quick view and camera windows. The four-square Quick view header button is removed on both desktops; tray and shell entry points remain available.
+Settings now starts with **Theme**, with four choices: **Follow desktop**, **GNOME (Adwaita)**, **KDE (Breeze)** and **Bambu Bar**, plus **Omarchy**. Follow desktop is the default and resolves to Omarchy on Omarchy/Hyprland with accessible current-theme files, Breeze on Plasma and Adwaita elsewhere. **Color mode** independently selects Dark, Light or System. Existing light/dark preferences are preserved; new installations follow the system. Both selections persist, and changes apply immediately to the main window, GTK Quick view and camera windows. The four-square Quick view header button is removed on both desktops; tray and shell entry points remain available.
 
 Adwaita uses libadwaita's native background, foreground and accent variables, neutral sidebar icons and rounded cards. Breeze uses the KDE light/dark palette, cyan accent and flatter, tighter cards and controls. This is a Breeze-inspired GTK style, not a Qt theme engine or an importer for arbitrary Plasma color schemes. Bambu Bar retains the original colorful sidebar and dark gradient. Shell popups and desktop widgets retain their own shell/companion styling; this chooser changes application windows.
 
@@ -238,3 +238,34 @@ Both the StatusNotifier tray and GNOME companion now use the same 18-unit printe
 `linux/scripts/generate-tray-icons.py` generates the shared assets during .NET builds and GNOME packaging. Flatpak and native installs expose the names through the standard icon theme. Filled outlines encode the frame, offline dashes and badge cutouts: GTK symbolic recoloring otherwise fills stroked rectangles and masks incorrectly. GNOME receives only a validated icon key and changes its `GIcon` when that key changes; StatusNotifier emits NewIcon only for a changed look, even in Icon only mode. Failed/paused states do not request a permanently animated attention icon.
 
 Validation includes 1,230 state/progress/asset checks (`dotnet run --project linux/tests/TrayIcon.Tests -- build/linux/linux-x64/tray-icons`), the seven existing GNOME widget tests and extension syntax checks. Actual AppKit renders of the Mac implementation and Linux SVG renders are saved side by side in `build/linux/evidence/tray-icon/comparison.html`. Both desktop integrations were inspected on the VMs, including Plasma light/dark panels and tray opening, and the GNOME extension after a session restart. No printer command was sent. Themes and ordinary monitoring were restored after testing.
+
+
+### Omarchy / Hyprland integration (November 13, 2026)
+
+The tested VM is Omarchy 4.5.0-3, Hyprland 0.56.2-4, x86_64, Wayland, 1920×1080. This installation uses **Quickshell 0.3.2**, not Waybar, for its bar, StatusNotifier host and notification daemon. Waybar is tested separately with a temporary configuration; the user's Quickshell/Hyprland configuration is not replaced. The app retains its GTK/libadwaita layout and the macOS menu-bar printer geometry, including progress and status variants.
+
+On Arch/Omarchy, install the missing packages without an unrelated system upgrade:
+
+```sh
+sudo pacman -S --needed dotnet-sdk base-devel nasm curl xz python flatpak python-gobject
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50
+BAMBUBAR_COMMIT=$(git rev-parse HEAD) linux/scripts/build.sh
+flatpak install --user build/linux/Bambu-Bar-2.2.0-linux-x64.flatpak
+linux/scripts/install-hyprland-integration.sh
+flatpak run dev.rolottr.BambuBar --version
+```
+
+If Flatpak was just installed, sign out/in once so the bar inherits Flatpak's exported icon/desktop search paths from `/etc/profile.d/flatpak.sh`. No copied icons or temporary user icon overrides are required. Packaging works on Arch: native codecs/layer-shell are compiled in GNOME SDK 50, Plasma's optional archive uses Python, and GNOME extension packaging is conditional on its packaging tool being available.
+
+**Theme:** the installed Omarchy stages the current theme under `~/.local/state/omarchy/current/theme`, replacing the theme directory atomically. The legacy `~/.config/omarchy/current/theme` is also recognized if accessible. The app reads bounded, validated scalar colors from `colors.toml` and the optional `shell.toml`, never theme CSS/Lua or executable content. It uses actual background, foreground, accent, selection, border and surface colors; secondary/status text is contrast-adjusted. The GTK desktop font family remains in effect; square, shadow-free application chrome follows the tested Omarchy defaults. Filament colors retain their physical meaning. This is palette integration, not an interpreter for arbitrary shell layout or Hyprland Lua customization.
+
+**Follow desktop** selects Omarchy automatically. The explicit **Omarchy** choice is appended without changing the existing `system`, `gnome`, `kde`, or `bambu` preference IDs. **System** color mode follows the active palette's declared/inferred light/dark mode. Explicit **Light** or **Dark** remains authoritative: an opposite-mode palette is adapted by exchanging its background/foreground roles, rebuilding neutral surfaces and ensuring text contrast while retaining its accent. A bounded two-second refresh detects theme replacement and applies one CSS provider to main, Quick view and camera windows, without navigation or restarting. Missing/malformed files fall back to native Adwaita. The portal provides a color-scheme preference but not Omarchy's full palette; the Flatpak therefore grants read-only access to the two current-theme parent directories only, not general home/config/theme-library access.
+
+**Tray and Quick view:** GTK4 Layer Shell is loaded before GTK on Hyprland as well as Plasma. Plasma's existing scale conversion remains separate. Waybar uses logical coordinates; Quickshell activation supplies no click position. The optional user-local `dev.rolottr.BambuBar.Hyprland` D-Bus service reads the current cursor/monitor geometry using fixed `hyprctl` queries. It returns only a connector and monitor-local logical rectangle, including scale/rotation handling. The sandbox cannot access Hyprland's command socket. With no helper, coordinate-less activation falls back to the top-right tray area; exact placement requires the helper. Main and camera windows remain normal compositor-managed windows.
+
+The helper also manages only Bambu Bar's fixed `flatpak run dev.rolottr.BambuBar --background` XDG autostart entry because this VM's GTK/Hyprland portals have no Background interface. It refuses to overwrite independently managed entries and preserves disabled entries as non-`.desktop` backups. Installation backs up prior helper/service files and modifies no Waybar/Hyprland config. It uses Python/PyGObject and starts on D-Bus demand. Remove its two files under `~/.local/share/bambu-bar-hyprland/` and `~/.local/share/dbus-1/services/` to uninstall after turning Open at login off. GNOME/KDE continue using their original Background portal path.
+
+**Widgets:** Hyprland has no Bambu Bar desktop companion. GNOME actors and Plasma QML applets cannot be reused as Hyprland desktop widgets; Quickshell plugins are not interchangeable with Waybar or a stable cross-shell widget API. The Widgets page states the limitation before its illustrative previews and exposes no GNOME/Plasma sharing or placement controls. Quick view provides live status. The existing sanitized printer-status D-Bus boundary is unchanged; neither printer credentials nor camera frames are exposed to companions or the geometry helper.
+
+Evidence and reproducible validation are saved locally under `build/linux/evidence/omarchy/`, including individual macOS comparisons, native desktop screenshots, app captures, build/tests, package/process hashes, reboot checks and 60-second resource samples. This is a local development build; no remote push or publication is part of this work.

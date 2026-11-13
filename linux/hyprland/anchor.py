@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only geometry bridge. No printer data, arbitrary commands or socket forwarding."""
+"""Desktop bridge: read-only geometry and a fixed app autostart entry. No printer data or arbitrary commands."""
 import json
 import math
 import os

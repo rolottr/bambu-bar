@@ -162,7 +162,17 @@ internal sealed partial class Shell
         _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 1); _panel.SetHideOnClose(true); _panel.SetResizable(false);
         BuildPanel();
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) => { if (e.Keyval != 65307) return false; _panel.SetVisible(false); return true; }; _panel.AddController(keys);
-        _panel.OnNotify += (_, e) => { if (e.Pspec.GetName() == "is-active" && !_panel.GetIsActive()) _panel.SetVisible(false); };
+        var hadFocus = false;
+        _panel.OnMap += (_, _) => hadFocus = false;
+        _panel.OnNotify += (_, e) =>
+        {
+            if (e.Pspec.GetName() == "visible" && !_panel.GetVisible()) _trayPlacement?.ClearDismissalSurfaces();
+            if (e.Pspec.GetName() != "is-active") return;
+            var active = _panel.GetIsActive();
+            Platform.Trace($"panel focus active={active}, previously={hadFocus}");
+            if (active) hadFocus = true;
+            else if (hadFocus) _panel.SetVisible(false);
+        };
     }
     private void ShowPanel() => ShowPanelAt(-1, -1);
     private bool _positioningPanel;
@@ -178,6 +188,7 @@ internal sealed partial class Shell
         if (_store.MenuBarSession is { } session) _store.Select(session.Id);
         BuildPanel();
         var watch = System.Diagnostics.Stopwatch.StartNew();
+        _trayPlacement?.ShowDismissalSurfaces(() => _panel!.SetVisible(false));
         _panel!.Present();
         if (_panel.GetFrameClock() is { } clock)
         {

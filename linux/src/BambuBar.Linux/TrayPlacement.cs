@@ -111,6 +111,38 @@ internal sealed class TrayPlacement(Gtk.Window window)
             }
         }
     }
+    private readonly List<Gtk.Window> _backdrops = [];
+    public void ShowDismissalSurfaces(Action dismiss)
+    {
+        if (!Platform.IsHyprland) return;
+        ClearDismissalSurfaces();
+        // Hyprland doesn't change keyboard focus when clicking empty wallpaper.
+        // A transparent input surface gives the popup normal outside-click semantics,
+        // including clicks on another output. It has no keyboard focus or reserved area.
+        var monitors = Gdk.Display.GetDefault()!.GetMonitors();
+        for (uint i = 0; i < monitors.GetNItems(); i++)
+        {
+            if (monitors.GetObject(i) is not Gdk.Monitor monitor) continue;
+            var backdrop = Gtk.Window.New();
+            backdrop.AddCssClass("tray-dismissal"); backdrop.SetDecorated(false);
+            var handle = backdrop.Handle.DangerousGetHandle();
+            gtk_layer_init_for_window(handle);
+            gtk_layer_set_namespace(handle, Platform.AppId + ".Dismiss");
+            gtk_layer_set_monitor(handle, monitor.Handle.DangerousGetHandle());
+            gtk_layer_set_layer(handle, 3); gtk_layer_set_keyboard_mode(handle, 0);
+            gtk_layer_set_exclusive_zone(handle, -1);
+            for (var edge = 0; edge < 4; edge++) gtk_layer_set_anchor(handle, edge, 1);
+            var area = Gtk.Box.New(Gtk.Orientation.Vertical, 0);
+            var clicks = Gtk.GestureClick.New(); clicks.SetButton(0);
+            clicks.OnPressed += (_, _) => dismiss(); area.AddController(clicks);
+            backdrop.SetChild(area); _backdrops.Add(backdrop); backdrop.SetVisible(true);
+        }
+    }
+    public void ClearDismissalSurfaces()
+    {
+        foreach (var backdrop in _backdrops) { backdrop.Destroy(); backdrop.Dispose(); }
+        _backdrops.Clear();
+    }
     [DllImport("libdl.so.2")] private static extern nint dlopen(string filename, int flags);
     [DllImport(Library)] private static extern int gtk_layer_is_supported();
     [DllImport(Library)] private static extern void gtk_layer_init_for_window(nint window);

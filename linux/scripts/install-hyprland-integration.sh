@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# User-local, D-Bus-activated read-only anchor service. Does not modify desktop config.
+# User-local, D-Bus-activated geometry/autostart service. Does not modify desktop config.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 python3 -c 'from gi.repository import Gio, GLib'
@@ -20,4 +20,4 @@ cat > "$services/dev.rolottr.BambuBar.Hyprland.service" <<SERVICE
 Name=dev.rolottr.BambuBar.Hyprland
 Exec=/usr/bin/python3 "$escaped/anchor.py"
 SERVICE
-printf 'Installed read-only Hyprland anchor service. No Waybar/Hyprland config changed.\n'
+printf 'Installed Hyprland geometry/autostart service. No Waybar/Hyprland config changed.\n'

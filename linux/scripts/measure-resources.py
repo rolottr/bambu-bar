@@ -46,7 +46,13 @@ def main():
             name = (process / 'comm').read_text().strip()
         except OSError:
             continue
-        if name in ('bambu-bar', 'gnome-shell', 'plasmashell', 'kwin_wayland', 'Hyprland', 'waybar', 'quickshell'):
+        if name in ('python', 'python3'):
+            try:
+                arguments = (process / 'cmdline').read_bytes().split(b'\0')
+                if any(arg.endswith(b'/bambu-bar-hyprland/anchor.py') for arg in arguments): name = 'bambu-hyprland'
+            except OSError:
+                continue
+        if name in ('bambu-bar', 'gnome-shell', 'plasmashell', 'kwin_wayland', 'Hyprland', 'waybar', 'quickshell', 'bambu-hyprland'):
             processes[process.name] = {'name': name, 'samples': []}
     for index in range(duration + 1):
         for pid, process in processes.items():
