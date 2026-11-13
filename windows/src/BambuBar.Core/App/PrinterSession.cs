@@ -235,7 +235,7 @@ public sealed class PrinterSession : Observable, IDisposable
             // Try the slicer's other stored code before telling anyone.
             var next = FallbackCodes[0];
             FallbackCodes.RemoveAt(0);
-            if (!_store.IsDemo) _store.Secrets.SetAccessCode(next, Config.Serial);
+            if (!_store.IsDemo) _store.SaveAccessCode(next, Config.Serial);
             _activeCode = next;
             _connection.Start(Config, next, _insecure);
             return;

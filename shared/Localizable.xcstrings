@@ -10029,6 +10029,113 @@
         }
       }
     },
+    "Bambu Bar can't save its settings": {
+      "comment": "Windows: title of the alert when the settings file or Credential Manager refuses a write",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar nemůže uložit nastavení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar kann seine Einstellungen nicht speichern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar no puede guardar su configuración"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar ne peut pas enregistrer ses réglages"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Bambu Bar nem tudja menteni a beállításait"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar non riesce a salvare le impostazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar の設定を保存できません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 설정을 저장할 수 없습니다"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar kan zijn instellingen niet opslaan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar nie może zapisać ustawień"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Bambu Bar não consegue salvar as configurações"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar не может сохранить настройки"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar kan inte spara sina inställningar"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar ayarlarını kaydedemiyor"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar не може зберегти налаштування"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 无法保存设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 無法儲存設定"
+          }
+        }
+      }
+    },
     "Bambu Bar connects straight to your printer on the local network, the same way Bambu Studio does in LAN mode: an encrypted MQTT connection on port 8883, signed in with the printer's access code. The printer's certificate is checked against Bambu Lab's own certificate authority.": {
       "localizations": {
         "cs": {
@@ -11194,6 +11301,113 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bambu Bar 會在背景持續嘗試。"
+          }
+        }
+      }
+    },
+    "Bambu Bar ran into a problem and kept running. If something looks wrong, quit it and open it again. The details are in %@.": {
+      "comment": "Windows: the alert after an unexpected error the app recovered from; %@ is the folder with the logs",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar narazil na problém, ale běží dál. Pokud něco nevypadá správně, ukončete ho a znovu otevřete. Podrobnosti najdete v %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar ist auf ein Problem gestoßen und läuft weiter. Wenn etwas nicht stimmt, beenden Sie Bambu Bar und öffnen Sie es erneut. Details finden Sie in %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar encontró un problema y sigue funcionando. Si algo no se ve bien, salga de Bambu Bar y vuelva a abrirlo. Los detalles están en %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar a rencontré un problème et continue de fonctionner. Si quelque chose semble anormal, quittez-le puis rouvrez-le. Les détails se trouvent dans %@."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Bambu Bar hibába ütközött, de tovább fut. Ha valami nem stimmel, lépjen ki belőle, és nyissa meg újra. A részletek itt találhatók: %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar ha riscontrato un problema e continua a funzionare. Se qualcosa non va, esci e riaprilo. I dettagli sono in %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar で問題が発生しましたが、動作を続けています。おかしな点がある場合は、終了してからもう一度開いてください。詳細は %@ にあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar에 문제가 발생했지만 계속 실행 중입니다. 이상해 보이면 종료한 다음 다시 여세요. 자세한 내용은 %@에 있습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar liep tegen een probleem aan en draait door. Klopt er iets niet, sluit Bambu Bar dan af en open het opnieuw. De details staan in %@."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar napotkał problem, ale nadal działa. Jeśli coś wygląda nie tak, zamknij go i otwórz ponownie. Szczegóły znajdziesz w %@."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Bambu Bar encontrou um problema e continua em execução. Se algo parecer errado, encerre-o e abra-o novamente. Os detalhes estão em %@."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В Bambu Bar возникла проблема, но приложение продолжает работать. Если что-то выглядит не так, завершите его и откройте снова. Подробности — в %@."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar stötte på ett problem men fortsätter att köras. Om något ser fel ut avslutar du Bambu Bar och öppnar det igen. Detaljerna finns i %@."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar bir sorunla karşılaştı ama çalışmaya devam ediyor. Bir şey yanlış görünüyorsa uygulamadan çık ve yeniden aç. Ayrıntılar şurada: %@."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar натрапив на проблему, але працює далі. Якщо щось виглядає не так, закрийте його й відкрийте знову. Подробиці — у %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 遇到问题，但仍在运行。如有异常，请退出后重新打开。详细信息位于 %@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar 發生問題，但仍在執行。如有異常，請結束後重新開啟。詳細資訊位於 %@。"
           }
         }
       }
@@ -39014,6 +39228,113 @@
         }
       }
     },
+    "OK": {
+      "comment": "Windows: the button that closes an alert",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        }
+      }
+    },
     "Off": {
       "localizations": {
         "cs": {
@@ -55071,6 +55392,113 @@
           "stringUnit": {
             "state": "translated",
             "value": "小"
+          }
+        }
+      }
+    },
+    "Something went wrong": {
+      "comment": "Windows: title of the alert after an unexpected error the app recovered from",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Něco se pokazilo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas ist schiefgelaufen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo salió mal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un problème est survenu"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiba történt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualcosa è andato storto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "問題が発生しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제가 발생했습니다"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er is iets misgegaan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coś poszło nie tak"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo deu errado"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что-то пошло не так"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Något gick fel"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir sorun oluştu"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щось пішло не так"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出现问题"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發生問題"
           }
         }
       }
@@ -71347,6 +71775,113 @@
           "stringUnit": {
             "state": "translated",
             "value": "在桌面上查看您的印表機，提供三種尺寸。"
+          }
+        }
+      }
+    },
+    "Your printers stay connected until Bambu Bar quits, but it won't remember them or your changes. Security software that protects folders can cause this: allow Bambu Bar there, then try again.\n\nWindows said: %@": {
+      "comment": "Windows: the alert when saving fails; %@ is the reason Windows gave",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiskárny zůstanou připojené, dokud Bambu Bar neukončíte, ale nezapamatuje si je ani vaše změny. Může to způsobovat bezpečnostní software, který chrání složky: povolte v něm Bambu Bar a zkuste to znovu.\n\nWindows hlásí: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Drucker bleiben verbunden, bis Sie Bambu Bar beenden, aber weder sie noch Ihre Änderungen werden gespeichert. Das kann an Sicherheitssoftware liegen, die Ordner schützt: Lassen Sie Bambu Bar dort zu und versuchen Sie es erneut.\n\nWindows meldet: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sus impresoras seguirán conectadas hasta que salga de Bambu Bar, pero no las recordará, ni tampoco sus cambios. Puede deberse a un software de seguridad que protege carpetas: permita Bambu Bar en él e inténtelo de nuevo.\n\nWindows indicó: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos imprimantes restent connectées jusqu’à ce que vous quittiez Bambu Bar, mais il ne s’en souviendra pas, ni de vos modifications. Un logiciel de sécurité qui protège les dossiers peut en être la cause : autorisez-y Bambu Bar, puis réessayez.\n\nWindows indique : %@"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A nyomtatók csatlakoztatva maradnak, amíg ki nem lép a Bambu Barból, de nem jegyzi meg sem őket, sem a módosításait. Ezt mappákat védő biztonsági szoftver okozhatja: engedélyezze benne a Bambu Bart, majd próbálja újra.\n\nA Windows üzenete: %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le stampanti restano connesse finché non esci da Bambu Bar, ma non verranno ricordate, e nemmeno le tue modifiche. Può dipendere da un software di sicurezza che protegge le cartelle: consenti Bambu Bar al suo interno, poi riprova.\n\nMessaggio di Windows: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar を終了するまでプリンターは接続されたままですが、プリンターや変更内容は記憶されません。フォルダーを保護するセキュリティソフトが原因の場合があります。そのソフトで Bambu Bar を許可してから、もう一度お試しください。\n\nWindows からのメッセージ: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar를 종료할 때까지 프린터는 연결된 상태로 유지되지만, 프린터와 변경 사항은 기억되지 않습니다. 폴더를 보호하는 보안 소프트웨어 때문일 수 있습니다. 해당 소프트웨어에서 Bambu Bar를 허용한 다음 다시 시도하세요.\n\nWindows 메시지: %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je printers blijven verbonden tot je Bambu Bar afsluit, maar ze worden niet onthouden, en je wijzigingen ook niet. Beveiligingssoftware die mappen beschermt kan dit veroorzaken: sta Bambu Bar daarin toe en probeer het opnieuw.\n\nWindows meldt: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drukarki pozostaną połączone do zamknięcia Bambu Bar, ale aplikacja nie zapamięta ich ani Twoich zmian. Przyczyną może być oprogramowanie zabezpieczające, które chroni foldery: zezwól w nim na Bambu Bar i spróbuj ponownie.\n\nKomunikat systemu Windows: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suas impressoras continuam conectadas até você encerrar o Bambu Bar, mas ele não vai se lembrar delas nem das suas alterações. Um software de segurança que protege pastas pode causar isso: permita o Bambu Bar nele e tente novamente.\n\nO Windows informou: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Принтеры останутся подключёнными, пока вы не завершите Bambu Bar, но ни они, ни ваши изменения не сохранятся. Причиной может быть защитное ПО, которое охраняет папки: разрешите в нём Bambu Bar и повторите попытку.\n\nСообщение Windows: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrivarna förblir anslutna tills du avslutar Bambu Bar, men varken de eller dina ändringar sparas. Säkerhetsprogram som skyddar mappar kan orsaka detta: tillåt Bambu Bar där och försök igen.\n\nWindows svarade: %@"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yazıcıların Bambu Bar'dan çıkana kadar bağlı kalır, ancak Bambu Bar onları ve değişikliklerini hatırlamaz. Buna klasörleri koruyan bir güvenlik yazılımı neden olabilir: Bambu Bar'a orada izin ver, sonra yeniden dene.\n\nWindows'un iletisi: %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Принтери залишатимуться під’єднаними, доки ви не закриєте Bambu Bar, але ні їх, ні ваших змін не буде збережено. Причиною може бути захисне ПЗ, яке охороняє папки: дозвольте в ньому Bambu Bar і спробуйте ще раз.\n\nПовідомлення Windows: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在退出 Bambu Bar 之前，打印机会保持连接，但不会记住这些打印机和你的更改。这可能是保护文件夹的安全软件导致的：请在该软件中允许 Bambu Bar，然后重试。\n\nWindows 提示：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在結束 Bambu Bar 之前，印表機會保持連線，但不會記住這些印表機和你的變更。這可能是保護資料夾的安全軟體造成的：請在該軟體中允許 Bambu Bar，然後再試一次。\n\nWindows 訊息：%@"
           }
         }
       }

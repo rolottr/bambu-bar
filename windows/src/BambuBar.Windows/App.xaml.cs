@@ -106,6 +106,10 @@ public partial class App : Application
         CameraWindow.Settings = _settings;
         _store.CameraSettingsChanged = () => CameraWindow.CloseWhereHidden(_store);
         ((System.Collections.Specialized.INotifyCollectionChanged)_store.Sessions).CollectionChanged += (_, _) => CameraWindow.CloseWhereHidden(_store);
+        // Saving can fail on someone's PC (an antivirus guarding %APPDATA%, Credential Manager refusing): say so once,
+        // and keep going with what's in memory.
+        _store.SaveFailed += failure => Dispatcher.BeginInvoke(() => SaveFailed(failure));
+        CrashLog.KeptRunning = KeptRunning;
         _store.Start();
 
         // The supporter license (P5.3): validated now and every 15 minutes while a key is saved; demo runs have none.
@@ -228,6 +232,38 @@ public partial class App : Application
             }
         }
         if (!args.Contains("--background")) ShowWindow();
+    }
+
+    private bool _toldSaveFailed;
+    private bool _toldKeptRunning;
+    private bool _noticeOpen;
+
+    /// <summary>The first time this run that a printer, access code or setting couldn't be saved.</summary>
+    private void SaveFailed(Exception failure)
+    {
+        if (_toldSaveFailed) return;
+        _toldSaveFailed = true;
+        CrashLog.Write("couldn't save", failure);
+        Notice(Loc.T("Bambu Bar can't save its settings", "Windows: title of the alert when the settings file or Credential Manager refuses a write"),
+            Loc.F("Your printers stay connected until Bambu Bar quits, but it won't remember them or your changes. Security software that protects folders can cause this: allow Bambu Bar there, then try again.\n\nWindows said: %@",
+                failure.Message));
+    }
+
+    /// <summary>The first time this run that something failed on the UI thread and the app carried on (CrashLog).</summary>
+    private void KeptRunning(Exception failure)
+    {
+        if (_toldKeptRunning || CrashLog.Quitting) return;
+        _toldKeptRunning = true;
+        Notice(Loc.T("Something went wrong", "Windows: title of the alert after an unexpected error the app recovered from"),
+            Loc.F("Bambu Bar ran into a problem and kept running. If something looks wrong, quit it and open it again. The details are in %@.", CrashLog.Folder));
+    }
+
+    private void Notice(string title, string detail)
+    {
+        if (_noticeOpen) return;
+        _noticeOpen = true;
+        try { Dialogs.Notice(_window is { IsVisible: true } ? _window : null, title, detail, Loc.T("OK", "Windows: the button that closes an alert")); }
+        finally { _noticeOpen = false; }
     }
 
     /// <summary>Opens (or brings forward) the window, at <paramref name="page"/> when given.</summary>

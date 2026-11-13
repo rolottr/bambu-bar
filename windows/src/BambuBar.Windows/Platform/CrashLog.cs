@@ -7,8 +7,9 @@ namespace BambuBar.Platform;
 
 /// <summary>
 /// Writes what went wrong to <c>%LOCALAPPDATA%\Bambu Bar\Logs\crash-…txt</c> (the newest ten are kept), so a crash on
-/// someone's PC comes back with its stack. While the app is quitting, an exception is logged and swallowed: the person
-/// asked it to go, and a crash dialog on the way out helps nobody.
+/// someone's PC comes back with its stack. An exception on the UI thread is logged and the app keeps running and says so
+/// (<see cref="KeptRunning"/>), unless it repeats: then the app ends. While the app is quitting, an exception is logged
+/// and swallowed: the person asked it to go, and a crash dialog on the way out helps nobody.
 /// </summary>
 public static class CrashLog
 {
@@ -29,10 +30,35 @@ public static class CrashLog
         };
     }
 
+    /// <summary>Tells the person the app hit a problem and kept running (set by the app; runs on the UI thread, after
+    /// the failed work has unwound).</summary>
+    public static Action<Exception>? KeptRunning { get; set; }
+
+    private static readonly Queue<DateTime> RecentFailures = new();
+
     private static void OnDispatcher(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        Write(Quitting ? "while quitting (ignored)" : "UI thread", e.Exception);
-        if (Quitting) e.Handled = true;
+        if (Quitting)
+        {
+            Write("while quitting (ignored)", e.Exception);
+            e.Handled = true;
+            return;
+        }
+        // One failed click mustn't take the app away without a word (a printer added that couldn't be saved made the
+        // window and tray icon vanish). Keep running and say so, unless it keeps failing: then it's a loop (layout,
+        // rendering) and ending is kinder than a frozen window.
+        var now = DateTime.UtcNow;
+        RecentFailures.Enqueue(now);
+        while (RecentFailures.Peek() < now - TimeSpan.FromSeconds(30)) RecentFailures.Dequeue();
+        if (RecentFailures.Count >= 3)
+        {
+            Write("UI thread (repeated, ending)", e.Exception);
+            return;
+        }
+        Write("UI thread (kept running)", e.Exception);
+        e.Handled = true;
+        var exception = e.Exception;
+        e.Dispatcher.BeginInvoke(() => KeptRunning?.Invoke(exception), DispatcherPriority.Background);
     }
 
     /// <summary>Runs one step of quitting; a failure is logged and the next step still runs.</summary>

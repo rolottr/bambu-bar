@@ -73,7 +73,27 @@ public sealed class PrinterStore : Observable, IDisposable
         _cameraEnabled = s.Get(AppSettings.Keys.CameraEnabled, false);
         _menuBarSerial = s.Get<string>(AppSettings.Keys.MenuBarPrinter);
         _selectedSerial = s.Get<string>(AppSettings.Keys.Selected);
+        s.SaveFailed += SettingsSaveFailed;
     }
+
+    /// <summary>A printer, its access code or a setting couldn't be saved: Windows refused the settings file or
+    /// Credential Manager. Everything keeps working until the app quits; the window says why it won't be remembered.
+    /// Raised on the thread that saved (the UI thread for clicks).</summary>
+    public event Action<Exception>? SaveFailed;
+
+    private void SettingsSaveFailed(Exception e) => SaveFailed?.Invoke(e);
+
+    /// <summary>Keeps an access code in Credential Manager (the Keychain on a Mac). A refusal is reported, not thrown:
+    /// adding a printer must never end the app, and the session holds the code for this run anyway.</summary>
+    internal void SaveAccessCode(string code, string serial)
+    {
+        try { Secrets.SetAccessCode(code, serial); }
+        catch (Exception e) when (IsStorageFailure(e)) { SaveFailed?.Invoke(e); }
+    }
+
+    private static bool IsStorageFailure(Exception e) =>
+        e is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException
+            or System.Security.SecurityException;
 
     internal AppSettings Settings => _services.Settings;
     internal CameraServices? CameraServices => _services.Camera;
@@ -263,6 +283,7 @@ public sealed class PrinterStore : Observable, IDisposable
 
     public void Dispose()
     {
+        _services.Settings.SaveFailed -= SettingsSaveFailed;
         foreach (var session in _sessions) session.Dispose();
         _discovery.Dispose();
         _toastTimer?.Dispose();
@@ -282,7 +303,7 @@ public sealed class PrinterStore : Observable, IDisposable
             foreach (var config in saved.Where(c => c.Serial != c.Serial.ToUpperInvariant()))
             {
                 var upper = config.Serial.ToUpperInvariant();
-                if (Secrets.AccessCode(upper) is null && Secrets.AccessCode(config.Serial) is { } code) Secrets.SetAccessCode(code, upper);
+                if (Secrets.AccessCode(upper) is null && Secrets.AccessCode(config.Serial) is { } code) SaveAccessCode(code, upper);
             }
             Settings.Set(AppSettings.Keys.Printers, configs);
         }
@@ -377,7 +398,7 @@ public sealed class PrinterStore : Observable, IDisposable
     public void Connect(PrinterConfig config, string accessCode, IEnumerable<string>? alternatives = null)
     {
         var code = accessCode.Trim();
-        if (!IsDemo) Secrets.SetAccessCode(code, config.Serial);
+        if (!IsDemo) SaveAccessCode(code, config.Serial);
         PrinterSession session;
         if (Session(config.Serial) is { } existing)
         {
@@ -413,7 +434,7 @@ public sealed class PrinterStore : Observable, IDisposable
             var seen = _discovered.FirstOrDefault(d => d.Serial == printer.Serial);
             var config = new PrinterConfig { Host = host, Serial = printer.Serial, Name = NameFor(printer), ModelCode = seen?.ModelCode ?? "" };
             var code = printer.AccessCodes[0];
-            if (!IsDemo) Secrets.SetAccessCode(code, config.Serial);
+            if (!IsDemo) SaveAccessCode(code, config.Serial);
             var session = Add(config);
             session.Start(code, printer.AccessCodes.Skip(1), _insecureTls);
             added.Add(session);
@@ -457,7 +478,8 @@ public sealed class PrinterStore : Observable, IDisposable
     {
         if (Session(serial) is not { } session) return;
         session.Dispose();
-        Secrets.RemoveAccessCode(serial);
+        try { Secrets.RemoveAccessCode(serial); }
+        catch (Exception e) when (IsStorageFailure(e)) { SaveFailed?.Invoke(e); }
         _sessions.Remove(session);
         if (SelectedSerial == serial) SelectedSerial = _sessions.FirstOrDefault()?.Id;
         if (MenuBarSerial == serial) MenuBarSerial = null;

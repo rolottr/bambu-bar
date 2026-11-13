@@ -20,6 +20,11 @@ public sealed class AppSettings
         _values = Load(path);
     }
 
+    /// <summary>The file couldn't be written (an antivirus that guards folders, a locked or read-only file). The values
+    /// stay in memory and every later change tries again, so a click that saves never ends the app. Raised on the
+    /// thread that made the change.</summary>
+    public event Action<Exception>? SaveFailed;
+
     /// <summary>%APPDATA%\Bambu Bar (or Application Support on a Mac, for development).</summary>
     public static string DefaultFolder => Path.Combine(
         OperatingSystem.IsWindows() ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
@@ -72,8 +77,15 @@ public sealed class AppSettings
     private void Save()
     {
         if (_path is null) return;
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        FileWrite.Atomic(_path, _values.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            FileWrite.Atomic(_path, _values.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            SaveFailed?.Invoke(e);
+        }
     }
 
     /// <summary>The Mac's key names, kept so the two read alike.</summary>
@@ -105,8 +117,17 @@ public static class FileWrite
     public static void Atomic(string path, string text)
     {
         var temp = path + ".tmp-" + Environment.ProcessId;
-        File.WriteAllText(temp, text);
-        File.Move(temp, path, overwrite: true);
+        try
+        {
+            File.WriteAllText(temp, text);
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            // Don't leave the half-step behind when the file itself can't be replaced.
+            try { File.Delete(temp); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+            throw;
+        }
     }
 }
 
