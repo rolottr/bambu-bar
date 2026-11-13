@@ -1,8 +1,8 @@
 /* Shared Mac-like hierarchy, with native GTK controls and Linux window chrome. */
-window { background: @window_bg_color; font-size: 13px; }
+window { background: var(--window-bg-color); font-size: 13px; }
 window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
 .bambu-dark headerbar { background: #222222; }
-.sidebar { background: alpha(@window_fg_color,.035); padding: 6px; }
+.sidebar { background: alpha(var(--window-fg-color),.035); padding: 6px; }
 .bambu-dark .sidebar { background: #2b2626; }
 .sidebar .navigation-sidebar row { min-height: 25px; padding: 3px 10px; margin: 1px 0; border-radius: 9px; }
 .sidebar row:selected { background: #087bfa; color: white; }
@@ -23,16 +23,16 @@ window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
 .nozzle { color: #ff7a4d; }
 .bed { color: #ffb84d; }
 .chamber { color: #b8adb8; }
-.module { border-radius: 16px; padding: 13px; background: alpha(@window_fg_color,.05); border: 1px solid alpha(@window_fg_color,.08); }
-.tile { border-radius: 14px; padding: 11px; background: alpha(@window_fg_color,.05); border: 1px solid alpha(@window_fg_color,.06); }
+.module { border-radius: 16px; padding: 13px; background: alpha(var(--window-fg-color),.05); border: 1px solid alpha(var(--window-fg-color),.08); }
+.tile { border-radius: 14px; padding: 11px; background: alpha(var(--window-fg-color),.05); border: 1px solid alpha(var(--window-fg-color),.06); }
 .detail-row { min-height: 14px; font-size: 12px; }
 .metric { font-size: 25px; font-weight: 800; font-feature-settings: "tnum"; }
-.job { background: alpha(@window_fg_color,.045); border-radius: 24px; padding: 18px; }
+.job { background: alpha(var(--window-fg-color),.045); border-radius: 24px; padding: 18px; }
 .job-title { font-size: 20px; font-weight: 800; }
 .progress-number { font-size: 52px; font-weight: 800; font-feature-settings: "tnum"; }
 progressbar progress { background: #ff9e69; min-height: 5px; border-radius: 8px; }
-progressbar trough { min-height: 5px; border-radius: 8px; background: alpha(@window_fg_color,.16); }
-.badge { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 12px; background: alpha(@window_fg_color,.08); }
+progressbar trough { min-height: 5px; border-radius: 8px; background: alpha(var(--window-fg-color),.16); }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 12px; background: alpha(var(--window-fg-color),.08); }
 .state-failed .state-label { color: #ff5c5c; background: alpha(#ff5c5c,.16); }
 .state-paused .state-label { color: #ffb83d; background: alpha(#ffb83d,.16); }
 .state-printing .state-label, .state-finished .state-label, .sample-printing { color: #21cc6b; background: alpha(#21cc6b,.16); }
@@ -83,7 +83,7 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 .size-picker button:checked { background: #087bfa; color: white; }
 .feature-chip { border-radius: 16px; font-size: 11px; font-weight: 600; padding: 3px 9px; }
 .feature-on { background: alpha(#21cc6b,.14); color: #21cc6b; }
-.feature-off { background: alpha(@window_fg_color,.05); color: alpha(@window_fg_color,.35); }
+.feature-off { background: alpha(var(--window-fg-color),.05); color: alpha(var(--window-fg-color),.35); }
 .step-number { min-width: 22px; min-height: 22px; border-radius: 14px; background: alpha(#21cc6b,.15); color: #21cc6b; font-weight: 700; }
 
 .menu-layout > flowboxchild { background: transparent; padding: 0; border: none; outline: none; }
@@ -114,3 +114,70 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 
 /* Layer-shell windows have no compositor decoration or rounded background. */
 window.tray-popup { border-radius: 14px; }
+
+/* Desktop styles share the same content; Adwaita supplies the controls and colors.
+   KDE uses a Breeze-inspired palette and flatter, tighter shapes within GTK. */
+window.theme-native { color: var(--window-fg-color); }
+.theme-native .page-background { background-image: none; }
+.theme-native .sidebar { background: var(--sidebar-bg-color); }
+.theme-native .sidebar image { color: var(--window-fg-color); }
+.theme-native .sidebar row:selected { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+.theme-native .sidebar row:selected image { color: var(--accent-fg-color); }
+.theme-native .sidebar .navigation-sidebar row { min-height: 30px; border-radius: 6px; }
+.theme-native .page-title { font-size: 26px; font-weight: 700; }
+.theme-native .module, .theme-native .tile, .theme-native .job {
+  background: var(--card-bg-color); color: var(--card-fg-color);
+  border: 1px solid alpha(var(--window-fg-color), .10); border-radius: 12px;
+}
+.theme-native .module { padding: 14px; }
+.theme-native .job-title, .theme-native .metric { font-weight: 700; }
+.theme-native switch:checked { background: var(--accent-bg-color); }
+.theme-native checkbutton check:checked, .theme-native checkbutton radio:checked,
+.theme-native .size-picker button:checked { background: var(--accent-bg-color); border-color: var(--accent-bg-color); color: var(--accent-fg-color); }
+.theme-native .support, .theme-native .about-links button { color: var(--accent-color); }
+.theme-native .success { color: var(--success-color); }
+.theme-native .warning { color: var(--warning-color); }
+.theme-native .error { color: var(--error-color); }
+.theme-native .chamber { color: var(--window-fg-color); opacity: .7; }
+window.theme-kde {
+  --window-bg-color: #eff0f1; --window-fg-color: #232629;
+  --view-bg-color: #ffffff; --view-fg-color: #232629;
+  --headerbar-bg-color: #dee0e2; --headerbar-fg-color: #232629;
+  --headerbar-backdrop-color: #eff0f1;
+  --sidebar-bg-color: #e3e5e7; --sidebar-fg-color: #232629;
+  --card-bg-color: #ffffff; --card-fg-color: #232629;
+  --popover-bg-color: #ffffff; --popover-fg-color: #232629;
+  --dialog-bg-color: #eff0f1; --dialog-fg-color: #232629;
+  --accent-bg-color: #3daee9; --accent-fg-color: #ffffff; --accent-color: #206d96;
+}
+window.theme-kde.theme-dark {
+  --window-bg-color: #2a2e32; --window-fg-color: #fcfcfc;
+  --view-bg-color: #1b1e20; --view-fg-color: #fcfcfc;
+  --headerbar-bg-color: #292c30; --headerbar-fg-color: #fcfcfc;
+  --headerbar-backdrop-color: #2a2e32;
+  --sidebar-bg-color: #232629; --sidebar-fg-color: #fcfcfc;
+  --card-bg-color: #31363b; --card-fg-color: #fcfcfc;
+  --popover-bg-color: #31363b; --popover-fg-color: #fcfcfc;
+  --dialog-bg-color: #2a2e32; --dialog-fg-color: #fcfcfc;
+  --accent-color: #6cc2ef;
+}
+.theme-kde .sidebar .navigation-sidebar row { min-height: 26px; border-radius: 4px; }
+.theme-kde .module, .theme-kde .tile, .theme-kde .job { border-radius: 5px; }
+.theme-kde .module { padding: 12px; }
+.theme-kde .control, .theme-kde dropdown > button, .theme-kde entry { border-radius: 4px; }
+.theme-kde .page-title { font-size: 24px; }
+.theme-kde .quick-panel .job, .theme-kde .issue-banner { border-radius: 5px; }
+window.theme-kde.tray-popup { border-radius: 6px; }
+/* Preserve meaningful status colors and the intentionally illustrated previews. */
+.theme-native .spool-card.active-spool { background: alpha(#21cc6b,.09); border-color: alpha(#21cc6b,.6); }
+.theme-native .fleet-paused { background: alpha(#ffb83d,.07); border-color: alpha(#ffb83d,.55); }
+.theme-native .fleet-failed { background: alpha(#ff5c5c,.07); border-color: alpha(#ff5c5c,.55); }
+.theme-native .preview-wallpaper .module, .theme-native .widget-stage .module { background: alpha(white,.06); color: #eeeeee; border-color: alpha(white,.14); }
+
+.theme-native .state-failed .state-label, .theme-native .state-failed .job-detail { color: var(--error-color); }
+.theme-native .state-paused .state-label { color: var(--warning-color); }
+.theme-native .state-printing .state-label, .theme-native .state-finished .state-label { color: var(--success-color); }
+.theme-native .nozzle { color: #bd4c00; }
+.theme-native.theme-dark .nozzle { color: #ff9c63; }
+.theme-native .bed { color: var(--warning-color); }
+.theme-native .feature-on { color: var(--success-color); }

@@ -59,9 +59,8 @@ internal sealed partial class Shell : IDisposable
         var root = Column(0);
         var header = Adw.HeaderBar.New();
         header.SetTitleWidget(Label("Bambu Bar", "heading"));
-        header.PackStart(Button("view-grid-symbolic", "Quick view", ShowPanel));
         header.PackEnd(Button("application-exit-symbolic", "Quit Bambu Bar", app.Quit));
-        var support = Button("emblem-favorite-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); header.PackEnd(support);
+        var support = Button("starred-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); header.PackEnd(support);
         root.Append(header);
         var split = Row(0); split.SetVexpand(true);
         var sidebar = Column(6); sidebar.SetSizeRequest(210, -1); sidebar.AddCssClass("sidebar");

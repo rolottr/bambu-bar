@@ -156,7 +156,7 @@ internal sealed partial class Shell
     private void PreparePanel()
     {
         if (_panel is not null) return;
-        _panel = Adw.ApplicationWindow.New(_app); WindowSize.Track(_panel);
+        _panel = Adw.ApplicationWindow.New(_app); ApplyWindowTheme(_panel); WindowSize.Track(_panel);
         _trayPlacement = TrayPlacement.Create(_panel);
         if (_trayPlacement is not null) _panel.AddCssClass("tray-popup");
         _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 1); _panel.SetHideOnClose(true); _panel.SetResizable(false);

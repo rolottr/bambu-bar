@@ -180,6 +180,20 @@ internal sealed partial class Shell
     private void SettingsPage()
     {
         Header(Loc.T("Settings"));
+        var theme = Gtk.DropDown.NewFromStrings([Loc.T("Follow desktop") + (Platform.IsPlasma ? " (KDE)" : Platform.IsGnome ? " (GNOME)" : ""), "GNOME (Adwaita)", "KDE (Breeze)", "Bambu Bar"]);
+        theme.SetSelected((uint)Array.IndexOf(ThemeIds, SelectedTheme));
+        theme.OnNotify += (_, e) =>
+        {
+            if (e.Pspec.GetName() != "selected" || theme.GetSelected() >= ThemeIds.Length) return;
+            _settings.Set("linuxTheme", ThemeIds[(int)theme.GetSelected()]);
+            UpdateAppearanceClass();
+        };
+        var appearance = Gtk.DropDown.NewFromStrings([Loc.T("Dark"), Loc.T("Light"), Loc.T("System")]);
+        appearance.SetSelected((uint)Math.Clamp(_settings.Get("linuxAppearance", 2), 0, 2));
+        appearance.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") { _settings.Set("linuxAppearance", (int)appearance.GetSelected()); ApplyAppearance(); } };
+        var themeCard = Module(SettingRow("Theme", theme), SettingRow("Color mode", appearance), Note("Choose a desktop style or the original Bambu Bar look. Changes apply immediately."));
+        _pageHost.Append(SettingsSection("Theme", "preferences-desktop-display-symbolic", themeCard));
+
         var general = Module();
         if (!_ephemeral) Toggle(general, "Open at login", Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? _settings.Get("openAtLogin", false) : Platform.Autostart, value => Async(async () =>
         {
@@ -226,12 +240,6 @@ internal sealed partial class Shell
         versionText.Append(Label(Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? "Flatpak · " + Platform.Commit : "Linux · " + Platform.Commit, "muted", "caption"));
         versionText.SetHexpand(true); version.Append(versionText); version.Append(Button("web-browser-symbolic", Loc.T("Downloads"), () => Open("https://bambubar.app/download"), true)); updates.Append(version);
         _pageHost.Append(SettingsSection("Updates", "folder-download-symbolic", updates));
-
-        var appearance = Gtk.DropDown.NewFromStrings([Loc.T("Dark"), Loc.T("Light"), Loc.T("System")]);
-        appearance.SetSelected((uint)_settings.Get("linuxAppearance", 0));
-        appearance.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") { _settings.Set("linuxAppearance", (int)appearance.GetSelected()); ApplyAppearance(); } };
-        var preferences = Module(SettingRow("Appearance", appearance));
-        _pageHost.Append(SettingsSection("Preferences", "preferences-desktop-display-symbolic", preferences));
     }
     private static Gtk.Box AboutSection(string title, string icon, Gtk.Widget content)
     {
@@ -255,11 +263,11 @@ internal sealed partial class Shell
         var license = Module(Label(Loc.T("Support Bambu Bar"), "job-title"), Note("Bambu Bar is free to use. Activate a supporter license to receive the Hero Supporter badge."), Note("Manage your installations in your account. Deactivate an old installation to make room for another.")); license.AddCssClass("license-card");
         var key = Gtk.Entry.New(); key.SetVisibility(false); key.SetPlaceholderText(Loc.T("License key")); key.SetHexpand(true);
         var actions = Row();
-        var activate = Button("emblem-ok-symbolic", Loc.T("Activate"), () => { _license.Activate(key.GetText()); key.SetText(""); }, true);
+        var activate = Button("object-select-symbolic", Loc.T("Activate"), () => { _license.Activate(key.GetText()); key.SetText(""); }, true);
         var check = Button("view-refresh-symbolic", Loc.T("Check License"), _license.Refresh, true);
         var deactivate = Button("list-remove-symbolic", Loc.T("Deactivate"), () => Confirm(Loc.T("Deactivate this installation?"), "", Loc.T("Deactivate"), _license.Deactivate), true);
         actions.Append(key); actions.Append(activate); actions.Append(check); actions.Append(deactivate); license.Append(actions);
-        var purchase = Row(); var support = Button("emblem-favorite-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); support.SetHexpand(true); purchase.Append(support); purchase.Append(Button("web-browser-symbolic", Loc.T("Manage Purchase"), () => Open(BambuBar.Core.Licensing.PolarConfiguration.PortalUrl.ToString()), true)); license.Append(purchase);
+        var purchase = Row(); var support = Button("starred-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); support.SetHexpand(true); purchase.Append(support); purchase.Append(Button("web-browser-symbolic", Loc.T("Manage Purchase"), () => Open(BambuBar.Core.Licensing.PolarConfiguration.PortalUrl.ToString()), true)); license.Append(purchase);
         var state = Live(() => _license.Busy ? Loc.T("Checking…") : _license.HasAccess ? Loc.T("Hero Supporter") : _license.Message ?? Loc.T("Support this project")); state.SetWrap(true); license.Append(state);
         _updates.Add(() => { activate.SetVisible(!_license.HasRecord); key.SetVisible(!_license.HasRecord); check.SetVisible(_license.HasRecord); deactivate.SetVisible(_license.HasRecord); activate.SetSensitive(!_license.Busy && !_license.HasRecord); check.SetSensitive(!_license.Busy && _license.HasRecord); deactivate.SetSensitive(!_license.Busy && _license.HasRecord); key.SetSensitive(!_license.Busy && !_license.HasRecord); });
         _pageHost.Append(AboutSection("Your license", "application-certificate-symbolic", license));

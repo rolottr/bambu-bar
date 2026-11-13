@@ -25,7 +25,7 @@ internal sealed partial class Shell
     {
         if (!session.ShowsCamera) return;
         if (_cameraWindows.TryGetValue(session.Id, out var existing)) { existing.Window.Present(); return; }
-        var window = Adw.ApplicationWindow.New(_app); WindowSize.Track(window); window.SetTitle(session.Config.Name + " — " + Loc.T("Camera")); window.SetDefaultSize(900, 580);
+        var window = Adw.ApplicationWindow.New(_app); ApplyWindowTheme(window); WindowSize.Track(window); window.SetTitle(session.Config.Name + " — " + Loc.T("Camera")); window.SetDefaultSize(900, 580);
         var header = Adw.HeaderBar.New(); header.SetTitleWidget(Label(session.Config.Name, "heading"));
         var surface = new CameraSurface(session.Camera, () => window.GetVisible() && !window.IsSuspended());
         var root = Column(0); root.Append(header); root.Append(surface.Content); window.SetContent(root);
