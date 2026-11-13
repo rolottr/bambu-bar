@@ -52,6 +52,7 @@ PlasmoidItem {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.minimumHeight: 0
                 spacing: 12
                 Canvas {
                     visible: root.small && root.state !== null
@@ -72,23 +73,23 @@ PlasmoidItem {
                 Image {
                     visible: !root.small && root.state !== null
                     Layout.preferredWidth: 98
-                    Layout.preferredHeight: 116
+                    Layout.preferredHeight: root.large ? 116 : 88
                     source: root.state && root.state.art ? "file://" + root.state.art : ""
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 5
+                    spacing: root.large || root.small ? 5 : 3
                     Line { visible: root.small; text: root.state ? root.state.caption.toUpperCase() : i18n("Offline"); color: root.statusColor; font.bold: true; font.pixelSize: 11 }
-                    Line { visible: !root.small || root.state === null; text: root.state ? root.state.headline : connection.connected ? i18n("Enable desktop widgets in Bambu Bar") : i18n("Open Bambu Bar to connect"); font.bold: true; wrapMode: Text.WordWrap; elide: Text.ElideNone }
-                    Line { visible: root.active && !root.small; text: root.state ? root.state.progress + "%" : ""; font.pixelSize: 30; font.bold: true }
+                    Line { visible: !root.small || root.state === null; text: root.state ? root.state.headline : connection.connected ? i18n("Enable desktop widgets in Bambu Bar") : i18n("Open Bambu Bar to connect"); font.bold: true; wrapMode: Text.WordWrap; maximumLineCount: root.large || root.small ? 2 : 1 }
+                    Line { visible: root.active && !root.small; text: root.state ? root.state.progress + "%" : ""; font.pixelSize: root.large ? 30 : 26; font.bold: true }
                     Rectangle {
                         visible: root.active && !root.small
                         Layout.fillWidth: true; height: 5; radius: 2; color: "#50535b"
                         Rectangle { width: parent.width * Math.min(100, Math.max(0, root.state ? root.state.progress : 0)) / 100; height: 5; radius: 2; color: root.tint }
                     }
-                    Line { text: root.state ? root.state.stateLine === (root.state.issue || {}).text && root.large ? "" : root.state.stateLine : ""; wrapMode: Text.WordWrap; maximumLineCount: 2; font.bold: root.small }
+                    Line { text: root.state ? root.state.stateLine === (root.state.issue || {}).text && root.large ? "" : root.state.stateLine : ""; wrapMode: Text.WordWrap; maximumLineCount: root.large || root.small ? 2 : 1; font.bold: root.small }
                     Line { visible: !root.small; text: root.state && root.state.detail !== root.state.stateLine ? root.state.detail : ""; color: "#b9bec6"; font.pixelSize: 11 }
                 }
             }

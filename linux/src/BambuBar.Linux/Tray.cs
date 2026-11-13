@@ -20,6 +20,7 @@ public interface IStatusItem : IDBusObject
     Task<object> GetAsync(string property);
     Task<IDictionary<string, object>> GetAllAsync();
     Task<IDisposable> WatchNewIconAsync(Action handler);
+    Task<IDisposable> WatchNewOverlayIconAsync(Action handler);
     Task<IDisposable> WatchNewTitleAsync(Action handler);
     Task<IDisposable> WatchNewToolTipAsync(Action handler);
     Task<IDisposable> WatchNewStatusAsync(Action<string> handler);
@@ -50,7 +51,7 @@ internal sealed class Tray : IStatusItem, IDisposable
     private IDisposable? _shellWatcher;
     private bool _nativePanel;
     private bool _disposed;
-    private readonly Signal _icon = new(), _title = new(), _tooltip = new();
+    private readonly Signal _icon = new(), _overlay = new(), _title = new(), _tooltip = new();
     private readonly Signal<string> _status = new();
     private string _last = "";
     public ObjectPath ObjectPath => new("/StatusNotifierItem");
@@ -90,9 +91,12 @@ internal sealed class Tray : IStatusItem, IDisposable
     private void Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
         if (_last == Title || _disposed) return; _last = Title;
-        _title.Emit(); _icon.Emit(); _tooltip.Emit(); _status.Emit(Status);
+        _title.Emit(); _icon.Emit(); _overlay.Emit(); _tooltip.Emit(); _status.Emit(Status);
     }
-    private string Status => _nativePanel ? "Passive" : _store.MenuBarSession?.Status?.State is BambuBar.Core.Model.JobState.Paused or BambuBar.Core.Model.JobState.Failed ? "NeedsAttention" : "Active";
+    // Plasma animates NeedsAttention indefinitely. A static warning keeps long-lived
+    // paused/failed states visible without continuously repainting the compositor.
+    private string Status => _nativePanel ? "Passive" : "Active";
+    private bool NeedsAttention => _store.MenuBarSession?.Status?.State is BambuBar.Core.Model.JobState.Paused or BambuBar.Core.Model.JobState.Failed;
     private IDictionary<string, object> Properties => new Dictionary<string, object>
     {
         ["Category"] = "Hardware",
@@ -102,7 +106,7 @@ internal sealed class Tray : IStatusItem, IDisposable
         ["WindowId"] = 0,
         ["IconName"] = Platform.AppId,
         ["IconPixmap"] = Array.Empty<(int, int, byte[])>(),
-        ["OverlayIconName"] = "",
+        ["OverlayIconName"] = NeedsAttention ? "dialog-warning" : "",
         ["OverlayIconPixmap"] = Array.Empty<(int, int, byte[])>(),
         ["AttentionIconName"] = Platform.AppId,
         ["AttentionIconPixmap"] = Array.Empty<(int, int, byte[])>(),
@@ -121,6 +125,7 @@ internal sealed class Tray : IStatusItem, IDisposable
     public Task ContextMenuAsync(int x, int y) => Task.CompletedTask;
     public Task ScrollAsync(int delta, string orientation) => Task.CompletedTask;
     public Task<IDisposable> WatchNewIconAsync(Action handler) => Task.FromResult(_icon.Watch(handler));
+    public Task<IDisposable> WatchNewOverlayIconAsync(Action handler) => Task.FromResult(_overlay.Watch(handler));
     public Task<IDisposable> WatchNewTitleAsync(Action handler) => Task.FromResult(_title.Watch(handler));
     public Task<IDisposable> WatchNewToolTipAsync(Action handler) => Task.FromResult(_tooltip.Watch(handler));
     public Task<IDisposable> WatchNewStatusAsync(Action<string> handler) => Task.FromResult(_status.Watch(handler));
