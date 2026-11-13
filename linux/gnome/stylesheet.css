@@ -76,7 +76,7 @@
 .bambu-menu .bambu-container .bambu-state-printing, .bambu-menu .bambu-container .bambu-state-finished { color: #32d074; }
 .bambu-menu .bambu-container .bambu-link, .bambu-menu .bambu-container .bambu-info { color: #4aa3ff; }
 .bambu-menu .bambu-container .bambu-code, .bambu-menu .bambu-container .bambu-ams-title { color: #adadad; }
-.bambu-desktop-widget, .bambu-desktop-widget:hover, .bambu-desktop-widget:active, .bambu-desktop-widget:focus { color: #eeeeee; background-gradient-direction: vertical; background-gradient-start: #292c2e; background-gradient-end: #141719; border: 1px solid rgba(255,255,255,.12); border-radius: 24px; padding: 16px; box-shadow: 0 6px 16px rgba(0,0,0,.24); }
+.bambu-desktop-widget, .bambu-desktop-widget:hover, .bambu-desktop-widget:active, .bambu-desktop-widget:focus { color: #eeeeee; background-gradient-direction: vertical; background-gradient-start: #292c2e; background-gradient-end: #141719; border: 1px solid rgba(255,255,255,.12); border-radius: 24px; padding: 16px; box-shadow: none; }
 .bambu-desktop-widget:focus { border-color: #4aa3ff; }
 .bambu-widget-content { spacing: 8px; }
 .bambu-widget-header { spacing: 8px; }
@@ -86,18 +86,18 @@
 .bambu-widget-hero { spacing: 14px; }
 .bambu-widget-info { spacing: 5px; }
 .bambu-widget-progress { color: #eeeeee; font-size: 34px; font-weight: 800; }
-.bambu-widget-progress.small { font-size: 25px; }
+.bambu-widget-progress.small { font-size: 17px; }
 .bambu-widget-detail { color: #bcbcc4; font-size: 11px; }
 .bambu-widget-detail.strong { font-weight: 700; color: #dedee3; }
 .bambu-widget-rail { height: 5px; border-radius: 3px; background-color: #44464a; }
 .bambu-widget-fill { border-radius: 3px; }
 .bambu-widget-issue { color: #7dbaff; font-size: 11px; padding: 6px; background-color: rgba(92,168,255,.1); border-radius: 10px; }
 .bambu-widget-temps { spacing: 8px; }
-.bambu-widget-temps.compact { padding-left: 118px; }
+.bambu-widget-temps.compact { padding-left: 106px; }
 .bambu-widget-inline-temp { spacing: 5px; }
-.bambu-widget-temp { spacing: 4px; padding: 8px; border-radius: 14px; background-color: rgba(255,255,255,.06); }
+.bambu-widget-temp { spacing: 2px; padding: 6px; border-radius: 14px; background-color: rgba(255,255,255,.06); }
 .bambu-widget-temperature { font-size: 22px; font-weight: 700; color: #eeeeee; }
-.bambu-widget-ams { spacing: 6px; padding: 8px; border-radius: 14px; background-color: rgba(255,255,255,.05); }
+.bambu-widget-ams { spacing: 6px; padding: 2px 0; }
 .bambu-widget-spools { spacing: 8px; }
 .bambu-widget-spool { spacing: 4px; text-align: center; }
 .bambu-widget-spool-rim { padding: 3px; border: 2px solid #68686c; border-radius: 20px; }
@@ -111,3 +111,10 @@
 
 .bambu-widget-idle-spools { spacing: 7px; padding: 8px 0; }
 .bambu-widget-idle-spool { width: 18px; height: 18px; border: 3px solid #68686c; border-radius: 14px; }
+
+.bambu-widget-small-top { spacing: 10px; }
+.bambu-widget-small-primary { spacing: 2px; }
+.bambu-widget-small-value { font-size: 14px; font-weight: 700; }
+.bambu-widget-timing { spacing: 6px; }
+.bambu-desktop-widget.small .bambu-widget-idle-spools { padding: 0; }
+.bambu-desktop-widget.small .bambu-widget-idle-spool { width: 10px; height: 10px; border-width: 2px; }

@@ -95,7 +95,7 @@ Mac unit tests, the portable core suite (269 passed, two optional asset-export t
 
 Quick view measured 90.1 ms to the first painted frame on its first open after launch and 37.0 ms on a warm open. A 15-second hidden-window sample averaged 0.13% CPU; a subsequent close/camera/theme transition sample averaged 0.67%. These are short VM samples, not a five-minute hardware-GPU benchmark.
 
-Live dark/light switching and 200% scaling were inspected at 1920×1080. The window now constrains itself to the monitor’s logical dimensions and its sidebar scrolls at small sizes. The desktop was restored to 100% scale. GTK automatic render invalidation remains enabled; remapping requests a new 3D frame.
+Live dark/light switching and 200% scaling were inspected at 1920×1080. The window now constrains itself to the monitor’s logical dimensions and its sidebar scrolls at small sizes. The desktop was restored to 100% scale. The 3D surface requests frames explicitly; remapping requests a fresh frame. Print animation is capped at 15 fps and stops when hidden, suspended or scrolled out of the viewport.
 
 Production license activation and a real print lifecycle were not exercised; no job was interrupted and no production license activation was consumed.
 
@@ -125,3 +125,39 @@ Menu Bar uses four radio choices and a sample print with a top-bar example, tran
 Widgets now includes a wallpaper-backed showcase, selectable sizes and print states, feature chips and Linux installation steps. Actual desktop cards use a progress ring for Small, illustrated job details for Medium, and temperature tiles, spool hubs and one issue message for Large. Artwork is rendered off the UI thread and cached by scene; no camera data or credentials cross the desktop interface. Idle cards expose loaded spools. Page navigation resets scroll position.
 
 Validation: Release builds passed with no warnings; all seven widget state/layout checks and extension syntax checks passed. The installed Flatpak and extension were inspected on GNOME 50 against the real P2S. Verified the four printer-detail cards, Settings sections, sample top-bar modes and chamber switch, widget size/state selection, and all three desktop cards with artwork and an unduplicated maintenance notice. Print commands were not exercised. Screenshots and local packages are under `build/linux/evidence/reference-pass/` and `build/linux/`. Nothing was uploaded or pushed.
+
+
+### Page-by-page macOS comparison (November 13, 2026)
+
+Reference captures from the installed Mac app were compared individually with the GNOME app, in addition to the supplied screenshots. The local review artifact is `build/linux/evidence/page-audit/comparison.html`; captures are actual application renders, with different window dimensions and demo/live status where indicated.
+
+| Surface | Refinement checked against macOS |
+| --- | --- |
+| Navigation | One **All Printers** entry, first and only with multiple printers; a shared printer selector; compact illustrated footer for one printer. |
+| Printer | Separate print controls, filament-colored progress, finish time, equal temperature/fan tiles, sensor icons and the four lower detail cards. |
+| Filament | Four AMS slots, matching external-spool width, active-spool treatment, weight hubs and filament-colored remaining bars. |
+| Menu Bar | Four display modes, grouped switches, sample panel and top-bar label; the real GNOME printer chooser is named for the selected printer. |
+| Notifications | Matching heading and event-toggle card; Linux retains a compact test-notification button. |
+| Printers | Printer list, selected printer details, editable name/address, per-printer camera and separate Controls section. |
+| Widgets | Small dial beside status/time, medium illustration and job, large sensors/AMS/footer; no desktop-card drop shadow. Failed/finished cards do not show active-print progress. |
+| Settings | General, Language, Camera and Updates groups, with native Linux update and appearance behavior. |
+| About | Horizontal app identity, copy/version and links cards, supporter license, how it works, privacy and credits. |
+| Fleet | Two-column cards, attention-first sorting, state colors and one sidebar destination. |
+
+Unchanged widget snapshots no longer trigger layout or restacking; cards only move in the window stack when they cross a real window or the desktop-icons surface. The standalone quick view is now created on demand. Its cleanup callbacks and temporary progress-color providers are released when rebuilt. 3D animation checks viewport visibility and uses explicit render requests. The resource sampler at `linux/scripts/measure-resources.py` reports interval CPU, RSS and PSS separately for Bambu Bar and GNOME Shell; it does not use lifetime `ps %CPU` averages.
+
+
+The final installed build and extension were checked on the same GNOME VM. Release build: zero warnings/errors; all seven widget model/layout tests and both JavaScript syntax checks passed. The installed application DLL and extension matched the published files, and GNOME reported no extension errors. Temporary demo windows were closed and the original widget configuration restored.
+
+Resource observations (CPU is percent of **one logical CPU**, RSS is resident memory):
+
+| Scenario | Interval | App CPU | App RSS at end | GNOME Shell CPU |
+| --- | --- | --- | --- | --- |
+| Cold background, three desktop widgets | 60 s | 0.55% | 196.8 MiB | 0.54% |
+| Warm background, after 24 page visits without captures | 60 s | 1.14% | 536.9 MiB | 0.42% |
+| Simulated printing, 3D model visible | 60 s | 4.45% | 406.2 MiB | 1.98% |
+| Same simulated print, model scrolled out of view | 30 s | 1.14% | 407.7 MiB | 2.00% |
+
+The earlier three-widget sample, before skipping redundant restacking, averaged 4.13% GNOME Shell CPU; the final sample averaged 0.54%. These are observed VM intervals, not a controlled hardware benchmark. The demo and real app ran as separate processes during the animation check; the table reports the demo process for those two rows. The 3D model displayed again when scrolled back into view.
+
+Memory remains substantial after opening the UI: the clean navigation run rose from 164.5 MiB at startup to 494.4, 504.4 and 532.6 MiB after successive eight-page cycles. The cold widget figure is not the warm UI footprint, and these short samples do not prove absence of a leak. Raw CPU/RSS/PSS measurements and methodology are saved in `build/linux/evidence/page-audit/performance/`. No builds or application captures ran during the measurement intervals. Nothing was pushed.

@@ -103,7 +103,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         var controls = online && status?.ControlsLocked == false && _store.ShowPrinterActions;
         var tray = _store.MenuBarSession;
         if (_open && session is not null) RenderArt(session);
-        var labelKeys = new[] { "Bambu Bar", "No printer set up", "Connected", "Printer", "Settings", "Refresh", "Open Bambu Bar", "Quit", "Camera", "Filament", "All Printers", "Nozzle", "Right", "Left", "Bed", "Chamber", "Fans", "Part cooling", "Auxiliary", "Light", "Turn light on", "Turn light off", "Pause", "Resume", "Stop", "Speed", "Enable Developer Mode on the printer to use controls", "Add Printer…", "Not connected", "Needs attention", "layers", "Support this project", "Manage License…", "Wiki", "Copy code", "Dismiss" };
+        var labelKeys = new[] { "Bambu Bar", "No printer set up", "Connected", "Printer", "Settings", "Refresh", "Open Bambu Bar", "Quit", "Camera", "Filament", "All Printers", "Nozzle", "Right", "Left", "Bed", "Chamber", "Fans", "Part cooling", "Auxiliary", "Light", "Turn light on", "Turn light off", "Pause", "Resume", "Stop", "Speed", "Enable Developer Mode on the printer to use controls", "Add Printer…", "Not connected", "Needs attention", "Stopped", "Done", "layers", "Support this project", "Manage License…", "Wiki", "Copy code", "Dismiss" };
         var payload = new
         {
             version = 1,

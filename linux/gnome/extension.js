@@ -46,7 +46,7 @@ export default class BambuBarExtension extends Extension {
         this._indicator.accessible_name = 'Bambu Bar';
         Main.panel.addToStatusArea(this.uuid, this._indicator);
         this._build();
-        this._widgets = new DesktopWidgets((action, printer) => this._proxy?.InvokeRemote(action, printer, () => {}));
+        this._widgets = new DesktopWidgets((action, printer) => this._proxy?.InvokeRemote(action, printer, () => {}), key => this._t(key));
         this._indicator.menu.connect('open-state-changed', (_menu, open) => {
             if (this._proxy?.g_name_owner)
                 this._proxy.SetOpenRemote(open, () => {});
@@ -303,7 +303,7 @@ export default class BambuBarExtension extends Extension {
                 item.connect('activate', () => this._proxy?.InvokeRemote('select', printer.id, () => {}));
                 this._picker.menu.addMenuItem(item);
             }
-            this._picker.label.text = this._t('All Printers');
+            this._picker.label.text = p?.name ?? this._t('Printer');
         }
         this._picker.visible = printers.length > 1;
         this._speed.visible = Boolean(p?.showControls);

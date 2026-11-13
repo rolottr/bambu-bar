@@ -19,11 +19,16 @@ internal sealed partial class Shell : IDisposable
     private readonly Gtk.Box _pageHost;
     private readonly Gtk.ScrolledWindow _scroller;
     private readonly Gtk.Label _footer;
+    private readonly Gtk.Label _footerState;
+    private readonly Gtk.Image _footerArt;
+    private string? _footerModel;
     private readonly Gtk.Label _message;
     private readonly Gtk.ListBox _nav;
+    private readonly Gtk.Box _printerPicker;
+    private string _pickerKey = "";
     private readonly List<Action> _updates = [];
     private readonly List<Action> _cleanup = [];
-    private readonly string[] _pages = ["Printer", "Filament", "Menu Bar", "Notifications", "Printers", "Widgets", "Settings", "About", "All Printers"];
+    private readonly string[] _pages = ["All Printers", "Printer", "Filament", "Menu Bar", "Notifications", "Printers", "Widgets", "Settings", "About"];
     private PrinterConfig? _setupConfig;
     private string? _error;
     private string _schema = "";
@@ -33,6 +38,7 @@ internal sealed partial class Shell : IDisposable
     private DesktopPanel? _desktop;
     private Adw.ApplicationWindow? _panel;
     private readonly List<Action> _panelUpdates = [];
+    private readonly List<Action> _panelCleanup = [];
 
     public Shell(Adw.Application app, PrinterStore store, AppSettings settings, SecretStore secrets, Notifier notifier, string[] args)
     {
@@ -56,8 +62,9 @@ internal sealed partial class Shell : IDisposable
         root.Append(header);
         var split = Row(0); split.SetVexpand(true);
         var sidebar = Column(6); sidebar.SetSizeRequest(210, -1); sidebar.AddCssClass("sidebar");
+        _printerPicker = Column(6); sidebar.Append(_printerPicker);
         _nav = Gtk.ListBox.New(); _nav.SetSelectionMode(Gtk.SelectionMode.Single); _nav.AddCssClass("navigation-sidebar");
-        var icons = new[] { "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "network-wired-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "help-about-symbolic", "view-grid-symbolic" };
+        var icons = new[] { "view-grid-symbolic", "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "network-wired-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "help-about-symbolic" };
         for (var i = 0; i < _pages.Length; i++)
         {
             var row = Gtk.ListBoxRow.New(); var content = Row(10);
@@ -65,18 +72,22 @@ internal sealed partial class Shell : IDisposable
         }
         _nav.OnRowSelected += (_, e) => { if (e.Row is not null) Navigate(_pages[e.Row.GetIndex()]); };
         var navScroll = Gtk.ScrolledWindow.New(); navScroll.SetPolicy(Gtk.PolicyType.Never, Gtk.PolicyType.Automatic); navScroll.SetVexpand(true); navScroll.SetChild(_nav); sidebar.Append(navScroll);
-        _footer = Label("", "muted"); _footer.SetWrap(true); _footer.SetMarginStart(12); _footer.SetMarginBottom(8); sidebar.Append(_footer);
+        var footer = Row(10); footer.SetMarginStart(8); footer.SetMarginBottom(8);
+        _footerArt = Gtk.Image.New(); _footerArt.SetPixelSize(30); footer.Append(_footerArt);
+        var footerText = Column(2); _footer = Label("", "heading", "caption"); _footer.SetEllipsize(Pango.EllipsizeMode.End);
+        _footerState = Label("", "muted", "caption"); footerText.Append(_footer); footerText.Append(_footerState); footer.Append(footerText); sidebar.Append(footer);
         split.Append(sidebar); split.Append(Gtk.Separator.New(Gtk.Orientation.Vertical));
-        var right = Column(0); right.SetHexpand(true);
+        var right = Column(0); right.SetHexpand(true); right.AddCssClass("page-background");
         var scroller = _scroller = Gtk.ScrolledWindow.New(); scroller.SetPolicy(Gtk.PolicyType.Never, Gtk.PolicyType.Automatic); scroller.SetVexpand(true);
-        scroller.GetVadjustment().OnValueChanged += (_, _) => _store.Current?.Camera.ViewersChanged();
+        scroller.GetVadjustment().OnValueChanged += (_, _) => { _store.Current?.Camera.ViewersChanged(); if (_ready) Refresh(); };
         _pageHost = Column(18); _pageHost.AddCssClass("page"); scroller.SetChild(_pageHost); right.Append(scroller);
         _message = Label("", "error"); _message.SetWrap(true); _message.SetVisible(false); _message.SetMarginBottom(12); right.Append(_message);
         split.Append(right); root.Append(split); _window.SetContent(root);
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) =>
         {
             if ((e.State & Gdk.ModifierType.ControlMask) == 0) return false;
-            if (e.Keyval is >= 49 and <= 57) { _nav.SelectRow(_nav.GetRowAtIndex((int)e.Keyval - 49)); return true; }
+            var shortcut = e.Keyval switch { 48 => "All Printers", 49 => "Printer", 50 => "Filament", 51 => "Widgets", 52 => "Settings", 53 => "About", 54 => "Printers", 55 => "Menu Bar", 56 => "Notifications", _ => null };
+            if (shortcut is not null) { Navigate(shortcut); return true; }
             switch (e.Keyval) { case 114: _store.Refresh(); return true; case 108: _store.ToggleLight(); return true; case 113: _app.Quit(); return true; case 107: if (_store.Current is { } camera) OpenCamera(camera); return true; case 119: _window.Close(); return true; case 44: _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, "Settings"))); return true; }
             return false;
         }; _window.AddController(keys);
@@ -95,7 +106,7 @@ internal sealed partial class Shell : IDisposable
         }
         var showPrinter = Gio.SimpleAction.New("printer", GLib.VariantType.New("s"));
         showPrinter.OnActivate += (_, e) => { var serial = e.Parameter?.GetString(out var length); if (serial is not null && _store.Session(serial) is not null) _store.Select(serial); Navigate("Printer"); Present(); }; _app.AddAction(showPrinter);
-        _nav.SelectRow(_nav.GetRowAtIndex(0));
+        _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, "Printer")));
         _window.OnCloseRequest += (_, _) => { HideMain(); return true; };
     }
     private void SubscribeSessions()
@@ -105,7 +116,7 @@ internal sealed partial class Shell : IDisposable
     private void HideMain() { _window.SetVisible(false); }
     public void Present() { Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
     public void ShowQuickView() => ShowPanel();
-    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); PreparePanel(); if (!_ephemeral) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _ = StartDesktop(); } _tray = new Tray(_store, ShowPanel, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (!_ephemeral) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _ = StartDesktop(); } _tray = new Tray(_store, ShowPanel, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
     private async Task StartDesktop() { try { await _desktop!.Start(); } catch (Exception) { Platform.Log("Native desktop panel unavailable; standard tray remains available."); } }
     private void DesktopAction(string action, PrinterSession? session)
     {
@@ -152,7 +163,27 @@ internal sealed partial class Shell : IDisposable
     {
         if (_panel?.GetVisible() == true && _panelSchema != Schema) BuildPanel();
         if (_ready && _schema != Schema) { Rebuild(); return; }
-        _footer.SetText(_store.IsConfigured ? $"{_store.PrinterName}\n{_store.Current?.ShortState}" : Loc.T("No printer set up"));
+        _nav.GetRowAtIndex(0)?.SetVisible(_store.HasMultiplePrinters);
+        _printerPicker.SetVisible(_store.HasMultiplePrinters);
+        _footer.GetParent()?.GetParent()?.SetVisible(!_store.HasMultiplePrinters);
+        var pickerKey = _store.SelectedSerial + string.Join('|', _store.Sessions.Select(s => s.Id + s.Config.Name));
+        if (_pickerKey != pickerKey)
+        {
+            _pickerKey = pickerKey;
+            while (_printerPicker.GetFirstChild() is { } child) _printerPicker.Remove(child);
+            if (_store.HasMultiplePrinters)
+            {
+                var sessions = _store.Sessions.ToArray();
+                var picker = Gtk.DropDown.NewFromStrings(sessions.Select(s => s.Config.Name).ToArray());
+                picker.SetSelected((uint)Math.Max(0, Array.FindIndex(sessions, s => s.Id == _store.SelectedSerial)));
+                picker.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected" && picker.GetSelected() < sessions.Length) _store.Select(sessions[(int)picker.GetSelected()].Id); };
+                _printerPicker.Append(picker);
+            }
+        }
+        _footer.SetText(_store.IsConfigured ? _store.PrinterName : Loc.T("No printer set up"));
+        _footerState.SetText(_store.Current?.ShortState ?? "");
+        var model = _store.Current?.Config.Model?.Shape.AssetName();
+        if (_footerModel != model) { _footerModel = model; if (model is not null) _footerArt.SetFromFile(Assets.PathOf("Printers", model + "-body.png")); else _footerArt.Clear(); }
         if (_window.GetVisible()) foreach (var update in _updates.ToArray()) update();
         if (_panel?.GetVisible() == true) foreach (var update in _panelUpdates.ToArray()) update();
         if (_store.Toast is { } toast) { _message.SetText(toast.Message); _message.SetVisible(true); }
@@ -161,6 +192,7 @@ internal sealed partial class Shell : IDisposable
     private void BeginSetup(PrinterConfig? config = null) { _setupConfig = config; Navigate("Setup"); }
     private void Navigate(string page)
     {
+        if (page == "All Printers" && !_store.HasMultiplePrinters) page = "Printer";
         var index = Array.IndexOf(_pages, page);
         if (index >= 0 && _nav.GetSelectedRow()?.GetIndex() != index) { _nav.SelectRow(_nav.GetRowAtIndex(index)); return; }
         var changed = _page != page;
@@ -170,6 +202,7 @@ internal sealed partial class Shell : IDisposable
     }
     private void Rebuild()
     {
+        if (_page == "All Printers" && !_store.HasMultiplePrinters) { Navigate("Printer"); return; }
         _schema = Schema;
         foreach (var clean in _cleanup) clean(); _cleanup.Clear(); _updates.Clear();
         while (_pageHost.GetFirstChild() is { } child) _pageHost.Remove(child);
@@ -205,7 +238,7 @@ internal sealed partial class Shell : IDisposable
     private Gtk.Box Header(string title, string? subtitle = null)
     {
         var row = Row(); var text = Column(3); text.SetHexpand(true); text.Append(Label(title, "page-title"));
-        if (subtitle is not null) text.Append(Label(subtitle, "muted")); row.Append(text); _pageHost.Append(row); return row;
+        if (subtitle is not null) { var detail = Label(subtitle, "muted"); detail.SetWrap(true); text.Append(detail); } row.Append(text); _pageHost.Append(row); return row;
     }
     private static Gtk.Box Module(params Gtk.Widget[] children)
     {
@@ -239,6 +272,7 @@ internal sealed partial class Shell : IDisposable
     {
         if (_disposed) return; Platform.Trace("shell dispose"); _disposed = true;
         foreach (var clean in _cleanup) clean();
+        foreach (var clean in _panelCleanup) clean();
         foreach (var camera in _cameraWindows.Values.ToArray()) { camera.Surface.Dispose(); camera.Window.Destroy(); }
         _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
     }

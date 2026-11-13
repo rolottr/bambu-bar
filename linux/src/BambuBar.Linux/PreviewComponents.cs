@@ -38,6 +38,11 @@ internal sealed partial class Shell
         var row = Row(12); var label = Label(Loc.T(title)); label.SetHexpand(true); row.Append(label);
         control.SetValign(Gtk.Align.Center); row.Append(control); return row;
     }
+    private static Gtk.Image PrinterThumbnail(PrinterSession session, int size)
+    {
+        var image = Gtk.Image.NewFromFile(Assets.PathOf("Printers", (session.Config.Model?.Shape ?? PrinterShape.Enclosed).AssetName() + "-body.png"));
+        image.SetPixelSize(size); image.SetSizeRequest(size, size + 6); return image;
+    }
     private Gtk.Image PreviewArt(JobState state, double progress, int size = 120)
     {
         var image = Gtk.Image.New(); image.SetPixelSize(size); image.SetSizeRequest(size, size + 12);
@@ -67,13 +72,13 @@ internal sealed partial class Shell
         }
         return row;
     }
-    private Gtk.Box SampleSpools()
+    private Gtk.Box SampleSpools(bool includeExternal = true)
     {
         var card = Module(); var header = Row(); var title = Label("AMS 2 PRO A", "section-title"); title.SetHexpand(true); header.Append(title);
         header.Append(Label("44% RH · 27°", "muted", "caption")); card.Append(header);
         var row = Row(12); row.SetHomogeneous(true);
         var colors = new[] { "FF9959FF", "F5E83DFF", "EF333FFF", "181818FF", "888888FF" };
-        for (var i = 0; i < colors.Length; i++)
+        for (var i = 0; i < (includeExternal ? colors.Length : 4); i++)
         {
             var spool = new Spool { Color = colors[i], Material = "PLA" }; var item = Column(3);
             var refresh = new List<Action>(); var ring = SpoolRing(() => spool, 32, refresh); foreach (var update in refresh) update(); ring.SetHalign(Gtk.Align.Center); item.Append(ring);

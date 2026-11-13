@@ -12,13 +12,6 @@ internal sealed partial class Shell
         var session = _store.Current!;
         var heading = Header(session.Config.Name, $"Bambu Lab {session.Config.ModelName} · {session.Config.Host} · Firmware {session.Status?.Firmware ?? "—"}");
         heading.Append(Button("view-refresh-symbolic", Loc.T("Refresh"), _store.Refresh));
-        if (_store.HasMultiplePrinters)
-        {
-            var selector = Gtk.DropDown.NewFromStrings(_store.Sessions.Select(s => s.Config.Name).ToArray());
-            selector.SetSelected((uint)_store.Sessions.ToList().IndexOf(session));
-            selector.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected" && selector.GetSelected() < _store.Sessions.Count) _store.Select(_store.Sessions[(int)selector.GetSelected()].Id); };
-            _pageHost.Append(selector);
-        }
         if (!session.IsOnline)
         {
             var connection = Module(Label(session.LinkSummary, "heading"));
@@ -82,11 +75,11 @@ internal sealed partial class Shell
         var card = Module(); card.AddCssClass("job");
         var stateClass = "";
         updates.Add(() => { var next = session.Status?.State switch { JobState.Failed => "state-failed", JobState.Paused => "state-paused", JobState.Finished => "state-finished", JobState.Printing or JobState.Preparing => "state-printing", _ => "state-idle" }; if (next == stateClass) return; if (stateClass.Length > 0) card.RemoveCssClass(stateClass); card.AddCssClass(next); stateClass = next; });
-        var status = Live(() => "● " + session.ShortState, updates, "state-label", "badge"); status.SetHalign(Gtk.Align.Start);
+        var status = Live(() => "● " + (session.IsOnline ? session.Status?.StateTitle ?? session.ShortState : session.ShortState), updates, "state-label", "badge"); status.SetHalign(Gtk.Align.Start);
         var main = Row(18);
         if (!compact)
         {
-            var model = new ModelView(session, false); main.Append(model.Widget); updates.Add(model.Update); _cleanup.Add(model.Dispose);
+            var model = new ModelView(session, false, VisibleInPage); main.Append(model.Widget); updates.Add(model.Update); _cleanup.Add(model.Dispose);
         }
         else
         {
@@ -94,7 +87,8 @@ internal sealed partial class Shell
             picture.SetTooltipText(session.Config.ModelName + " printer");
             var art = Assets.PathOf("Printers", (session.Config.Model?.Shape ?? PrinterShape.Enclosed).AssetName() + "-body.png");
             if (File.Exists(art)) { using var bytes = GLib.Bytes.New(File.ReadAllBytes(art)); picture.SetFromGicon(Gio.BytesIcon.New(bytes)); } main.Append(picture);
-            var last = ""; var generation = 0;
+            var last = ""; var generation = 0; var alive = true;
+            (compact ? _panelCleanup : _cleanup).Add(() => alive = false);
             updates.Add(() =>
             {
                 var s = session.Status;
@@ -106,7 +100,7 @@ internal sealed partial class Shell
                 async Task Render()
                 {
                     var rgba = await Task.Run(() => PrinterArt.Render(scene, 220, 280));
-                    if (mine != generation || rgba is null || _disposed) return;
+                    if (!alive || mine != generation || rgba is null || _disposed) return;
                     using var bytes = GLib.Bytes.New(Png.Encode(rgba));
                     picture.SetFromGicon(Gio.BytesIcon.New(bytes));
                 }
@@ -122,11 +116,13 @@ internal sealed partial class Shell
         info.Append(top);
         var job = Live(() => session.Status?.JobName is { Length: > 0 } name ? name : session.Status is null ? session.LinkSummary : Loc.T("Ready to print"), updates, "job-title");
         job.SetEllipsize(Pango.EllipsizeMode.End); info.Append(job);
-        var stage = Live(() => session.Status is { State: JobState.Failed } failed ? Loc.F("Stopped at layer %lld of %lld", failed.Layer, failed.TotalLayers) : session.Status?.DetailText ?? session.LinkSummary, updates, "muted"); stage.SetEllipsize(Pango.EllipsizeMode.End); info.Append(stage);
+        var stage = Live(() => session.Status is { State: JobState.Failed } failed ? Loc.F("Stopped at layer %lld of %lld", failed.Layer, failed.TotalLayers) : session.Status?.ActiveSpool is { } spool ? $"{spool.DisplayName} · {spool.SlotName}" : session.Status?.DetailText ?? session.LinkSummary, updates, "muted"); stage.SetEllipsize(Pango.EllipsizeMode.End); info.Append(stage);
         var numbers = Row(); var percent = Live(() => session.Status is { } s && session.IsOnline ? $"{s.Progress}%" : "—", updates, "progress-number"); percent.SetHexpand(true); numbers.Append(percent);
         var layers = Live(() => session.Status is { TotalLayers: > 0 } s ? $"{s.Layer}/{s.TotalLayers}\nlayers" : "", updates, "muted", "caption"); layers.SetXalign(1); layers.SetValign(Gtk.Align.End); numbers.Append(layers); info.Append(numbers);
-        var progress = Gtk.ProgressBar.New(); updates.Add(() => progress.SetFraction(Math.Clamp((session.Status?.Progress ?? 0) / 100.0, 0, 1))); info.Append(progress);
-        info.Append(Live(() => session.Status?.State == JobState.Failed ? "⚠ " + Loc.T("Needs attention") : session.Status is { } s && s.State.IsActive() ? Format.Duration(s.RemainingMinutes) + " " + Loc.T("left") : session.LinkSummary, updates, "job-detail"));
+        var progress = Gtk.ProgressBar.New(); TintProgress(progress, () => session.Status?.ActiveSpool?.Color, updates); updates.Add(() => progress.SetFraction(Math.Clamp((session.Status?.Progress ?? 0) / 100.0, 0, 1))); info.Append(progress);
+        var timing = Row(8); var timeLeft = Live(() => session.Status?.State == JobState.Failed ? "⚠ " + Loc.T("Needs attention") : session.Status is { } s && s.State.IsActive() ? Format.Duration(s.RemainingMinutes) + " " + Loc.T("left") : session.LinkSummary, updates, "job-detail");
+        timeLeft.SetHexpand(true); timing.Append(timeLeft);
+        timing.Append(Live(() => session.Status?.EstimatedEnd is { } end ? Loc.T("Done") + " " + end.ToLocalTime().ToString("HH:mm") : "", updates, "muted", "caption", "heading")); info.Append(timing);
         main.Append(info); card.Append(main);
         var locked = Live(() => Loc.T("Enable Developer Mode on the printer to use controls"), updates, "muted", "caption"); locked.SetWrap(true); card.Append(locked);
         updates.Add(() => locked.SetVisible(_store.ShowPrinterActions && session.Status is { ControlsLocked: true } active && active.State.IsActive()));
@@ -137,7 +133,7 @@ internal sealed partial class Shell
             if (_store.ConfirmStop) Confirm(Loc.T("Stop this print?"), session.Status?.JobName ?? "", Loc.T("Stop"), () => session.StopPrint());
             else session.StopPrint();
         }, true);
-        pause.SetHexpand(true); stop.SetHexpand(true); controls.Append(pause); controls.Append(stop);
+        stop.AddCssClass("stop-control"); pause.SetHexpand(true); stop.SetHexpand(true); controls.Append(pause); controls.Append(stop);
         updates.Add(() =>
         {
             var s = session.Status;
@@ -149,17 +145,19 @@ internal sealed partial class Shell
         var speed = Gtk.DropDown.NewFromStrings(Enum.GetValues<SpeedLevel>().Select(s => s.Title()).ToArray());
         updates.Add(() => { speed.SetSensitive(session.IsOnline && session.Status?.ControlsLocked == false); speed.SetSelected((uint)Array.IndexOf(Enum.GetValues<SpeedLevel>(), session.Speed)); });
         speed.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected" && speed.GetSelected() < 4 && Enum.GetValues<SpeedLevel>()[(int)speed.GetSelected()] != session.Speed) _store.SetSpeed(Enum.GetValues<SpeedLevel>()[(int)speed.GetSelected()]); };
-        controls.Append(speed); card.Append(controls);
+        controls.Append(speed);
+        var result = compact ? card : Column(18);
+        if (!compact) result.Append(card); result.Append(controls);
         updates.Add(() => controls.SetVisible(_store.ShowPrinterActions && session.Status?.State.IsActive() == true));
         foreach (var update in updates.ToArray()) update();
-        return card;
+        return result;
     }
     private void PreparePanel()
     {
         if (_panel is not null) return;
         _panel = Adw.ApplicationWindow.New(_app); WindowSize.Track(_panel);
         _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 500); _panel.SetHideOnClose(true); _panel.SetResizable(false);
-        _panel.Realize(); BuildPanel();
+        BuildPanel();
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) => { if (e.Keyval != 65307) return false; _panel.SetVisible(false); return true; }; _panel.AddController(keys);
         _panel.OnNotify += (_, e) => { if (e.Pspec.GetName() == "is-active" && !_panel.GetIsActive()) _panel.SetVisible(false); };
     }
@@ -183,6 +181,7 @@ internal sealed partial class Shell
         _desktop?.Queue();
         if (_panel is null) return;
         _panelSchema = Schema;
+        foreach (var clean in _panelCleanup) clean(); _panelCleanup.Clear();
         _panelUpdates.Clear();
         var root = Column(12); root.AddCssClass("quick-panel"); root.SetMarginTop(12); root.SetMarginBottom(14); root.SetMarginStart(14); root.SetMarginEnd(14);
         var header = Row(); var title = Label(_store.PrinterName, "heading"); title.SetHexpand(true); header.Append(title);

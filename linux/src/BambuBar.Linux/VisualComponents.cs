@@ -28,7 +28,22 @@ internal sealed partial class Shell
         var grid = Gtk.FlowBox.New(); grid.SetSelectionMode(Gtk.SelectionMode.None); grid.SetHomogeneous(true);
         grid.SetMinChildrenPerLine(1); grid.SetMaxChildrenPerLine(4); grid.SetColumnSpacing(12); grid.SetRowSpacing(12); return grid;
     }
-    private Gtk.Image SpoolRing(Func<Spool?> current, int size, List<Action>? updates = null)
+    private int _progressStyleId;
+    private void TintProgress(Gtk.ProgressBar bar, Func<string?> color, List<Action>? updates = null)
+    {
+        var id = "filament-progress-" + ++_progressStyleId; bar.AddCssClass(id);
+        var provider = Gtk.CssProvider.New(); var display = Gdk.Display.GetDefault()!;
+        Gtk.StyleContext.AddProviderForDisplay(display, provider, 601);
+        (ReferenceEquals(updates, _panelUpdates) ? _panelCleanup : _cleanup).Add(() => { Gtk.StyleContext.RemoveProviderForDisplay(display, provider); provider.Dispose(); });
+        string? last = null;
+        (updates ?? _updates).Add(() =>
+        {
+            var hex = color(); hex = hex is { Length: >= 6 } && hex[..6].All(Uri.IsHexDigit) ? hex[..6] : "FF9E69";
+            if (last == hex) return; last = hex;
+            provider.LoadFromString($"progressbar.{id} progress {{ background: #{hex}; }}");
+        });
+    }
+    private Gtk.Image SpoolRing(Func<Spool?> current, int size, List<Action>? updates = null, Func<bool>? active = null)
     {
         var image = Gtk.Image.New(); image.SetPixelSize(size); image.SetSizeRequest(size, size);
         string? previous = null;
@@ -36,8 +51,11 @@ internal sealed partial class Shell
         {
             var s = current(); var color = s?.Color ?? "888888";
             color = color.Length >= 6 && color[..6].All(Uri.IsHexDigit) ? color[..6] : "888888";
-            var key = color + s?.IsLoaded; if (previous == key) return; previous = key;
-            var svg = $"<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><circle cx='32' cy='32' r='29' fill='none' stroke='#686868' stroke-width='5'/><circle cx='32' cy='32' r='22' fill='#{color}' stroke='#ffffff' stroke-opacity='.2' stroke-width='2'/><circle cx='32' cy='32' r='6' fill='#000000' fill-opacity='.48'/></svg>";
+            var key = color + s?.IsLoaded + s?.Remain + s?.Weight + active?.Invoke(); if (previous == key) return; previous = key;
+            var rim = active?.Invoke() == true ? "#21cc6b" : "#91918d";
+            var remaining = s?.Remain is { } percent ? $"stroke-dasharray='{Math.Clamp(percent, 0, 100) * 1.822} 183' transform='rotate(-90 32 32)'" : "";
+            var hub = size >= 50 && s?.Weight is { } weight ? $"<text x='32' y='36' text-anchor='middle' font-family='sans-serif' font-size='10' font-weight='bold' fill='white'>{System.Security.SecurityElement.Escape(Format.Grams(weight))}</text>" : "<circle cx='32' cy='32' r='6' fill='#000000' fill-opacity='.48'/>";
+            var svg = $"<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><circle cx='32' cy='32' r='29' fill='none' stroke='#494b49' stroke-width='4'/><circle cx='32' cy='32' r='29' fill='none' stroke='{rim}' stroke-width='4' {remaining}/><circle cx='32' cy='32' r='22' fill='#{color}' stroke='#ffffff' stroke-opacity='.2' stroke-width='2'/>{hub}</svg>";
             using var bytes = GLib.Bytes.New(Encoding.UTF8.GetBytes(svg)); image.SetFromGicon(Gio.BytesIcon.New(bytes));
             image.SetTooltipText(s is null ? "Empty" : $"{s.SlotName} · {s.DisplayName} · {s.RemainDetail}");
         }); return image;
@@ -46,14 +64,19 @@ internal sealed partial class Shell
     {
         Spool? Current() => session.Status?.AllSpools.FirstOrDefault(s => s.Id == id);
         var card = Module(); card.AddCssClass("spool-card"); card.SetSizeRequest(145, 174);
-        var top = Row(); top.Append(SpoolRing(Current, 62));
-        var slot = Live(() => Current()?.SlotName ?? "—", null, "badge"); slot.SetHexpand(true); slot.SetHalign(Gtk.Align.End); slot.SetValign(Gtk.Align.Start); top.Append(slot); card.Append(top);
-        card.Append(Live(() => Current()?.DisplayName ?? "—", null, "heading"));
+        bool Active() => session.Status?.State.IsActive() == true && session.Status.ActiveSpool?.Id == id;
+        var top = Row(); top.Append(SpoolRing(Current, 58, active: Active));
+        var slot = Live(() => Current()?.SlotName ?? "—", null, "badge"); slot.SetHexpand(true); slot.SetHalign(Gtk.Align.End); slot.SetValign(Gtk.Align.Start); var identity = Column(4); identity.SetHexpand(true); identity.SetHalign(Gtk.Align.End); identity.Append(slot);
+        var inUse = Label(Loc.T("In use"), "caption", "success"); identity.Append(inUse); top.Append(identity); card.Append(top);
+        _updates.Add(() => { var active = Active(); inUse.SetVisible(active); if (active) card.AddCssClass("active-spool"); else card.RemoveCssClass("active-spool"); });
+        var name = Live(() => Current()?.DisplayName ?? "—", null, "heading"); name.SetEllipsize(Pango.EllipsizeMode.End); card.Append(name);
         var maker = Live(() => $"{Current()?.Brand ?? "Generic"} · {Current()?.ColorName ?? "#" + Current()?.Color[..Math.Min(6, Current()?.Color.Length ?? 0)]}", null, "muted", "caption");
         maker.SetEllipsize(Pango.EllipsizeMode.End); card.Append(maker);
-        var amount = Live(() => Current()?.GramsLeft is { } g ? Loc.T("Remaining") + "   " + Format.Grams(g) : "", null, "caption"); card.Append(amount);
-        var progress = Gtk.ProgressBar.New(); card.Append(progress);
-        _updates.Add(() => { var s = Current(); progress.SetVisible(s?.Remain is not null); progress.SetFraction(Math.Clamp((s?.Remain ?? 0) / 100.0, 0, 1)); progress.SetShowText(true); progress.SetText(s?.RemainText ?? ""); });
+        var remaining = Column(5); var amount = Row(4); var caption = Label(Loc.T("Remaining"), "caption", "muted"); caption.SetHexpand(true); amount.Append(caption);
+        amount.Append(Live(() => Current()?.GramsLeft is { } grams ? Format.Grams(grams) : "", null, "caption", "heading")); remaining.Append(amount);
+        var bar = Row(6); var progress = Gtk.ProgressBar.New(); TintProgress(progress, () => Current()?.Color); progress.SetHexpand(true); bar.Append(progress);
+        bar.Append(Live(() => Current()?.RemainText ?? "", null, "caption", "heading")); remaining.Append(bar); card.Append(remaining);
+        _updates.Add(() => { var s = Current(); remaining.SetOpacity(s?.Remain is not null ? 1 : 0); progress.SetFraction(Math.Clamp((s?.Remain ?? 0) / 100.0, 0, 1)); });
         return card;
     }
     private Gtk.Box AmsStrip(PrinterSession session, List<Action>? updates = null)
@@ -72,7 +95,7 @@ internal sealed partial class Shell
             void Add(int id)
             {
                 Spool? Current() => session.Status?.AllSpools.FirstOrDefault(s => s.Id == id);
-                var column = Column(4); column.SetHexpand(true); var ring = SpoolRing(Current, 36, updates); ring.SetHalign(Gtk.Align.Center); column.Append(ring);
+                var column = Column(4); column.SetHexpand(true); var ring = SpoolRing(Current, 36, updates, () => session.Status?.State.IsActive() == true && session.Status.ActiveSpool?.Id == id); ring.SetHalign(Gtk.Align.Center); column.Append(ring);
                 var material = Live(() => Current()?.Material ?? "—", updates, "caption", "heading"); material.SetXalign(.5f); column.Append(material);
                 var amount = Live(() => Current()?.AmountText ?? "—", updates, "caption", "muted"); amount.SetXalign(.5f); column.Append(amount); row.Append(column);
             }
@@ -100,19 +123,20 @@ internal sealed partial class Shell
     }
     private Gtk.Box TemperatureStrip(PrinterSession session, bool fans, List<Action>? updates = null)
     {
-        var row = Row(10);
+        var row = Row(10); row.SetHomogeneous(true);
         void Tile(string title, Func<string> value)
-        { var tile = Module(Label(Loc.T(title), "muted", "caption"), Live(value, updates, "metric")); tile.AddCssClass("temperature-card"); tile.SetHexpand(true); row.Append(tile); }
+        { var heading = Row(5); heading.Append(DetailIcon(title == "Bed" ? "weather-fog-symbolic" : title == "Chamber" ? "temperature-symbolic" : "weather-clear-symbolic", 12, title == "Bed" ? "#ffb84d" : title == "Chamber" ? "#b8adb8" : "#ff7a4d")); heading.Append(Label(Loc.T(title), "muted", "caption")); var tile = Module(heading, Live(value, updates, "metric")); tile.AddCssClass("temperature-card"); tile.SetHexpand(true); row.Append(tile); }
         Tile(session.Status?.SecondNozzle is null ? "Nozzle" : "Right", () => Temp(session.Status?.Nozzle));
         if (session.Status?.SecondNozzle is not null) Tile("Left", () => Temp(session.Status?.SecondNozzle));
         Tile("Bed", () => Temp(session.Status?.Bed));
         if (session.Status?.Chamber is not null && (fans || _settings.Get(AppSettings.Keys.PanelChamber, true))) Tile("Chamber", () => $"{session.Status?.Chamber:0}°");
         if (fans)
         {
-            var box = Module(Label(Loc.T("Fans"), "muted", "caption")); box.SetSpacing(5); box.SetHexpand(true);
+            var heading = Row(5); heading.Append(DetailIcon("sensors-fan-symbolic", 12, "#88aaff")); heading.Append(Label(Loc.T("Fans"), "muted", "caption")); var box = Module(heading); box.AddCssClass("fan-card"); box.SetSpacing(5); box.SetHexpand(true);
             foreach (var field in new (string, Func<int?>)[] { ("Part", () => session.Status?.PartFan), ("Aux", () => session.Status?.AuxFan), (session.Status?.ExhaustFan is null ? "Hotend" : "Chamber", () => session.Status?.ExhaustFan ?? session.Status?.HeatbreakFan) })
             {
-                var line = Row(6); line.Append(Label(Loc.T(field.Item1), "muted", "caption"));
+                if (field.Item2() is null) continue;
+                var line = Row(6); var label = Label(Loc.T(field.Item1), "muted", "caption"); label.SetSizeRequest(35, -1); line.Append(label);
                 var progress = Gtk.ProgressBar.New(); progress.SetHexpand(true); progress.SetValign(Gtk.Align.Center); line.Append(progress);
                 line.Append(Live(() => Percent(field.Item2()), updates, "caption")); (updates ?? _updates).Add(() => progress.SetFraction(Math.Clamp((field.Item2() ?? 0) / 100.0, 0, 1))); box.Append(line);
             }

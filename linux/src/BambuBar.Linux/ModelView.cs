@@ -11,12 +11,13 @@ using Silk.NET.OpenGL;
 namespace BambuBar.Linux;
 
 /// <summary>Native GTK GL surface. Geometry is uploaded once; status changes only uniforms/visibility.
-/// No frame timer: a report or mouse gesture requests a frame. Hidden surfaces do no rendering.</summary>
+/// Reports and gestures request frames; print animation is capped at 15 fps while visible.</summary>
 internal sealed class ModelView : IDisposable
 {
     private static readonly ConcurrentDictionary<PrinterShape, Task<Gltf>> Models = new();
     public Gtk.GLArea Widget { get; } = Gtk.GLArea.New();
     private readonly PrinterSession _session;
+    private readonly Func<Gtk.Widget, bool> _visible;
     private readonly Task<Gltf> _loading;
     private readonly List<Draw> _draws = [];
     private Draw[] _ordered = [];
@@ -37,16 +38,17 @@ internal sealed class ModelView : IDisposable
     private string _key = "";
     private sealed record Draw(uint Vao, uint Vertices, uint Indices, int Count, int Node, Gltf.Material? Material, int Part, int Spool, bool Filament, bool Glass);
     [DllImport("libEGL.so.1")] private static extern nint eglGetProcAddress([MarshalAs(UnmanagedType.LPStr)] string name);
-    public ModelView(PrinterSession session, bool compact)
+    public ModelView(PrinterSession session, bool compact, Func<Gtk.Widget, bool> visible)
     {
-        _session = session;
+        _session = session; _visible = visible;
         _loading = Models.GetOrAdd(session.Config.Model?.Shape ?? PrinterShape.Enclosed, shape => Task.Run(() => Gltf.Load(Assets.PathOf("Printers", shape.AssetName() + ".glb"))));
-        Widget.SetSizeRequest(compact ? 120 : 230, compact ? 150 : 270); Widget.SetHasDepthBuffer(true); Widget.SetRequiredVersion(3, 3); Widget.SetUseEs(false); Widget.SetAutoRender(true);
+        Widget.SetSizeRequest(compact ? 120 : 210, compact ? 150 : 230); Widget.SetHasDepthBuffer(true); Widget.SetRequiredVersion(3, 3); Widget.SetUseEs(false); Widget.SetAutoRender(false);
         Widget.SetTooltipText(Loc.T("Drag to rotate"));
         Widget.OnRealize += (_, _) => { Widget.MakeCurrent(); if (Widget.GetError() is null) { _gl = GL.GetApi(eglGetProcAddress); Widget.QueueRender(); } };
         Widget.OnRender += (_, _) => { try { Render(); } catch (Exception) { Console.Error.WriteLine("3D rendering unavailable."); } return true; };
         Widget.OnResize += (_, _) => Widget.QueueRender();
         Widget.OnUnrealize += (_, _) => Release();
+        Widget.OnUnmap += (_, _) => { if (_tick != 0) { Widget.RemoveTickCallback(_tick); _tick = 0; } };
         Widget.OnMap += (_, _) => GLib.Functions.IdleAdd(200, () => { if (!_disposed) { _key = ""; Update(); Widget.QueueRender(); } return false; });
         var drag = Gtk.GestureDrag.New(); drag.OnDragBegin += (_, _) => { _dragYaw = _yaw; _dragPitch = _pitch; };
         drag.OnDragUpdate += (_, e) => { _yaw = _dragYaw + (float)e.OffsetX * .009f; _pitch = Math.Clamp(_dragPitch + (float)e.OffsetY * .006f, -.15f, .7f); Widget.QueueRender(); }; Widget.AddController(drag);
@@ -58,16 +60,16 @@ internal sealed class ModelView : IDisposable
         var s = _session.Status;
         _spools = s?.Ams.SelectMany(a => a.Spools).ToArray() ?? [];
         var key = $"{s?.State}:{s?.Progress}:{s?.ActiveSpool?.Color}:{_session.ChamberLightOn}:{_session.IsOnline}:" + string.Join(',', s?.AllSpools.Select(p => p.Color) ?? []);
-        if (_tick == 0 && Widget.GetMapped() && s?.State == JobState.Printing && Gtk.Settings.GetDefault()?.GtkEnableAnimations != false)
+        if (_tick == 0 && Widget.GetMapped() && _visible(Widget) && s?.State == JobState.Printing && Gtk.Settings.GetDefault()?.GtkEnableAnimations != false)
             _tick = Widget.AddTickCallback((_, clock) =>
             {
-                if (_disposed || !Widget.GetMapped() || Widget.GetRoot() is Gtk.Window { Suspended: true } || _session.Status?.State != JobState.Printing || Gtk.Settings.GetDefault()?.GtkEnableAnimations == false) { _tick = 0; return false; }
+                if (_disposed || !Widget.GetMapped() || !_visible(Widget) || Widget.GetRoot() is Gtk.Window { Suspended: true } || _session.Status?.State != JobState.Printing || Gtk.Settings.GetDefault()?.GtkEnableAnimations == false) { _tick = 0; return false; }
                 var now = clock.GetFrameTime();
                 if (now - _lastFrame > 66000) { _lastFrame = now; _time = now / 1_000_000.0; Widget.QueueRender(); }
                 return true;
             });
-        if (_key == key) return; _key = key;
-        if (Widget.GetMapped()) Widget.QueueRender();
+        if (_key == key || !Widget.GetMapped() || !_visible(Widget)) return;
+        _key = key; Widget.QueueRender();
     }
     private unsafe void Initialize(Gltf model)
     {

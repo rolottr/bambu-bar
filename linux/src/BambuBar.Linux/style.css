@@ -74,7 +74,7 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 .sample-footer .sample-control { background: transparent; border-color: transparent; }
 .sample-panel progressbar trough, .widget-sample progressbar trough { background: alpha(white,.15); }
 .widget-stage { padding: 24px 28px 14px; border-radius: 30px; background: linear-gradient(135deg,#bd885d,#414a79); color: #eeeeee; }
-.widget-sample { background: linear-gradient(180deg,#292c2e,#141719); color: #eeeeee; border: 1px solid alpha(white,.08); border-radius: 24px; padding: 16px; box-shadow: 0 8px 20px alpha(black,.25); }
+.widget-sample { background: linear-gradient(180deg,#292c2e,#141719); color: #eeeeee; border: 1px solid alpha(white,.08); border-radius: 24px; padding: 16px; box-shadow: none; }
 .widget-sample .module { background: alpha(white,.06); }
 .scene-picker { border-radius: 24px; background: alpha(#171c3a,.55); padding: 3px; }
 .scene-picker button { font-size: 11px; font-weight: 600; min-height: 22px; padding: 2px 8px; border-radius: 18px; background: transparent; color: #eeeeee; box-shadow: none; }
@@ -87,3 +87,27 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 .step-number { min-width: 22px; min-height: 22px; border-radius: 14px; background: alpha(#21cc6b,.15); color: #21cc6b; font-weight: 700; }
 
 .menu-layout > flowboxchild { background: transparent; padding: 0; border: none; outline: none; }
+
+.bambu-dark .page-background { background-image: linear-gradient(135deg,alpha(#b76d65,.045),transparent 55%,alpha(#21cc6b,.035)); }
+.printer-list-row { padding: 6px 0; }
+.about-links button { background: transparent; box-shadow: none; }
+.fleet-art { min-width: 80px; }
+
+.spool-card.active-spool { background: alpha(#21cc6b,.09); border-color: alpha(#21cc6b,.6); }
+
+.stop-control { color: #ff5c5c; background: alpha(#ff5c5c,.13); }
+.fan-card progressbar progress { background: #88aaff; }
+.fan-card progressbar progress, .fan-card progressbar trough { min-height: 4px; }
+
+.license-card { padding: 28px; }
+.about-links button { color: #21cc6b; min-height: 20px; padding: 2px 4px; }
+
+.spool-card progressbar, .spool-card progressbar trough { min-width: 0; }
+.fan-card progressbar, .fan-card progressbar trough { min-width: 0; }
+
+.fleet-paused { background: alpha(#ffb83d,.07); border-color: alpha(#ffb83d,.55); }
+.fleet-failed { background: alpha(#ff5c5c,.07); border-color: alpha(#ff5c5c,.55); }
+.fleet-paused .badge { background: alpha(#ffb83d,.14); color: #ffb83d; }
+.fleet-failed .badge { background: alpha(#ff5c5c,.14); color: #ff5c5c; }
+.fleet-printing .badge, .fleet-finished .badge { background: alpha(#21cc6b,.14); color: #21cc6b; }
+.fleet-preparing .badge { background: alpha(#5ca8ff,.14); color: #5ca8ff; }

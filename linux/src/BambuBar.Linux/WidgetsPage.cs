@@ -48,23 +48,32 @@ internal sealed partial class Shell
             var percent = preparing || _widgetPreviewState == JobState.Idle ? 0 : _widgetPreviewState == JobState.Finished ? 100 : printing ? 50 : 64;
             var content = Column(6); content.SetHexpand(true);
             var heading = Row(); var name = Label(_store.Current?.Config.Name ?? "Bambulab P2S", "caption", "heading", "muted"); name.SetHexpand(true); name.SetEllipsize(Pango.EllipsizeMode.End); heading.Append(name);
-            var stateLabel = Label("● " + _widgetPreviewState.Title(), "caption", "heading", preparing ? "preparing" : _widgetPreviewState == JobState.Paused ? "warning" : "success"); heading.Append(stateLabel); content.Append(heading);
-            content.Append(Label(_widgetPreviewState == JobState.Idle ? Loc.T("Ready to print") : "Articulated Dragon", "heading"));
+            var stateLabel = Label("● " + _widgetPreviewState.Title(), "caption", "heading", preparing ? "preparing" : _widgetPreviewState == JobState.Paused ? "warning" : "success"); heading.Append(stateLabel); if (!small) content.Append(heading);
+            if (!small) content.Append(Label(_widgetPreviewState == JobState.Idle ? Loc.T("Ready to print") : "Articulated Dragon", "heading"));
             if (small)
             {
-                var ring = Gtk.Image.New(); ring.SetPixelSize(94);
-                var svg = $"<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><circle cx='50' cy='50' r='42' fill='none' stroke='#505055' stroke-width='7'/><circle cx='50' cy='50' r='42' fill='none' stroke='#ff9959' stroke-width='7' stroke-dasharray='{percent * 2.64} 264' transform='rotate(-90 50 50)'/><text x='50' y='57' text-anchor='middle' font-family='sans-serif' font-weight='bold' font-size='26' fill='white'>{percent}%</text></svg>";
-                using var bytes = GLib.Bytes.New(System.Text.Encoding.UTF8.GetBytes(svg)); ring.SetFromGicon(Gio.BytesIcon.New(bytes)); content.Append(ring);
+                var ring = Gtk.Image.New(); ring.SetPixelSize(58); ring.SetSizeRequest(58, 58);
+                var dial = _widgetPreviewState == JobState.Finished ? "✓" : preparing ? "♨" : percent + "%";
+                var svg = $"<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><circle cx='50' cy='50' r='42' fill='none' stroke='#505055' stroke-width='10'/><circle cx='50' cy='50' r='42' fill='none' stroke='#ff9959' stroke-width='10' stroke-dasharray='{percent * 2.64} 264' transform='rotate(-90 50 50)'/><text x='50' y='57' text-anchor='middle' font-family='sans-serif' font-weight='bold' font-size='26' fill='white'>{dial}</text></svg>";
+                using var bytes = GLib.Bytes.New(System.Text.Encoding.UTF8.GetBytes(svg)); ring.SetFromGicon(Gio.BytesIcon.New(bytes));
+                var top = Row(10); top.Append(ring); var primary = Column(2); primary.SetHexpand(true);
+                primary.Append(Label(_widgetPreviewState.Title().ToUpperInvariant(), "caption", "heading", preparing ? "preparing" : "success"));
+                var summary = Label(printing ? "1h 12m" : preparing ? Loc.T("Auto bed leveling") : _widgetPreviewState == JobState.Paused ? Loc.T("Filament ran out") : _widgetPreviewState == JobState.Finished ? "12m " + Loc.T("ago") : "220° · 55°", "heading"); summary.SetWrap(true); summary.SetMaxWidthChars(11); primary.Append(summary);
+                if (printing) primary.Append(Label(Loc.T("left"), "caption", "muted")); top.Append(primary); content.Append(top);
+                var spacer = Column(); spacer.SetVexpand(true); content.Append(spacer);
+                if (_widgetPreviewState.IsActive()) content.Append(Label("◉ PLA Matte · A1", "caption", "muted"));
+                content.Append(Label(_widgetPreviewState == JobState.Idle ? Loc.T("Ready to print") : "Articulated Dragon", "heading"));
+                content.Append(Label(printing ? Loc.T("Done") + " 13:38 · 144/284" : preparing ? "Nozzle 201° → 220°" : _widgetPreviewState == JobState.Finished ? Loc.T("Ready to remove") : "182/284", "caption", "muted"));
             }
             else
             {
                 var numbers = Row(); var progressLabel = Label(percent + "%", "sample-percent"); progressLabel.SetHexpand(true); numbers.Append(progressLabel); numbers.Append(Label(preparing ? "0/305" : $"{percent * 284 / 100}/284", "caption", "muted", "heading")); content.Append(numbers);
                 var progress = Gtk.ProgressBar.New(); progress.SetFraction(percent / 100.0); content.Append(progress);
             }
-            content.Append(Label(preparing ? Loc.T("Auto bed leveling") : printing ? "1h 12m " + Loc.T("left") + "    " + Loc.T("Done") + " 13:38" : _widgetPreviewState == JobState.Paused ? Loc.T("Filament ran out") : _widgetPreviewState == JobState.Finished ? Loc.T("Finished") + " · 12m" : Loc.T("Ready to print"), "caption", "heading"));
-            if (!small) { var hero = Row(14); hero.Append(PreviewArt(_widgetPreviewState, percent / 100.0, 104)); hero.Append(content); card.Append(hero); card.Append(SampleTemperatures(true, large)); }
+            if (!small) content.Append(Label(preparing ? Loc.T("Auto bed leveling") : printing ? "1h 12m " + Loc.T("left") + "    " + Loc.T("Done") + " 13:38" : _widgetPreviewState == JobState.Paused ? Loc.T("Filament ran out") : _widgetPreviewState == JobState.Finished ? Loc.T("Finished") + " · 12m" : Loc.T("Ready to print"), "caption", "heading"));
+            if (!small) { var hero = Row(14); hero.Append(PreviewArt(_widgetPreviewState, percent / 100.0, 104)); hero.Append(content); card.Append(hero); var temperatures = SampleTemperatures(true, large); if (!large) temperatures.SetMarginStart(118); card.Append(temperatures); }
             else card.Append(content);
-            if (large) card.Append(SampleSpools()); slot.Append(card);
+            if (large) card.Append(SampleSpools(false)); slot.Append(card);
             details.Append(Label(Loc.T(char.ToUpperInvariant(_widgetPreviewSize[0]) + _widgetPreviewSize[1..]), "heading"));
             details.Append(Note(small ? "The essentials at a glance: progress, time left and finish time. Paused, it says why; finished, how long ago." : large ? "Everything: progress and timing, temperature tiles, AMS spools with what's left, the newest error in plain words, and how the last print went." : "The printer as it is: the part growing in the filament's colour, the job and its progress, finish time and layers, and nozzle, bed and chamber temperatures."));
             var chips = Gtk.FlowBox.New(); chips.SetSelectionMode(Gtk.SelectionMode.None); chips.SetColumnSpacing(6); chips.SetRowSpacing(6); chips.SetMaxChildrenPerLine(6); chips.SetHomogeneous(false);

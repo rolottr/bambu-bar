@@ -28,7 +28,7 @@ internal sealed partial class Shell
         var snapshot = Array.IndexOf(args, "--snapshot");
         if (snapshot >= 0 && snapshot + 1 < args.Length)
         {
-            var scenes = _pages.ToArray(); var index = 0; Navigate(scenes[0]); Present();
+            var scenes = _pages.Where(p => p != "All Printers" || _store.HasMultiplePrinters).ToArray(); var index = 0; Navigate(scenes[0]); Present();
             GLib.Functions.TimeoutAdd(200, 1200, () =>
             {
                 Capture(Path.Combine(args[snapshot + 1], "window-" + scenes[index].ToLowerInvariant().Replace(' ', '-') + ".png"), _window);
