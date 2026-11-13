@@ -35,21 +35,27 @@ internal sealed partial class Shell
         _pageHost.Append(AmsStrip(session));
         if (session.ShowsCamera) AddCamera(session);
         _pageHost.Append(Label(Loc.T("PRINTER"), "section-title"));
-        var row = Row(); var left = Module(); left.SetHexpand(true); var right = Module(); right.SetHexpand(true);
-        Detail(left, "Speed", () => session.Speed.Title());
-        Detail(left, "Nozzle", () => session.Status?.NozzleDiameter is { } d ? $"{d:0.0} mm · {session.Status?.NozzleType}" : "—");
-        Detail(left, "Door", () => Loc.T(session.Status?.DoorOpen == true ? "Open" : "Closed"));
-        Detail(left, "Light", () => Loc.T(session.ChamberLightOn ? "On" : "Off"));
-        Detail(right, "Network", () => session.Status?.WifiSignal is { } signal ? $"Wi-Fi ({signal} dBm)" : session.LinkSummary);
-        Detail(right, "Storage", () => Loc.T(session.Status?.HasSdCard == true ? "SD card inserted" : "No SD card"));
-        Detail(right, "Live View", () => Loc.T(session.ShowsCamera ? "On" : "Off"));
-        Detail(right, "Firmware", () => session.Status?.Firmware ?? "—");
+        var row = Row(10); row.SetHomogeneous(true);
+        var left = Module(); var right = Module();
+        Detail(left, "Speed", () => $"{session.Speed.Title()} ({session.Speed.Percent()}%)", "speedometer-symbolic");
+        Detail(left, "Nozzle", () => session.Status?.NozzleDiameter is { } d ? $"{d:0.0} mm · {NozzleMaterial(session.Status?.NozzleType)}" : "—", "applications-engineering-symbolic");
+        if (session.Status?.DoorOpen is not null) Detail(left, "Door", () => Loc.T(session.Status?.DoorOpen == true ? "Open" : "Closed"), "door-symbolic");
+        if (session.Status?.ChamberLightOn is not null) Detail(left, "Light", () => Loc.T(session.ChamberLightOn ? "On" : "Off"), "display-brightness-symbolic");
+        Detail(right, "Network", () => session.Status?.WifiSignal is { } signal ? $"{WifiDescription(signal)} ({signal} dBm)" : "—", "network-wireless-symbolic");
+        Detail(right, "Storage", () => session.Status?.HasSdCard is { } sd ? Loc.T(sd ? "SD card inserted" : "No SD card") : "—", "media-flash-symbolic");
+        Detail(right, "Live View", () => session.Status?.LiveViewEnabled is { } live ? Loc.T(live ? "On" : "Off") : "—", "camera-video-symbolic");
+        Detail(right, "Firmware", () => session.Status?.Firmware ?? "—", "application-x-firmware-symbolic");
         row.Append(left); row.Append(right); _pageHost.Append(row);
         if (session.Config.Model is { } model)
         {
-            var specs = Module(); Detail(specs, "Build volume", () => model.BuildVolumeText);
-            Detail(specs, "Chamber", () => model.HasChamberSensor ? Loc.T("Enclosed, with temperature sensor") : "—");
-            _pageHost.Append(specs);
+            var specs = Row(10); specs.SetHomogeneous(true); var dimensions = Module(); var capabilities = Module();
+            Detail(dimensions, "Build volume", () => model.BuildVolumeText, "package-x-generic-symbolic");
+            Detail(dimensions, "Chamber", () => model.ChamberText, "view-paged-symbolic");
+            Detail(dimensions, "Nozzles", () => Loc.F(model.NozzleCount == 2 ? "Two, up to %lld °C" : "One, up to %lld °C", model.NozzleMax), "applications-engineering-symbolic");
+            Detail(capabilities, "Bed", () => Loc.F("Up to %lld °C", model.BedMax), "weather-fog-symbolic");
+            Detail(capabilities, "Fans", () => string.Join(", ", new[] { Loc.T("Part cooling"), model.HasAuxFan ? Loc.T("aux") : null, model.HasChamberFan ? Loc.T("chamber") : null }.OfType<string>()), "sensors-fan-symbolic");
+            Detail(capabilities, "Filament", () => model.UsesAmsLite ? "AMS Lite" : "AMS, AMS 2 Pro, AMS HT", "media-optical-symbolic");
+            specs.Append(dimensions); specs.Append(capabilities); _pageHost.Append(specs);
         }
         var history = _store.HistoryFor(session.Id);
         if (history.Count > 0)
@@ -58,6 +64,15 @@ internal sealed partial class Shell
             foreach (var job in history) recent.Append(Label($"{job.Name} · {job.Outcome.Title()}"));
             _pageHost.Append(recent);
         }
+    }
+    private static string WifiDescription(int signal) => Loc.T(signal == -90 ? "Ethernet" : signal >= -55 ? "Wi-Fi excellent" : signal >= -67 ? "Wi-Fi good" : signal >= -75 ? "Wi-Fi fair" : signal >= -89 ? "Wi-Fi weak" : "Wi-Fi poor");
+    private static string NozzleMaterial(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return "—";
+        var upper = code.ToUpperInvariant();
+        if (upper.Length < 4) return code;
+        var material = upper[2..4] switch { "00" => Loc.T("Stainless steel"), "01" => Loc.T("Hardened steel"), "05" => Loc.T("Tungsten carbide"), _ => code };
+        return upper[1] switch { 'U' => Loc.F("%@, TPU high flow", material), 'H' or 'E' => Loc.F("%@, high flow", material), _ => upper.Contains("HARDENED") ? Loc.T("Hardened steel") : upper.Contains("STAINLESS") ? Loc.T("Stainless steel") : material };
     }
     private static string Temp(Temperature? temperature) => temperature is { } t ? t.Target > 0 && !t.IsAtTarget ? $"{t.Current:0}° → {t.Target:0}°" : $"{t.Current:0}°" : "—";
     private static string Percent(int? value) => value is >= 0 and { } v ? $"{v}%" : "—";
@@ -138,41 +153,6 @@ internal sealed partial class Shell
         updates.Add(() => controls.SetVisible(_store.ShowPrinterActions && session.Status?.State.IsActive() == true));
         foreach (var update in updates.ToArray()) update();
         return card;
-    }
-    private void QuickViewPage()
-    {
-        Header(Loc.T("Menu Bar"), Loc.T("What the menu bar shows while you print, and what you see when you click it."));
-        var layout = Row(18); var options = Column(16); options.SetSizeRequest(280, -1); options.SetHexpand(true);
-        var style = Gtk.DropDown.NewFromStrings(new[] { Loc.T("Icon only"), Loc.T("Progress"), Loc.T("Time left"), Loc.T("Progress and time left") });
-        style.SetSelected((uint)Array.IndexOf(Enum.GetValues<TrayStyle>(), _store.MenuBarStyle));
-        style.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected" && style.GetSelected() < Enum.GetValues<TrayStyle>().Length) { _store.MenuBarStyle = Enum.GetValues<TrayStyle>()[(int)style.GetSelected()]; _desktop?.Queue(); } };
-        options.Append(Module(Label(Loc.T("While printing, show"), "heading"), style));
-        var content = Module(Label(Loc.T("What to show"), "heading"));
-        void Update(string key, bool value) { _settings.Set(key, value); BuildPanel(); GLib.Functions.IdleAdd(200, () => { Rebuild(); return false; }); }
-        Toggle(content, "Temperatures", _settings.Get(AppSettings.Keys.PanelTemperatures, true), value => Update(AppSettings.Keys.PanelTemperatures, value));
-        Toggle(content, "Chamber temperature", _settings.Get(AppSettings.Keys.PanelChamber, true), value => Update(AppSettings.Keys.PanelChamber, value));
-        Toggle(content, "Fans", _settings.Get(AppSettings.Keys.PanelFans, false), value => Update(AppSettings.Keys.PanelFans, value));
-        Toggle(content, "Filament", _settings.Get(AppSettings.Keys.PanelFilament, true), value => Update(AppSettings.Keys.PanelFilament, value));
-        Toggle(content, "Pause, stop and speed", _store.ShowPrinterActions, value => { _store.ShowPrinterActions = value; BuildPanel(); });
-        options.Append(content); options.SetValign(Gtk.Align.Start); layout.Append(options);
-        if (_store.Current is { } session)
-        {
-            var preview = Column(10); preview.SetSizeRequest(330, -1); preview.SetHexpand(true); preview.SetValign(Gtk.Align.Start); preview.AddCssClass("menu-preview");
-            preview.Append(Label(session.Config.Name, "heading")); preview.Append(JobCard(session, _updates, compact: true));
-            if (_settings.Get(AppSettings.Keys.PanelTemperatures, true)) preview.Append(TemperatureStrip(session, false));
-            if (_settings.Get(AppSettings.Keys.PanelFilament, true)) preview.Append(AmsStrip(session));
-            if (_settings.Get(AppSettings.Keys.PanelFans, false)) preview.Append(Live(() => DesktopPanel.FanText(session.Status), null, "caption", "muted"));
-            preview.Append(Label(Loc.T("Live preview · changes appear here as you make them"), "caption", "muted")); layout.Append(preview);
-        }
-        _pageHost.Append(layout);
-        if (_store.HasMultiplePrinters)
-        {
-            var sessions = _store.Sessions.ToArray();
-            var selector = Gtk.DropDown.NewFromStrings([Loc.T("Automatic"), .. sessions.Select(s => s.Config.Name)]);
-            selector.SetSelected((uint)Math.Max(0, Array.FindIndex(sessions, s => s.Id == _store.MenuBarSerial) + 1));
-            selector.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") _store.MenuBarSerial = selector.GetSelected() == 0 ? null : sessions[(int)selector.GetSelected() - 1].Id; };
-            _pageHost.Append(Module(Label(Loc.T("Printer"), "section-title"), selector));
-        }
     }
     private void PreparePanel()
     {

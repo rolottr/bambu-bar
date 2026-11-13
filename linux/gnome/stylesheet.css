@@ -76,17 +76,38 @@
 .bambu-menu .bambu-container .bambu-state-printing, .bambu-menu .bambu-container .bambu-state-finished { color: #32d074; }
 .bambu-menu .bambu-container .bambu-link, .bambu-menu .bambu-container .bambu-info { color: #4aa3ff; }
 .bambu-menu .bambu-container .bambu-code, .bambu-menu .bambu-container .bambu-ams-title { color: #adadad; }
-.bambu-desktop-widget, .bambu-desktop-widget:hover, .bambu-desktop-widget:active, .bambu-desktop-widget:focus { color: #eeeeee; background-color: rgba(35,35,38,0.96); border: 1px solid #535357; border-radius: 22px; padding: 18px; box-shadow: 0 4px 14px rgba(0,0,0,.24); }
+.bambu-desktop-widget, .bambu-desktop-widget:hover, .bambu-desktop-widget:active, .bambu-desktop-widget:focus { color: #eeeeee; background-gradient-direction: vertical; background-gradient-start: #292c2e; background-gradient-end: #141719; border: 1px solid rgba(255,255,255,.12); border-radius: 24px; padding: 16px; box-shadow: 0 6px 16px rgba(0,0,0,.24); }
 .bambu-desktop-widget:focus { border-color: #4aa3ff; }
 .bambu-widget-content { spacing: 8px; }
-.bambu-widget-name { color: #eeeeee; font-size: 14px; font-weight: 700; }
-.bambu-widget-caption { font-size: 11px; font-weight: 600; }
-.bambu-widget-job { color: #eeeeee; font-size: 14px; font-weight: 600; }
-.bambu-widget-progress { color: #eeeeee; font-size: 36px; font-weight: 800; }
+.bambu-widget-header { spacing: 8px; }
+.bambu-widget-name { color: #adadb3; font-size: 12px; font-weight: 700; }
+.bambu-widget-caption { font-size: 11px; font-weight: 700; }
+.bambu-widget-job { color: #eeeeee; font-size: 15px; font-weight: 700; }
+.bambu-widget-hero { spacing: 14px; }
+.bambu-widget-info { spacing: 5px; }
+.bambu-widget-progress { color: #eeeeee; font-size: 34px; font-weight: 800; }
+.bambu-widget-progress.small { font-size: 25px; }
 .bambu-widget-detail { color: #bcbcc4; font-size: 11px; }
-.bambu-widget-rail { height: 5px; border-radius: 3px; background-color: #55555a; }
-.bambu-widget-fill { background-color: #21cc6b; border-radius: 3px; }
-.bambu-widget-issue { color: #7dbaff; font-size: 11px; }
-.bambu-widget-spools { spacing: 8px; padding-top: 6px; }
-.bambu-widget-spool { spacing: 5px; }
-.bambu-widget-spool-ring { width: 24px; height: 24px; border: 4px solid #656569; border-radius: 18px; }
+.bambu-widget-detail.strong { font-weight: 700; color: #dedee3; }
+.bambu-widget-rail { height: 5px; border-radius: 3px; background-color: #44464a; }
+.bambu-widget-fill { border-radius: 3px; }
+.bambu-widget-issue { color: #7dbaff; font-size: 11px; padding: 6px; background-color: rgba(92,168,255,.1); border-radius: 10px; }
+.bambu-widget-temps { spacing: 8px; }
+.bambu-widget-temps.compact { padding-left: 118px; }
+.bambu-widget-inline-temp { spacing: 5px; }
+.bambu-widget-temp { spacing: 4px; padding: 8px; border-radius: 14px; background-color: rgba(255,255,255,.06); }
+.bambu-widget-temperature { font-size: 22px; font-weight: 700; color: #eeeeee; }
+.bambu-widget-ams { spacing: 6px; padding: 8px; border-radius: 14px; background-color: rgba(255,255,255,.05); }
+.bambu-widget-spools { spacing: 8px; }
+.bambu-widget-spool { spacing: 4px; text-align: center; }
+.bambu-widget-spool-rim { padding: 3px; border: 2px solid #68686c; border-radius: 20px; }
+.bambu-widget-spool-ring { width: 24px; height: 24px; border: 1px solid rgba(255,255,255,.25); border-radius: 15px; }
+.bambu-widget-spool-hub { width: 6px; height: 6px; border-radius: 3px; background-color: rgba(0,0,0,.5); }
+.bambu-desktop-widget.small { padding: 12px; }
+.bambu-desktop-widget.small .bambu-widget-content { spacing: 4px; }
+.bambu-desktop-widget.small .bambu-widget-caption { font-size: 9px; }
+.bambu-desktop-widget.small .bambu-widget-name { font-size: 10px; }
+.bambu-desktop-widget.small .bambu-widget-job { font-size: 12px; }
+
+.bambu-widget-idle-spools { spacing: 7px; padding: 8px 0; }
+.bambu-widget-idle-spool { width: 18px; height: 18px; border: 3px solid #68686c; border-radius: 14px; }

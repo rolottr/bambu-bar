@@ -33,6 +33,9 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
     private readonly HashSet<PrinterSession> _sessions = [];
     private event Action<string>? StateChanged;
     private string _state = "{}", _artKey = "", _art = "", _artSerial = "";
+    private readonly Dictionary<string, (string Key, string? Path)> _widgetArt = [];
+    private readonly object _widgetArtLock = new();
+    private readonly HashSet<string> _widgetRendering = [];
     private bool _queued, _open, _disposed, _rendering;
 
     public DesktopPanel(PrinterStore store, AppSettings settings, Action<string, PrinterSession?> invoke)
@@ -107,7 +110,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
             widgets = !_settings.Get("linuxWidgetsEnabled", false) ? [] : (_settings.Get<List<DesktopWidgetConfig>>("linuxWidgets") ?? []).Take(8).Select(w => new
             {
                 id = w.Id, size = w.Size, corner = w.Corner,
-                state = JsonSerializer.SerializeToElement(WidgetStateWriter.Build(_store.Fleet.For(w.Printer), DateTimeOffset.Now), WidgetState.Json),
+                state = JsonSerializer.SerializeToElement(WidgetSnapshot(w.Printer), WidgetState.Json),
             }).ToArray(),
             labels = labelKeys.ToDictionary(k => k, k => Loc.T(k)),
             panelText = tray?.Status is { } t && tray.IsOnline && t.State.IsActive() ? _store.MenuBarStyle.Text(t) ?? "" : "",
@@ -156,6 +159,39 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         if (json == _state) return;
         Volatile.Write(ref _state, json);
         StateChanged?.Invoke(json);
+    }
+    private WidgetState WidgetSnapshot(string? serial)
+    {
+        var snapshot = _store.Fleet.For(serial);
+        var state = WidgetStateWriter.Build(snapshot, DateTimeOffset.Now);
+        var status = snapshot.Status;
+        var scene = new PrinterArt.Scene
+        {
+            Shape = PrinterShapes.FromModel(snapshot.Model), State = status?.State ?? JobState.Idle,
+            Progress = Math.Round((status?.Progress ?? 0) / 5.0) / 20,
+            Filament = status?.ActiveSpool?.Color,
+            Spools = status?.Ams.FirstOrDefault()?.Spools.Select(s => s.IsLoaded ? s.Color : null).ToArray() ?? [],
+            LightOn = status?.ChamberLightOn ?? false, Dimmed = !state.Live,
+        };
+        var key = JsonSerializer.Serialize(scene);
+        var id = snapshot.Serial;
+        _widgetArt.TryGetValue(id, out var cached);
+        if (cached.Key != key && _widgetRendering.Add(id)) _ = Render();
+        return state with { Art = cached.Path };
+        async Task Render()
+        {
+            var folder = Path.Combine(Environment.GetEnvironmentVariable("XDG_CACHE_HOME") ?? Path.Combine(Platform.Home, ".cache"), "bambu-bar", "widgets");
+            try
+            {
+                var name = await Task.Run(() => { lock (_widgetArtLock) return PrinterArt.WritePng(scene, 196, 232, folder); });
+                if (_disposed) return;
+                _widgetArt[id] = (key, name is null ? null : Path.Combine(folder, name));
+                // Content-addressed files are shared across printers; prune only files no current card uses.
+                if (_widgetRendering.Count == 1) PrinterArt.Prune(folder, _widgetArt.Values.Select(a => a.Path).OfType<string>().Select(Path.GetFileName).OfType<string>());
+            }
+            catch (Exception) { if (!_disposed) _widgetArt[id] = (key, null); }
+            finally { _widgetRendering.Remove(id); if (!_disposed) Queue(); }
+        }
     }
     internal static string FanText(PrinterStatus? s) => string.Join(" · ", new (string Name, int? Value)[]
     { ("Part", s?.PartFan), ("Aux", s?.AuxFan), ("Chamber", s?.ExhaustFan), ("Hotend", s?.HeatbreakFan) }

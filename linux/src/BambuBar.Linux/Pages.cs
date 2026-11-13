@@ -131,12 +131,8 @@ internal sealed partial class Shell
     private void SettingsPage()
     {
         Header(Loc.T("Settings"));
-        var appearance = Gtk.DropDown.NewFromStrings([Loc.T("Dark"), Loc.T("Light"), Loc.T("System")]);
-        appearance.SetSelected((uint)_settings.Get("linuxAppearance", 0));
-        appearance.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") { _settings.Set("linuxAppearance", (int)appearance.GetSelected()); ApplyAppearance(); } };
-        _pageHost.Append(Module(Label(Loc.T("Appearance"), "heading"), appearance));
-        var general = Module(Label(Loc.T("General"), "section-title"));
-        if (!_ephemeral) Toggle(general, "Open at Login", Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? _settings.Get("openAtLogin", false) : Platform.Autostart, value => Async(async () =>
+        var general = Module();
+        if (!_ephemeral) Toggle(general, "Open at login", Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? _settings.Get("openAtLogin", false) : Platform.Autostart, value => Async(async () =>
         {
             if (Environment.GetEnvironmentVariable("FLATPAK_ID") is not null)
             {
@@ -146,23 +142,48 @@ internal sealed partial class Shell
             else Platform.SetAutostart(value);
             _settings.Set("openAtLogin", value);
         }));
-        Toggle(general, "Confirm before stopping a print", _store.ConfirmStop, v => _store.ConfirmStop = v);
-        _pageHost.Append(general);
-        var camera = Module(Label(Loc.T("Camera"), "section-title")); Toggle(camera, "Enable camera", _store.CameraEnabled, v => _store.CameraEnabled = v);
-        Toggle(camera, "Keep the camera connected during prints", _store.CameraStaysOnWhilePrinting, v => _store.CameraStaysOnWhilePrinting = v); _pageHost.Append(camera);
+        else Toggle(general, "Open at login", false, _ => { });
+        general.Append(Note("At login Bambu Bar starts in the background. Open it from the top bar or the app launcher to see this window."));
+        _pageHost.Append(SettingsSection("General", "emblem-system-symbolic", general));
+
         var languages = Strings.Current?.Languages.ToArray() ?? ["en"];
-        var language = Gtk.DropDown.NewFromStrings(languages.Select(c => CultureInfo.GetCultureInfo(c).NativeName).ToArray());
-        language.SetSelected((uint)Math.Max(0, Array.IndexOf(languages, Loc.Language)));
+        var language = Gtk.DropDown.NewFromStrings([Loc.T("System") + " (" + CultureInfo.CurrentUICulture.NativeName + ")", .. languages.Select(c => CultureInfo.GetCultureInfo(c).NativeName)]);
+        var selectedLanguage = _settings.Get<string>("appLanguage");
+        language.SetSelected((uint)(selectedLanguage is null ? 0 : Math.Max(0, Array.IndexOf(languages, selectedLanguage) + 1)));
         language.OnNotify += (_, e) =>
         {
-            if (e.Pspec.GetName() == "selected")
-            {
-                var selected = languages[(int)language.GetSelected()]; _settings.Set("appLanguage", selected); Strings.LoadFor(_ => selected).Use(selected);
-                for (var i = 0; i < _pages.Length; i++) if (_nav.GetRowAtIndex(i)?.GetChild() is Gtk.Box row && row.GetLastChild() is Gtk.Label label) label.SetText(Loc.T(_pages[i]));
-                Rebuild();
-            }
+            if (e.Pspec.GetName() != "selected") return;
+            var selected = language.GetSelected() == 0 ? null : languages[(int)language.GetSelected() - 1];
+            _settings.Set<string?>("appLanguage", selected);
+            var strings = Strings.LoadFor(catalog => selected ?? catalog.Match(CultureInfo.CurrentUICulture));
+            strings.Use(selected ?? strings.Match(CultureInfo.CurrentUICulture));
+            for (var i = 0; i < _pages.Length; i++) if (_nav.GetRowAtIndex(i)?.GetChild() is Gtk.Box row && row.GetLastChild() is Gtk.Label label) label.SetText(Loc.T(_pages[i]));
+            GLib.Functions.IdleAdd(200, () => { if (!_disposed) Rebuild(); return false; });
         };
-        _pageHost.Append(Module(Label(Loc.T("Language"), "section-title"), language));
+        var languageCard = Module(SettingRow("Language", language), Note("Bambu Bar follows your system language unless you pick another one here."));
+        _pageHost.Append(SettingsSection("Language", "preferences-desktop-locale-symbolic", languageCard));
+
+        var camera = Module(); Toggle(camera, "Show the printer camera", _store.CameraEnabled, v => { _store.CameraEnabled = v; BuildPanel(); });
+        camera.Append(Note("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the top bar panel and the menus."));
+        var advancedCamera = Gtk.Expander.New(Loc.T("Camera options")); var cameraOptions = Column(8);
+        Toggle(cameraOptions, "Keep the camera connected during prints", _store.CameraStaysOnWhilePrinting, v => _store.CameraStaysOnWhilePrinting = v);
+        advancedCamera.SetChild(cameraOptions); camera.Append(advancedCamera);
+        _pageHost.Append(SettingsSection("Camera", "camera-video-symbolic", camera));
+
+        var updates = Module(Note("Updates are managed by your Linux installation source. Install a newer Bambu Bar package to update this local build."));
+        var version = Row(10); version.Append(Gtk.Image.NewFromIconName("software-update-available-symbolic"));
+        var versionText = Column(2); versionText.Append(Label($"{Loc.T("Version")} {AppVersion.Marketing}", "heading"));
+        versionText.Append(Label(Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? "Flatpak · " + Platform.Commit : "Linux · " + Platform.Commit, "muted", "caption"));
+        versionText.SetHexpand(true); version.Append(versionText); updates.Append(version);
+        updates.Append(Button("web-browser-symbolic", Loc.T("Downloads"), () => Open("https://bambubar.app/download"), true));
+        _pageHost.Append(SettingsSection("Updates", "folder-download-symbolic", updates));
+
+        var appearance = Gtk.DropDown.NewFromStrings([Loc.T("Dark"), Loc.T("Light"), Loc.T("System")]);
+        appearance.SetSelected((uint)_settings.Get("linuxAppearance", 0));
+        appearance.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") { _settings.Set("linuxAppearance", (int)appearance.GetSelected()); ApplyAppearance(); } };
+        var preferences = Module(SettingRow("Appearance", appearance));
+        Toggle(preferences, "Confirm before stopping a print", _store.ConfirmStop, v => _store.ConfirmStop = v);
+        _pageHost.Append(SettingsSection("Preferences", "preferences-desktop-display-symbolic", preferences));
     }
     private void AboutPage()
     {

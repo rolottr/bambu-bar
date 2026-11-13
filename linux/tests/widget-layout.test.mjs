@@ -20,3 +20,11 @@ test('a display resize clamps cards inside the new work area', () => {
     const [p] = placeWidgets([{width:330,height:360,corner:'bottom-right'}], {x:0,y:24,width:800,height:500});
     assert.ok(p.x>=0 && p.x+330<=800 && p.y>=24 && p.y+360<=524);
 });
+
+test('380px illustrated cards have a full gap between wrapped columns', () => {
+    const positions = placeWidgets(Array.from({length: 6}, () => ({width:380,height:380,corner:'top-right'})), area);
+    for (let i=0; i<positions.length; i++) for (let j=i+1; j<positions.length; j++) {
+        const a=positions[i], b=positions[j];
+        assert.ok(Math.abs(a.x-b.x)>=400 || Math.abs(a.y-b.y)>=396);
+    }
+});

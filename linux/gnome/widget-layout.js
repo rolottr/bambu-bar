@@ -1,6 +1,7 @@
 // Pure placement logic, shared by Shell and the layout regression checks.
 export function placeWidgets(items, area) {
     const stacks = new Map();
+    const columnWidth = Math.max(0, ...items.map(item => item.width)) + 20;
     return items.map(item => {
         const corner = item.corner ?? 'top-right';
         const stack = stacks.get(corner) ?? {offset: 0, column: 0};
@@ -10,7 +11,7 @@ export function placeWidgets(items, area) {
         }
         const right = corner.endsWith('right');
         const bottom = corner.startsWith('bottom');
-        const x = right ? area.x + area.width - item.width - 20 - stack.column * 350 : area.x + 20 + stack.column * 350;
+        const x = right ? area.x + area.width - item.width - 20 - stack.column * columnWidth : area.x + 20 + stack.column * columnWidth;
         const y = bottom ? area.y + area.height - item.height - 20 - stack.offset : area.y + 20 + stack.offset;
         stack.offset += item.height + 16;
         stacks.set(corner, stack);

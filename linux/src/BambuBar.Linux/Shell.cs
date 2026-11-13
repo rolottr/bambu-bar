@@ -163,8 +163,10 @@ internal sealed partial class Shell : IDisposable
     {
         var index = Array.IndexOf(_pages, page);
         if (index >= 0 && _nav.GetSelectedRow()?.GetIndex() != index) { _nav.SelectRow(_nav.GetRowAtIndex(index)); return; }
-        if (_page != page) _error = null;
+        var changed = _page != page;
+        if (changed) _error = null;
         _page = page; Rebuild();
+        if (changed) _scroller.GetVadjustment().SetValue(0);
     }
     private void Rebuild()
     {
@@ -213,9 +215,12 @@ internal sealed partial class Shell : IDisposable
     {
         var label = Label(value(), css); (updates ?? _updates).Add(() => label.SetText(value())); return label;
     }
-    private void Detail(Gtk.Box box, string title, Func<string> value)
+    private void Detail(Gtk.Box box, string title, Func<string> value, string? icon = null)
     {
-        var row = Row(); var key = Label(Loc.T(title), "muted"); key.SetHexpand(true); row.Append(key); row.Append(Live(value)); box.Append(row);
+        var row = Row(8); row.AddCssClass("detail-row");
+        if (icon is not null) { var glyph = DetailIcon(icon); glyph.AddCssClass("muted"); row.Append(glyph); }
+        var key = Label(Loc.T(title), "muted"); row.Append(key);
+        var text = Live(value, null, "heading"); text.SetHexpand(true); text.SetXalign(1); text.SetWrap(true); text.SetJustify(Gtk.Justification.Right); row.Append(text); box.Append(row);
     }
     private void Toggle(Gtk.Box box, string title, bool value, Action<bool> set)
     {

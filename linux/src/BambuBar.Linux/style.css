@@ -1,82 +1,89 @@
-/* Dimensions from Theme.swift and MainView.swift; desktop supplies font, chrome and accent. */
-window { background: @window_bg_color; }
-.sidebar { background: alpha(@window_fg_color, .035); padding: 12px 8px; }
-.sidebar row { border-radius: 9px; padding: 11px 12px; }
-.sidebar row:selected { background: alpha(@accent_bg_color, .18); color: @accent_color; }
-.page { padding: 24px 28px; }
-.page-title { font-size: 26px; font-weight: 700; }
-.section-title { font-size: 11px; font-weight: 600; letter-spacing: .6px; opacity: .65; }
-.module { border-radius: 18px; padding: 14px; background: alpha(@window_fg_color, .05); border: 1px solid alpha(@window_fg_color, .07); }
-.tile { border-radius: 14px; padding: 11px; background: alpha(@window_fg_color, .05); border: 1px solid alpha(@window_fg_color, .06); }
-.job { background: linear-gradient(125deg, alpha(#21cc6b,.13), alpha(@window_fg_color,.025)); }
-.metric { font-size: 22px; font-weight: 600; font-feature-settings: "tnum"; }
-.progress-number { font-size: 42px; font-weight: 700; font-feature-settings: "tnum"; }
-.muted { opacity: .6; }
-.success { color: @success_color; }
-.warning { color: @warning_color; }
-.error { color: @error_color; }
-.job progressbar progress { background: #21cc6b; min-height: 6px; border-radius: 8px; }
-.job progressbar trough { min-height: 6px; border-radius: 8px; }
-.control { min-height: 28px; border-radius: 11px; }
-.printer-art { min-width: 190px; }
-.list-row { padding: 12px 2px; }
-.spool-dot { font-size: 28px; }
-.job.state-failed { background: linear-gradient(125deg, alpha(#e45454,.12), alpha(@window_fg_color,.025)); }
-.job.state-paused { background: linear-gradient(125deg, alpha(#d89321,.13), alpha(@window_fg_color,.025)); }
-.job.state-idle { background: alpha(@window_fg_color,.04); }
-.state-failed .state-label { color: @error_color; }
-.state-paused .state-label { color: @warning_color; }
-.state-finished .state-label, .state-printing .state-label { color: @success_color; }
-/* Shared visual hierarchy across every application page. */
-.sidebar { padding: 6px; }
-.sidebar row { padding: 6px 10px; }
+/* Shared Mac-like hierarchy, with native GTK controls and Linux window chrome. */
+window { background: @window_bg_color; font-size: 13px; }
+window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
+.bambu-dark headerbar { background: #222222; }
+.sidebar { background: alpha(@window_fg_color,.035); padding: 6px; }
+.bambu-dark .sidebar { background: #2b2626; }
+.sidebar .navigation-sidebar row { min-height: 25px; padding: 3px 10px; margin: 1px 0; border-radius: 9px; }
 .sidebar row:selected { background: #087bfa; color: white; }
 .sidebar image { color: #2997ff; }
 .sidebar row:selected image { color: white; }
-.page { padding: 28px 28px; }
+.page { padding: 28px; }
 .page-title { font-size: 27px; font-weight: 800; }
+.section-title { font-size: 10px; font-weight: 700; letter-spacing: .6px; opacity: .65; }
 .heading { font-weight: 700; }
 .caption { font-size: 11px; }
+.note { font-size: 12px; }
 .monospace { font-family: monospace; }
-.module { padding: 14px; border-radius: 18px; }
-.job, .job.state-failed, .job.state-paused, .job.state-idle { background: alpha(@window_fg_color,.045); border-radius: 24px; padding: 18px; }
+.muted { opacity: .65; }
+.success, .sample-printing { color: #21cc6b; }
+.warning { color: #ffb83d; }
+.error, .sample-stop { color: #ff5c5c; }
+.preparing { color: #5ca8ff; }
+.nozzle { color: #ff7a4d; }
+.bed { color: #ffb84d; }
+.chamber { color: #b8adb8; }
+.module { border-radius: 16px; padding: 13px; background: alpha(@window_fg_color,.05); border: 1px solid alpha(@window_fg_color,.08); }
+.tile { border-radius: 14px; padding: 11px; background: alpha(@window_fg_color,.05); border: 1px solid alpha(@window_fg_color,.06); }
+.detail-row { min-height: 14px; font-size: 12px; }
+.metric { font-size: 25px; font-weight: 800; font-feature-settings: "tnum"; }
+.job { background: alpha(@window_fg_color,.045); border-radius: 24px; padding: 18px; }
 .job-title { font-size: 20px; font-weight: 800; }
-.progress-number { font-size: 52px; font-weight: 800; }
-.badge { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 12px; background: alpha(@window_fg_color,.08); }
+.progress-number { font-size: 52px; font-weight: 800; font-feature-settings: "tnum"; }
+progressbar progress { background: #ff9e69; min-height: 5px; border-radius: 8px; }
+progressbar trough { min-height: 5px; border-radius: 8px; background: alpha(@window_fg_color,.16); }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 12px; background: alpha(@window_fg_color,.08); }
 .state-failed .state-label { color: #ff5c5c; background: alpha(#ff5c5c,.16); }
 .state-paused .state-label { color: #ffb83d; background: alpha(#ffb83d,.16); }
-.state-printing .state-label, .state-finished .state-label { color: #21cc6b; background: alpha(#21cc6b,.16); }
+.state-printing .state-label, .state-finished .state-label, .sample-printing { color: #21cc6b; background: alpha(#21cc6b,.16); }
 .state-failed .job-detail { color: #ff5c5c; }
 .job-detail { font-size: 12px; font-weight: 600; }
+.control { min-height: 24px; border-radius: 9px; }
+.printer-art { min-width: 190px; }
 .issue-banner { background: alpha(#4a9eff,.15); border-color: alpha(#4a9eff,.15); border-radius: 14px; padding: 10px; }
 .issue-banner button { min-height: 14px; padding: 0 4px; background: transparent; box-shadow: none; }
 .issue-banner image { color: #4a9eff; }
-.temperature-card { padding: 12px; }
-.temperature-card .metric { font-size: 25px; font-weight: 800; }
+.temperature-card { padding: 11px; }
 .temperature-card progressbar { min-width: 35px; }
 .support { color: #21cc6b; background: transparent; }
 .pill { border-radius: 20px; padding: 2px 10px; min-height: 22px; font-size: 12px; }
 .spool-card { padding: 12px; }
-.spool-card progressbar progress { background: #ff9e69; }
 .spool-card progressbar text { font-size: 10px; }
 flowboxchild { padding: 0; }
-.menu-preview { padding: 14px; border-radius: 22px; background: linear-gradient(135deg, alpha(#b97b4e,.22),alpha(#646bd1,.18)); }
-.menu-preview .job { padding: 10px; border-radius: 18px; }
-.menu-preview .job-title { font-size: 14px; }
-.menu-preview .progress-number { font-size: 34px; }
-.menu-preview .caption { font-size: 10px; }
-.menu-preview .module { padding: 10px; }
-.menu-preview .metric { font-size: 18px; }
-.list-row { padding: 6px 0; }
+.list-row { padding: 2px 0; min-height: 26px; }
+switch { min-height: 22px; min-width: 48px; }
 switch:checked { background: #0eaf60; }
-.sidebar .navigation-sidebar row { min-height: 25px; padding: 3px 10px; margin: 1px 0; }
-.menu-preview .job .muted { font-size: 11px; }
-window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
-.bambu-dark headerbar { background: #222222; }
-.bambu-dark .sidebar { background: #2b2626; }
+checkbutton { min-height: 18px; }
+checkbutton check:checked, checkbutton radio:checked { background: #087bfa; border-color: #087bfa; }
 .quick-panel .job { padding: 10px; border-radius: 18px; }
 .quick-panel .job-title { font-size: 14px; }
 .quick-panel .progress-number { font-size: 34px; }
 .quick-panel .muted { font-size: 11px; }
 .quick-panel .module { padding: 10px; }
-.quick-panel .metric { font-size: 18px; }
+.quick-panel .metric { font-size: 22px; }
+/* Preview wallpaper and nested translucent cards are local to the samples. */
+.preview-wallpaper { border-radius: 24px; background: linear-gradient(135deg,#98603a,#393f6d); color: #eeeeee; padding: 0 14px 16px; }
+.sample-topbar { margin: 0 -4px 8px; padding: 4px 0; font-size: 12px; }
+.sample-indicator { background: alpha(white,.22); border-radius: 4px; padding: 1px 5px; }
+.sample-panel { padding: 12px; border-radius: 18px; border: 1px solid alpha(white,.14); background: alpha(#292730,.30); }
+.sample-panel .module { padding: 10px; background: alpha(white,.07); border-color: alpha(white,.08); }
+.sample-panel .sample-job { border-radius: 20px; padding: 10px; }
+.sample-percent { font-size: 34px; font-weight: 800; font-feature-settings: "tnum"; }
+.sample-panel .sample-control { border-radius: 10px; padding: 6px 9px; }
+.sample-panel .sample-stop { background: alpha(#ff5c5c,.12); }
+.sample-footer .sample-control { background: transparent; border-color: transparent; }
+.sample-panel progressbar trough, .widget-sample progressbar trough { background: alpha(white,.15); }
+.widget-stage { padding: 24px 28px 14px; border-radius: 30px; background: linear-gradient(135deg,#bd885d,#414a79); color: #eeeeee; }
+.widget-sample { background: linear-gradient(180deg,#292c2e,#141719); color: #eeeeee; border: 1px solid alpha(white,.08); border-radius: 24px; padding: 16px; box-shadow: 0 8px 20px alpha(black,.25); }
+.widget-sample .module { background: alpha(white,.06); }
+.scene-picker { border-radius: 24px; background: alpha(#171c3a,.55); padding: 3px; }
+.scene-picker button { font-size: 11px; font-weight: 600; min-height: 22px; padding: 2px 8px; border-radius: 18px; background: transparent; color: #eeeeee; box-shadow: none; }
+.scene-picker button:checked { background: alpha(white,.16); box-shadow: inset 0 0 0 1px alpha(white,.3); color: white; }
+.size-picker button { font-size: 12px; min-height: 20px; padding: 2px 18px; }
+.size-picker button:checked { background: #087bfa; color: white; }
+.feature-chip { border-radius: 16px; font-size: 11px; font-weight: 600; padding: 3px 9px; }
+.feature-on { background: alpha(#21cc6b,.14); color: #21cc6b; }
+.feature-off { background: alpha(@window_fg_color,.05); color: alpha(@window_fg_color,.35); }
+.step-number { min-width: 22px; min-height: 22px; border-radius: 14px; background: alpha(#21cc6b,.15); color: #21cc6b; font-weight: 700; }
+
+.menu-layout > flowboxchild { background: transparent; padding: 0; border: none; outline: none; }
