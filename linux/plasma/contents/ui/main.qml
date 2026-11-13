@@ -35,6 +35,7 @@ PlasmoidItem {
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton
+            preventStealing: true
             cursorShape: Qt.PointingHandCursor
             onClicked: connection.openPrinter(root.state ? root.state.serial : "")
             Accessible.role: Accessible.Button

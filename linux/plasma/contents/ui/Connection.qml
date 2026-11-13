@@ -21,7 +21,7 @@ Item {
     }
     function openPrinter(serial) {
         DBus.SessionBus.asyncCall({service, path, iface: service, member: "Invoke",
-            arguments: ["show", serial], signature: "ss"}, () => {}, () => {});
+            arguments: ["show", serial]}, () => {}, error => console.warn("Bambu Bar open failed:", error.error.message));
     }
     DBus.DBusServiceWatcher {
         id: watcher

@@ -148,7 +148,7 @@ internal sealed partial class Shell : IDisposable
     }
     private async Task RequestBackground()
     {
-        try { if (await _background.Request(false, permissionOnly: true)) await _background.Status(Loc.T("Printers")); }
+        try { if (await _background.Request(_settings.Get("openAtLogin", false))) await _background.Status(Loc.T("Printers")); }
         catch (Exception) { /* Launcher and optional SNI remain usable when a portal is absent. */ }
     }
     private async Task StartTray() { try { await _tray!.Start(); } catch (Exception) { Console.Error.WriteLine("Tray host unavailable; launcher remains available."); } }

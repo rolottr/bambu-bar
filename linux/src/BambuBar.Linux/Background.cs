@@ -19,7 +19,7 @@ internal sealed class Background : IDisposable
     private readonly Connection _connection = new(Address.Session);
     private bool _connected;
     private string _localName = "";
-    public async Task<bool> Request(bool autostart, bool permissionOnly = false)
+    public async Task<bool> Request(bool autostart)
     {
         if (!_connected) { _localName = (await _connection.ConnectAsync()).LocalName; _connected = true; }
         var portal = _connection.CreateProxy<IBackgroundPortal>("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop");
@@ -28,7 +28,11 @@ internal sealed class Background : IDisposable
         var done = new TaskCompletionSource<bool>();
         using var subscription = await request.WatchResponseAsync(response => done.TrySetResult(response.code == 0 && response.result.TryGetValue(autostart ? "autostart" : "background", out var allowed) && allowed is true));
         var options = new Dictionary<string, object> { { "handle_token", token }, { "reason", "Monitor Bambu Lab printers and notify you when a print needs attention." } };
-        if (!permissionOnly) { options["autostart"] = autostart; options["commandline"] = new[] { "bambu-bar", "--background" }; options["dbus-activatable"] = false; }
+        // Omitting autostart means false to the portal, even for a permission refresh.
+        // Always send the saved preference so launching the app cannot erase its login entry.
+        options["autostart"] = autostart;
+        options["commandline"] = new[] { "bambu-bar", "--background" };
+        options["dbus-activatable"] = false;
         await portal.RequestBackgroundAsync("", options);
         try { return await done.Task.WaitAsync(TimeSpan.FromMinutes(2)); }
         catch (TimeoutException) { await request.CloseAsync(); return false; }
