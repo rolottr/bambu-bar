@@ -35,6 +35,22 @@ flatpak uninstall --user dev.rolottr.BambuBar
 
 Updates belong to the package channel; this port does not change the Mac/Windows appcast or replace package-manager files. No remote pushes, uploads, submissions or releases were made while developing it.
 
+## Consolidated Linux branch validation
+
+The local `linux` branch merges the completed GNOME → KDE → Omarchy history with the newer main-checkout changes, including version 2.2.1 and the portable save-failure fixes. The translation catalog retains both Mac and Linux notification strings: all 697 entries pass the translation check across 17 languages.
+
+The same committed source was built and packaged independently on all three recorded Linux hosts. Builds used new `~/bambu-bar-linux-consolidated` directories, with no destructive synchronization of the earlier checkouts. Each build produced the Flatpak, all three companion archives, checksums and source identity. The packages were installed and launched in each actual desktop session; Settings captures verified native GNOME, Breeze and Omarchy styling and the compact 960×700 Omarchy window.
+
+| Host | Environment | Build and checks |
+| --- | --- | --- |
+| Ubuntu GNOME | Ubuntu 26.04.1, GNOME 50.1, x86_64 Wayland | Flatpak + all companions; 273 core tests passed, 2 optional exporters skipped; 1,230 tray checks passed. |
+| Ubuntu KDE | Ubuntu 26.04.1, Plasma 6.6.6, x86_64 Wayland | Flatpak + all companions; 273 core tests passed, 2 optional exporters skipped; 1,230 tray checks passed. |
+| Omarchy | Omarchy 4.5, Hyprland 0.56, x86_64 Wayland | Flatpak + all companions; 273 core tests passed, 2 optional exporters skipped; 1,230 tray checks passed; 329 palette checks and 4 helper tests passed. |
+
+The seven GNOME widget tests and both JavaScript syntax checks also passed. The GNOME/Plasma archives were accepted by their native installation tools in isolated test directories, and the extracted Hyprland archive's installer was checked against an isolated Lua configuration. Existing desktop companions and user settings were preserved. This consolidation pass verifies builds, packages and basic running desktop rendering; the detailed tray/widget/camera/lifecycle validation below belongs to the earlier desktop passes, not a claim that every interaction was repeated.
+
+Local evidence is in `build/linux/evidence/consolidation/`. Before removing the three Linux worktrees, their complete `build/linux/` artifacts were preserved under `build/linux/archives/linux-gnome/`, `linux-kde/` and `linux-omarchy/`, with checksummed comparisons. Their commits remain reachable from `linux`. Unrelated worktrees and unfinished main-checkout edits are preserved. No remote push or release publication is part of consolidation.
+
 ## What is ported
 
 - Network discovery, manual connection/identity lookup, settings-file import, saved access codes, several printers and automatic selection for the tray.
