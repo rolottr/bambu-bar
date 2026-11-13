@@ -86,8 +86,19 @@ internal sealed class Tray : IStatusItem, IDisposable
             catch (Exception) { Available = false; }
         }
     }
-    private string Title => _store.MenuBarSession is { } s ? $"{s.Config.Name} · {s.ShortState}" +
-        (s.IsOnline && s.Status is { } status && status.State.IsActive() && _store.MenuBarStyle.Text(status) is { Length: > 0 } text ? " · " + text : "") : "Bambu Bar";
+    private string Title
+    {
+        get
+        {
+            if (_store.MenuBarSession is not { } session) return "Bambu Bar";
+            var state = session.IsOnline ? session.Status : null;
+            var label = state?.StateTitle ?? session.LinkSummary;
+            var parts = new List<string> { session.Config.Name, label };
+            if (state?.State.IsActive() == true && _store.MenuBarStyle.Text(state) is { Length: > 0 } text)
+                parts.AddRange(text.Split(" · ").Where(part => part != label));
+            return string.Join(" · ", parts);
+        }
+    }
     private void Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
         if (_last == Title || _disposed) return; _last = Title;
