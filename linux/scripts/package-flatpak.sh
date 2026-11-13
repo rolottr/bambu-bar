@@ -14,6 +14,8 @@ ln -s ../lib/bambu-bar/bambu-bar "$stage/files/bin/bambu-bar"
 cp "$repo/linux/packaging/dev.rolottr.BambuBar.desktop" "$stage/files/share/applications/"
 cp "$repo/linux/packaging/dev.rolottr.BambuBar.metainfo.xml" "$stage/files/share/metainfo/"
 cp "$publish/AppIcon.png" "$stage/files/share/icons/hicolor/256x256/apps/dev.rolottr.BambuBar.png"
+mkdir -p "$stage/files/share/icons/hicolor/scalable/status"
+cp "$publish/tray-icons/"*.svg "$stage/files/share/icons/hicolor/scalable/status/"
 cat > "$stage/metadata" <<META
 [Application]
 name=dev.rolottr.BambuBar

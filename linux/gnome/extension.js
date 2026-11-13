@@ -38,8 +38,10 @@ export default class BambuBarExtension extends Extension {
         this._cancellable = new Gio.Cancellable();
         this._indicator = new PanelMenu.Button(0.5, 'Bambu Bar', false);
         const panelBox = box(false, 'bambu-panel');
-        const iconFile = this.dir.get_child('bambu-bar-symbolic.svg');
-        panelBox.add_child(new St.Icon({gicon: new Gio.FileIcon({file: iconFile}), style_class: 'system-status-icon'}));
+        this._panelIcon = new St.Icon({icon_size: 18, style_class: 'system-status-icon'});
+        this._panelIconKey = null;
+        this._setPanelIcon('offline');
+        panelBox.add_child(this._panelIcon);
         this._panelLabel = label();
         panelBox.add_child(this._panelLabel);
         this._indicator.add_child(panelBox);
@@ -247,6 +249,9 @@ export default class BambuBarExtension extends Extension {
             return;
         if (!this._proxy?.g_name_owner) {
             this._state = {};
+            this._setPanelIcon('offline');
+            this._panelLabel.text = '';
+            this._panelLabel.visible = false;
             this._widgets?.update([]);
             this._paint();
             return;
@@ -259,6 +264,16 @@ export default class BambuBarExtension extends Extension {
             }
         });
     }
+    _setPanelIcon(key) {
+        // Only packaged names may enter the path; old app versions use the idle glyph.
+        if (!/^(offline|failed|(?:idle|paused|finished|printing-(?:[0-9]|1[0-9]|20))(?:-alert)?)$/.test(key))
+            key = 'idle';
+        if (this._panelIconKey === key)
+            return;
+        this._panelIconKey = key;
+        const file = this.dir.get_child('tray-icons').get_child(`dev.rolottr.BambuBar-tray-${key}-symbolic.svg`);
+        this._panelIcon.gicon = new Gio.FileIcon({file});
+    }
     _receive(json) {
         if (!this._alive)
             return;
@@ -268,6 +283,7 @@ export default class BambuBarExtension extends Extension {
                 return;
             this._state = state;
             this._widgets?.update(state.widgets ?? []);
+            this._setPanelIcon(state.panelIcon ?? 'idle');
             this._panelLabel.text = state.panelText ?? '';
             this._panelLabel.visible = this._panelLabel.text.length > 0;
             this._indicator.accessible_name = state.title ?? 'Bambu Bar';

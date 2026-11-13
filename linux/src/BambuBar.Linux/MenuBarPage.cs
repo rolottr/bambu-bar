@@ -17,7 +17,7 @@ internal sealed partial class Shell
         var frame = Column(0); frame.AddCssClass("preview-wallpaper"); example.Append(frame);
         var caption = Note("Sample print. Changes show here as you make them."); caption.SetXalign(.5f); caption.SetJustify(Gtk.Justification.Center); example.Append(caption);
         var topBar = Row(8); topBar.AddCssClass("sample-topbar"); var spacer = Label(""); spacer.SetHexpand(true); topBar.Append(spacer);
-        var indicator = Row(5); indicator.AddCssClass("sample-indicator"); var printerIcon = Gtk.Image.NewFromIconName("printer-symbolic"); printerIcon.SetPixelSize(14); indicator.Append(printerIcon);
+        var indicator = Row(5); indicator.AddCssClass("sample-indicator"); var printerIcon = Gtk.Image.NewFromGicon(Gio.FileIcon.New(Gio.FileHelper.NewForPath(Path.Combine(AppContext.BaseDirectory, "tray-icons", TrayIcon.Name("printing-10") + ".svg")))); printerIcon.SetPixelSize(18); indicator.Append(printerIcon);
         var indicatorText = Label("", "heading"); indicator.Append(indicatorText); topBar.Append(indicator);
         var wifi = Gtk.Image.NewFromIconName("network-wireless-signal-excellent-symbolic"); wifi.SetPixelSize(14); topBar.Append(wifi); topBar.Append(Label("Fri 12:26", "caption", "heading")); frame.Append(topBar);
         var panel = Column(10); panel.AddCssClass("sample-panel"); frame.Append(panel);

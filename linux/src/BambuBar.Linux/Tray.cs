@@ -54,7 +54,7 @@ internal sealed class Tray : IStatusItem, IDisposable
     private bool _disposed;
     private readonly Signal _icon = new(), _overlay = new(), _title = new(), _tooltip = new();
     private readonly Signal<string> _status = new();
-    private string _last = "";
+    private string _lastTitle = "", _lastIcon = "";
     public ObjectPath ObjectPath => new("/StatusNotifierItem");
     public bool Available { get; private set; }
 
@@ -102,13 +102,16 @@ internal sealed class Tray : IStatusItem, IDisposable
     }
     private void Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
-        if (_last == Title || _disposed) return; _last = Title;
-        _title.Emit(); _icon.Emit(); _overlay.Emit(); _tooltip.Emit(); _status.Emit(Status);
+        if (_disposed) return;
+        var title = Title;
+        if (_lastTitle != title) { _lastTitle = title; _title.Emit(); _tooltip.Emit(); }
+        var icon = IconName;
+        if (_lastIcon != icon) { _lastIcon = icon; _icon.Emit(); }
     }
-    // Plasma animates NeedsAttention indefinitely. A static warning keeps long-lived
+    // Plasma animates NeedsAttention indefinitely. The glyph itself keeps long-lived
     // paused/failed states visible without continuously repainting the compositor.
     private string Status => _nativePanel ? "Passive" : "Active";
-    private bool NeedsAttention => _store.MenuBarSession?.Status?.State is BambuBar.Core.Model.JobState.Paused or BambuBar.Core.Model.JobState.Failed;
+    private string IconName => TrayIcon.Name(TrayIcon.Key(_store.MenuBarSession, _store.IsConfigured));
     private IDictionary<string, object> Properties => new Dictionary<string, object>
     {
         ["Category"] = "Hardware",
@@ -116,14 +119,14 @@ internal sealed class Tray : IStatusItem, IDisposable
         ["Title"] = Title,
         ["Status"] = Status,
         ["WindowId"] = 0,
-        ["IconName"] = Platform.AppId,
+        ["IconName"] = IconName,
         ["IconPixmap"] = Array.Empty<(int, int, byte[])>(),
-        ["OverlayIconName"] = NeedsAttention ? "dialog-warning" : "",
+        ["OverlayIconName"] = "",
         ["OverlayIconPixmap"] = Array.Empty<(int, int, byte[])>(),
-        ["AttentionIconName"] = Platform.AppId,
+        ["AttentionIconName"] = IconName,
         ["AttentionIconPixmap"] = Array.Empty<(int, int, byte[])>(),
         ["AttentionMovieName"] = "",
-        ["ToolTip"] = (Platform.AppId, Array.Empty<(int, int, byte[])>(), "Bambu Bar", Title),
+        ["ToolTip"] = (IconName, Array.Empty<(int, int, byte[])>(), "Bambu Bar", Title),
         ["IconAccessibleDesc"] = Title,
         ["AttentionAccessibleDesc"] = Title,
         ["OverlayIconAccessibleDesc"] = "",

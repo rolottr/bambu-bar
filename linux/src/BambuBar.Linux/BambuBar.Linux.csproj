@@ -18,4 +18,11 @@
     <Content Include="../../packaging/THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="style.css" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="GenerateTrayIcons" BeforeTargets="PrepareForBuild">
+    <Exec Command="python3 &quot;$(MSBuildProjectDirectory)/../../scripts/generate-tray-icons.py&quot; &quot;$(IntermediateOutputPath)tray-icons&quot;" />
+    <ItemGroup>
+      <_TrayIcon Include="$(IntermediateOutputPath)tray-icons/*.svg" />
+      <Content Include="@(_TrayIcon)" Link="tray-icons/%(_TrayIcon.Filename)%(_TrayIcon.Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 </Project>

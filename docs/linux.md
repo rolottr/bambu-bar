@@ -56,7 +56,7 @@ The native Shell integration receives a small versioned JSON snapshot and sends 
 
 ## Build locally on Linux
 
-Install the .NET 10 SDK, `build-essential`, `nasm`, `curl`, `xz-utils`, `flatpak` and the GNOME 50 runtime and SDK. For native development also install GTK 4, libadwaita and `libsecret-tools`.
+Install the .NET 10 SDK, `build-essential`, `nasm`, `curl`, `xz-utils`, `python3`, `flatpak` and the GNOME 50 runtime and SDK. For native development also install GTK 4, libadwaita and `libsecret-tools`.
 
 ```sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -229,3 +229,12 @@ Adwaita uses libadwaita's native background, foreground and accent variables, ne
 Implementation references: [libadwaita CSS variables](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/css-variables.html), KDE's [Breeze Light](https://github.com/KDE/breeze/blob/Plasma/6.6/colors/BreezeLight.colors) and [Breeze Dark](https://github.com/KDE/breeze/blob/Plasma/6.6/colors/BreezeDark.colors) palettes. Support and license-activation icons unavailable in the Flatpak's Adwaita theme were also replaced with available symbolic icons.
 
 Validation on the Ubuntu 26.04.1 Plasma 6.6.6 and GNOME 50.1 VMs: built and installed the same Flatpak, checked the removed header button, all theme choices, light/dark rendering, System color mode and persistence through process restarts. GNOME's System mode changed live with its desktop preference, including Breeze style; native Adwaita picked up Ubuntu's orange accent. Inspected page captures with both native styles, including readable light-mode Printer, Filament, Menu Bar and Widgets previews. Plasma Quick view remained beside the tray with the selected style. Evidence and repeatable steps are under `build/linux/evidence/themes/`. Both VMs were left on Follow desktop with their prior Dark color mode; other settings and real-printer controls were not changed. No performance claim is made for these styling changes; the earlier measurements above were not repeated.
+
+
+### macOS menu-bar printer glyph on Linux
+
+Both the StatusNotifier tray and GNOME companion now use the same 18-unit printer geometry as `Sources/BambuBar/UI/MenuBarIcon.swift`, replacing the application logo and the old GNOME stacked symbol. The chamber fills in 5% steps during printing/preparing; paused, failed, finished, canceled, offline and serious-alert states follow the Mac's look selection. The app's Menu Bar preview uses the same artwork. The desktop supplies the monochrome foreground, independently of the app's selected theme. The launcher keeps the application icon.
+
+`linux/scripts/generate-tray-icons.py` generates the shared assets during .NET builds and GNOME packaging. Flatpak and native installs expose the names through the standard icon theme. Filled outlines encode the frame, offline dashes and badge cutouts: GTK symbolic recoloring otherwise fills stroked rectangles and masks incorrectly. GNOME receives only a validated icon key and changes its `GIcon` when that key changes; StatusNotifier emits NewIcon only for a changed look, even in Icon only mode. Failed/paused states do not request a permanently animated attention icon.
+
+Validation includes 1,230 state/progress/asset checks (`dotnet run --project linux/tests/TrayIcon.Tests -- build/linux/linux-x64/tray-icons`), the seven existing GNOME widget tests and extension syntax checks. Actual AppKit renders of the Mac implementation and Linux SVG renders are saved side by side in `build/linux/evidence/tray-icon/comparison.html`. Both desktop integrations were inspected on the VMs, including Plasma light/dark panels and tray opening, and the GNOME extension after a session restart. No printer command was sent. Themes and ordinary monitoring were restored after testing.

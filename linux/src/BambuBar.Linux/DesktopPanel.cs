@@ -116,6 +116,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
                 state = JsonSerializer.SerializeToElement(WidgetSnapshot(w.Printer), WidgetState.Json),
             }).ToArray(),
             labels = labelKeys.ToDictionary(k => k, k => Loc.T(k)),
+            panelIcon = TrayIcon.Key(tray, _store.IsConfigured),
             panelText = tray?.Status is { } t && tray.IsOnline && t.State.IsActive() ? _store.MenuBarStyle.Text(t) ?? "" : "",
             title = tray is null ? "Bambu Bar" : tray.Config.Name + " · " + tray.ShortState,
             printers = _store.Sessions.Select(s => new { id = s.Id, name = s.Config.Name, state = s.ShortState }).ToArray(),
