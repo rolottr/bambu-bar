@@ -701,6 +701,12 @@ final class PrinterStore {
         if notifyFinished || notifyFailed || notifyPaused || notifyStarted { notifier.requestAuthorization() }
     }
 
+    /// A sample from the Notifications page, to see where notifications appear and how they sound (as on Windows).
+    func sendTestNotification() {
+        notifier.post(title: String(localized: "Notifications are on"),
+                      body: String(localized: "This is how Bambu Bar tells you a print finished, failed or needs you."), id: "test")
+    }
+
     // MARK: - Widget
 
     func snapshot(of session: PrinterSession) -> SharedSnapshot {

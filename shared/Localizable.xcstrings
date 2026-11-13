@@ -11335,7 +11335,7 @@
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A Bambu Bar hibába ütközött, de tovább fut. Ha valami nem stimmel, lépjen ki belőle, és nyissa meg újra. A részletek itt találhatók: %@."
+            "value": "A Bambu Bar hibába ütközött, de tovább fut. Ha valami nem stimmel, lépj ki belőle, és nyisd meg újra. A részletek itt találhatók: %@."
           }
         },
         "it": {
@@ -38376,6 +38376,112 @@
         }
       }
     },
+    "Notifications are on": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oznámení jsou zapnutá"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitteilungen sind aktiviert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las notificaciones están activadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les notifications sont activées"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Az értesítések be vannak kapcsolva"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le notifiche sono attive"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知はオンです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림이 켜져 있습니다"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meldingen staan aan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiadomienia są włączone"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As notificações estão ativadas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уведомления включены"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiser är på"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildirimler açık"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сповіщення ввімкнено"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知已开启"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知已開啟"
+          }
+        }
+      }
+    },
     "Notifications for Bambu Bar are turned off in System Settings.": {
       "localizations": {
         "cs": {
@@ -51679,6 +51785,112 @@
         }
       }
     },
+    "Send Test Notification": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odeslat zkušební oznámení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testmitteilung senden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar notificación de prueba"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer une notification test"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tesztértesítés küldése"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia notifica di prova"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト通知を送信"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "테스트 알림 보내기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testmelding sturen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij powiadomienie testowe"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar Notificação de Teste"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отправить тестовое уведомление"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka testnotis"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test Bildirimi Gönder"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Надіслати тестове сповіщення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送测试通知"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳送測試通知"
+          }
+        }
+      }
+    },
     "Send a job from Bambu Studio or the printer and it shows up here.": {
       "localizations": {
         "cs": {
@@ -51781,6 +51993,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "從 Bambu Studio 或印表機發起列印後，就會顯示在這裡。"
+          }
+        }
+      }
+    },
+    "Send a sample notification to see how it looks.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pošlete si ukázkové oznámení a podívejte se, jak vypadá."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden Sie eine Beispielmitteilung, um zu sehen, wie sie aussieht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envíe una notificación de prueba para ver cómo se ve."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyez une notification d’exemple pour voir à quoi elle ressemble."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Küldj egy mintaértesítést, hogy lásd, hogyan néz ki."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia una notifica di esempio per vedere come appare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプルの通知を送信して、表示を確認できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "샘플 알림을 보내 어떻게 보이는지 확인하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stuur een voorbeeldmelding om te zien hoe die eruitziet."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyślij przykładowe powiadomienie, aby zobaczyć, jak wygląda."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie uma notificação de exemplo para ver como ela aparece."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отправьте пробное уведомление, чтобы увидеть, как оно выглядит."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka en exempelnotis för att se hur den ser ut."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nasıl göründüğünü görmek için örnek bir bildirim gönder."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Надішліть пробне сповіщення, щоб побачити, як воно виглядає."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送一条示例通知，看看它的样子。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳送一則範例通知，看看它的樣子。"
           }
         }
       }
@@ -64432,6 +64750,112 @@
         }
       }
     },
+    "This is how Bambu Bar tells you a print finished, failed or needs you.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takto vám Bambu Bar dá vědět, že tisk skončil, selhal nebo vás potřebuje."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So meldet Bambu Bar, dass ein Druck fertig ist, fehlgeschlagen ist oder Sie braucht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Así le avisa Bambu Bar cuando una impresión termina, falla o lo necesita."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voici comment Bambu Bar vous prévient qu’une impression est terminée, a échoué ou a besoin de vous."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Így szól a Bambu Bar, ha egy nyomtatás elkészült, meghiúsult vagy szüksége van rád."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Così Bambu Bar ti avvisa quando una stampa è terminata, non è riuscita o ha bisogno di te."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "造形の完了や失敗、対応が必要なときは、このようにBambu Barが知らせます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출력이 끝나거나 실패하거나 확인이 필요하면 Bambu Bar가 이렇게 알려 드립니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zo laat Bambu Bar u weten dat een print klaar is, is mislukt of u nodig heeft."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tak Bambu Bar powiadomi Cię, że wydruk się zakończył, nie powiódł się lub Cię potrzebuje."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É assim que o Bambu Bar avisa que uma impressão terminou, falhou ou precisa de você."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Так Bambu Bar сообщает, что печать завершена, не удалась или нужно ваше внимание."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Så här säger Bambu Bar till när en utskrift är klar, har misslyckats eller behöver dig."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bambu Bar, bir baskı bittiğinde, başarısız olduğunda ya da sana ihtiyaç duyduğunda böyle haber verir."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Так Bambu Bar повідомляє, що друк завершено, він не вдався або потрібна ваша увага."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打印完成、失败或需要您处理时，Bambu Bar 会这样通知您。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列印完成、失敗或需要您處理時，Bambu Bar 會這樣通知您。"
+          }
+        }
+      }
+    },
     "This license could not be activated. If all installations are in use, deactivate one in your account, then try again.": {
       "localizations": {
         "cs": {
@@ -71809,7 +72233,7 @@
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A nyomtatók csatlakoztatva maradnak, amíg ki nem lép a Bambu Barból, de nem jegyzi meg sem őket, sem a módosításait. Ezt mappákat védő biztonsági szoftver okozhatja: engedélyezze benne a Bambu Bart, majd próbálja újra.\n\nA Windows üzenete: %@"
+            "value": "A nyomtatók csatlakoztatva maradnak, amíg ki nem lépsz a Bambu Barból, de nem jegyzi meg sem őket, sem a módosításaidat. Ezt mappákat védő biztonsági szoftver okozhatja: engedélyezd benne a Bambu Bart, majd próbáld újra.\n\nA Windows üzenete: %@"
           }
         },
         "it": {
@@ -71833,7 +72257,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Je printers blijven verbonden tot je Bambu Bar afsluit, maar ze worden niet onthouden, en je wijzigingen ook niet. Beveiligingssoftware die mappen beschermt kan dit veroorzaken: sta Bambu Bar daarin toe en probeer het opnieuw.\n\nWindows meldt: %@"
+            "value": "Uw printers blijven verbonden tot u Bambu Bar afsluit, maar ze worden niet onthouden, en uw wijzigingen ook niet. Beveiligingssoftware die mappen beschermt kan dit veroorzaken: sta Bambu Bar daarin toe en probeer het opnieuw.\n\nWindows meldt: %@"
           }
         },
         "pl": {
@@ -71875,13 +72299,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在退出 Bambu Bar 之前，打印机会保持连接，但不会记住这些打印机和你的更改。这可能是保护文件夹的安全软件导致的：请在该软件中允许 Bambu Bar，然后重试。\n\nWindows 提示：%@"
+            "value": "在退出 Bambu Bar 之前，打印机会保持连接，但不会记住这些打印机和您的更改。这可能是保护文件夹的安全软件导致的：请在该软件中允许 Bambu Bar，然后重试。\n\nWindows 提示：%@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在結束 Bambu Bar 之前，印表機會保持連線，但不會記住這些印表機和你的變更。這可能是保護資料夾的安全軟體造成的：請在該軟體中允許 Bambu Bar，然後再試一次。\n\nWindows 訊息：%@"
+            "value": "在結束 Bambu Bar 之前，印表機會保持連線，但不會記住這些印表機和您的變更。這可能是保護資料夾的安全軟體造成的：請在該軟體中允許 Bambu Bar，然後再試一次。\n\nWindows 訊息：%@"
           }
         }
       }

@@ -1,9 +1,5 @@
 # Texts only the Windows app shows, waiting to join shared/Localizable.xcstrings with their translations (P4.2,
 # marked there with a comment starting "Windows:"). One catalog key per line; CatalogTests accepts these until they
 # move, and fails once a key listed here is in the catalog.
-Notifications are on
-This is how Bambu Bar tells you a print finished, failed or needs you.
-Send a sample notification to see how it looks.
-Send Test Notification
 Downloading…
 The license could not be saved in Windows Credential Manager. Try again, or restart Windows if it keeps failing.

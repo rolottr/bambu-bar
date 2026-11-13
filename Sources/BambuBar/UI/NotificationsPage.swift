@@ -31,6 +31,10 @@ struct NotificationsPage: View {
                 SettingsToggle("Print failed, canceled or an error", isOn: $store.notifyFailed)
                 SettingsToggle("Print paused (filament runout, user)", isOn: $store.notifyPaused)
                 SettingsToggle("Print started", isOn: $store.notifyStarted)
+                Divider()
+                SettingsRow("Send a sample notification to see how it looks.") {
+                    Button("Send Test Notification") { store.sendTestNotification() }.controlSize(.small)
+                }
             }
         }
         .task { await refresh() }
