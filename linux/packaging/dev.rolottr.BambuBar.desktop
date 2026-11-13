@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=Bambu Bar
+Comment=Your Bambu Lab printers, one click away
+Exec=bambu-bar
+Icon=dev.rolottr.BambuBar
+Terminal=false
+Categories=Utility;Monitor;
+StartupNotify=true
+Actions=QuickView;Quit;
+
+[Desktop Action QuickView]
+Name=Quick view
+Exec=bambu-bar --panel
+
+[Desktop Action Quit]
+Name=Quit
+Exec=bambu-bar --quit

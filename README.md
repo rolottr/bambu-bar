@@ -14,6 +14,8 @@ Bambu Bar is a native macOS app that shows your 3D printer's progress, temperatu
 
 Built with Swift and SwiftUI. Printer data stays local, with no app analytics. The GitHub build is free to use. Optional supporter licenses enable automatic updates; the Mac App Store edition is independent.
 
+**Linux (GNOME) development port:** native GTK 4/libadwaita, packaged as a local Flatpak. See [Linux build and validation notes](docs/linux.md). No Linux release has been published yet.
+
 **Now on Windows too:** the same app lives in the notification area on Windows 10 and 11. See [Windows](#windows).
 
 [Getting started](#getting-started) · [Windows](#windows) · [Features](#features) · [Widgets](#desktop-widgets) · [Compatibility](#compatibility) · [Building](#building-from-source)

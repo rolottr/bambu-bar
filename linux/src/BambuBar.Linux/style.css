@@ -1,0 +1,29 @@
+/* Dimensions from Theme.swift and MainView.swift; desktop supplies font, chrome and accent. */
+window { background: @window_bg_color; }
+.sidebar { background: alpha(@window_fg_color, .035); padding: 12px 8px; }
+.sidebar row { border-radius: 9px; padding: 11px 12px; }
+.sidebar row:selected { background: alpha(@accent_bg_color, .18); color: @accent_color; }
+.page { padding: 24px 28px; }
+.page-title { font-size: 26px; font-weight: 700; }
+.section-title { font-size: 11px; font-weight: 600; letter-spacing: .6px; opacity: .65; }
+.module { border-radius: 18px; padding: 14px; background: alpha(@window_fg_color, .05); border: 1px solid alpha(@window_fg_color, .07); }
+.tile { border-radius: 14px; padding: 11px; background: alpha(@window_fg_color, .05); border: 1px solid alpha(@window_fg_color, .06); }
+.job { background: linear-gradient(125deg, alpha(#21cc6b,.13), alpha(@window_fg_color,.025)); }
+.metric { font-size: 22px; font-weight: 600; font-feature-settings: "tnum"; }
+.progress-number { font-size: 42px; font-weight: 700; font-feature-settings: "tnum"; }
+.muted { opacity: .6; }
+.success { color: @success_color; }
+.warning { color: @warning_color; }
+.error { color: @error_color; }
+.job progressbar progress { background: #21cc6b; min-height: 6px; border-radius: 8px; }
+.job progressbar trough { min-height: 6px; border-radius: 8px; }
+.control { min-height: 28px; border-radius: 11px; }
+.printer-art { min-width: 190px; }
+.list-row { padding: 12px 2px; }
+.spool-dot { font-size: 28px; }
+.job.state-failed { background: linear-gradient(125deg, alpha(#e45454,.12), alpha(@window_fg_color,.025)); }
+.job.state-paused { background: linear-gradient(125deg, alpha(#d89321,.13), alpha(@window_fg_color,.025)); }
+.job.state-idle { background: alpha(@window_fg_color,.04); }
+.state-failed .state-label { color: @error_color; }
+.state-paused .state-label { color: @warning_color; }
+.state-finished .state-label, .state-printing .state-label { color: @success_color; }

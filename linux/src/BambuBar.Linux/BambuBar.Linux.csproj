@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>bambu-bar</AssemblyName>
+    <RootNamespace>BambuBar.Linux</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <PackageReference Include="Tmds.DBus" Version="0.94.2" />
+    <ProjectReference Include="../../../windows/src/BambuBar.Core/BambuBar.Core.csproj" />
+    <PackageReference Include="GirCore.Adw-1" Version="0.8.1" />
+    <Content Include="../../../windows/src/BambuBar.Windows/Assets/AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Include="../../../windows/src/BambuBar.Windows/Model3D/Gltf.cs" Link="Model3D/Gltf.cs" />
+    <Content Include="../../../LICENSE" Link="BAMBU-BAR-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../packaging/THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="style.css" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

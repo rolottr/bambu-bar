@@ -94,7 +94,7 @@ public interface ILicenseApi
 }
 
 /// <summary>Polar's public customer-portal license-key endpoints, without any credentials.</summary>
-public sealed class PolarClient(HttpMessageHandler? handler = null) : ILicenseApi
+public sealed class PolarClient(HttpMessageHandler? handler = null, Func<string, string>? activationLabel = null) : ILicenseApi
 {
     public static readonly Uri Endpoint = new("https://api.polar.sh/v1/customer-portal/license-keys/");
 
@@ -112,7 +112,7 @@ public sealed class PolarClient(HttpMessageHandler? handler = null) : ILicenseAp
         var data = await RequestAsync("activate", new JsonObject
         {
             ["key"] = key,
-            ["label"] = ActivationLabel(installationId),
+            ["label"] = (activationLabel ?? ActivationLabel)(installationId),
             ["conditions"] = new JsonObject { ["installation_id"] = installationId },
         }, cancellation).ConfigureAwait(false);
         return PolarActivation.FromJson(data);
