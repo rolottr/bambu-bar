@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""Desktop bridge: read-only geometry and a fixed app autostart entry. No printer data or arbitrary commands."""
+"""Host bridge for Bambu Bar popup placement and autostart. No printer data or arbitrary commands."""
 import json
 import math
 import os
 import subprocess
 from pathlib import Path
 import time
+import re
+import sys
 from gi.repository import Gio, GLib
 
 NAME = 'dev.rolottr.BambuBar.Hyprland'
 XML = f'''<node><interface name="{NAME}"><method name="GetAnchor">
 <arg type="s" name="geometry" direction="out"/></method>
 <method name="SetAutostart"><arg type="b" name="enabled" direction="in"/>
-<arg type="b" name="accepted" direction="out"/></method></interface></node>'''
+<arg type="b" name="accepted" direction="out"/></method>
+<method name="ShowPopup"><arg type="s" name="token" direction="in"/>
+<arg type="i" name="width" direction="in"/><arg type="i" name="height" direction="in"/>
+<arg type="b" name="fromTray" direction="in"/><arg type="b" name="positioned" direction="out"/></method>
+<method name="HidePopup"><arg type="s" name="token" direction="in"/></method>
+<signal name="Dismissed"><arg type="s" name="token"/></signal></interface></node>'''
 
 
-def query(command):
+def hypr_env():
     # Resolve the live session on every request, including after a compositor restart.
     env = os.environ.copy()
     instances = json.loads(subprocess.check_output(['hyprctl', '-j', 'instances'], timeout=1))
@@ -25,7 +32,11 @@ def query(command):
     if len(live) != 1:
         raise ValueError('No unambiguous Hyprland session')
     env['HYPRLAND_INSTANCE_SIGNATURE'] = live[0]['instance']
-    return json.loads(subprocess.check_output(['hyprctl', '-j', command], env=env, timeout=1))
+    return env
+
+
+def query(command):
+    return json.loads(subprocess.check_output(['hyprctl', '-j', command], env=hypr_env(), timeout=1))
 
 
 def anchor():
@@ -42,7 +53,7 @@ def anchor():
         x, y = monitor['x'], monitor['y']
         if x <= cursor['x'] < x + width and y <= cursor['y'] < y + height:
             return json.dumps(dict(connector=monitor['name'], x=int(cursor['x'] - x),
-                                   y=int(cursor['y'] - y), width=width, height=height))
+                                   y=int(cursor['y'] - y), width=width, height=height, originX=x, originY=y))
     raise ValueError('Cursor monitor unavailable')
 
 
@@ -71,19 +82,144 @@ def set_autostart(enabled):
     return True
 
 
+# Host-only dismissal surfaces are necessary because Hyprland intentionally hides
+# layer-shell from security-context/Flatpak clients. No Wayland socket is exported.
+class Popup:
+    def __init__(self):
+        self.windows = []
+        self.token = None
+        self.owner = None
+        self.generation = 0
+
+    def clear(self):
+        self.generation += 1
+        for window in self.windows:
+            window.destroy()
+        self.windows.clear()
+        self.token = self.owner = None
+
+    def show(self, connection, sender, token, width, height, from_tray, invocation):
+        if not re.fullmatch('[a-f0-9]{32}', token) or not 200 <= width <= 800 or not 1 <= height <= 4096:
+            raise ValueError('Invalid popup dimensions or identity')
+        import gi
+        gi.require_version('Gtk', '3.0')
+        gi.require_version('Gdk', '3.0')
+        gi.require_version('GtkLayerShell', '0.1')
+        from gi.repository import Gtk, Gdk, GtkLayerShell
+        import cairo
+        if not Gtk.init_check([])[0]:
+            raise ValueError('Desktop unavailable')
+        self.clear()
+        self.token, self.owner = token, sender
+        generation = self.generation
+        geometry = json.loads(anchor())
+        px = geometry['x'] if from_tray else geometry['width'] - 32
+        py = geometry['y'] if from_tray else 13
+        distances = [px, geometry['width'] - px, py, geometry['height'] - py]
+        edge = distances.index(min(distances))
+        width = min(width, geometry['width'] - 16)
+        height = min(height, max(100, geometry['height'] - (distances[edge] + 32 if edge >= 2 else 16)))
+        x = max(8, min(px - width // 2, geometry['width'] - width - 8))
+        y = py + 24 if edge == 2 else py - height - 24 if edge == 3 else 8
+        if edge < 2:
+            x = px + 24 if edge == 0 else px - width - 24
+        x = geometry['originX'] + max(0, x)
+        y = geometry['originY'] + max(0, y)
+        attempts = 0
+
+        def dismiss(*_):
+            self.clear()
+            connection.emit_signal(sender, '/dev/rolottr/BambuBar/Hyprland', NAME, 'Dismissed', GLib.Variant('(s)', (token,)))
+            return True
+
+        def position():
+            nonlocal attempts
+            attempts += 1
+            try:
+                if generation != self.generation:
+                    invocation.return_value(GLib.Variant('(b)', (False,)))
+                    return False
+                clients = [c for c in query('clients') if c.get('class') == 'dev.rolottr.BambuBar'
+                           and c.get('title') == 'Bambu Bar — Quick view ' + token and c.get('mapped')]
+                if not clients:
+                    if attempts < 40:
+                        return True
+                    raise ValueError('Quick view did not map')
+                address = clients[0]['address']
+                if not re.fullmatch('0x[0-9a-fA-F]+', address):
+                    raise ValueError('Invalid window address')
+                # Only this freshly identified Bambu Bar popup is a dispatch target.
+                # Numeric geometry is computed above; caller supplies no Lua/selector.
+                lua = (f'hl.dispatch(hl.dsp.window.float({{window="address:{address}",action="on"}}));'
+                       f'hl.dispatch(hl.dsp.window.resize({{window="address:{address}",x={width},y={height}}}));'
+                       f'hl.dispatch(hl.dsp.window.move({{window="address:{address}",x={x},y={y}}}));'
+                       f'hl.dispatch(hl.dsp.focus({{window="address:{address}"}}))')
+                subprocess.run(['hyprctl', 'eval', lua], env=hypr_env(), check=True, stdout=subprocess.DEVNULL, timeout=2)
+                display = Gdk.Display.get_default()
+                css = Gtk.CssProvider()
+                css.load_from_data(b'window { background-color: transparent; box-shadow: none; }')
+                for i in range(display.get_n_monitors()):
+                    monitor = display.get_monitor(i)
+                    bounds = monitor.get_geometry()
+                    window = Gtk.Window()
+                    window.set_app_paintable(True)
+                    visual = window.get_screen().get_rgba_visual()
+                    if visual:
+                        window.set_visual(visual)
+                    window.get_style_context().add_provider(css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+                    GtkLayerShell.init_for_window(window)
+                    GtkLayerShell.set_namespace(window, 'dev.rolottr.BambuBar.Dismiss')
+                    GtkLayerShell.set_monitor(window, monitor)
+                    GtkLayerShell.set_layer(window, GtkLayerShell.Layer.OVERLAY)
+                    GtkLayerShell.set_keyboard_mode(window, GtkLayerShell.KeyboardMode.NONE)
+                    GtkLayerShell.set_exclusive_zone(window, -1)
+                    for side in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT):
+                        GtkLayerShell.set_anchor(window, side, True)
+                    window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+                    window.connect('button-press-event', dismiss)
+                    self.windows.append(window)
+                    window.show_all()
+                    # Leave the actual popup and its compositor border interactive.
+                    region = cairo.Region(cairo.RectangleInt(0, 0, bounds.width, bounds.height))
+                    region.subtract(cairo.Region(cairo.RectangleInt(x - bounds.x - 3, y - bounds.y - 3, width + 6, height + 6)))
+                    window.get_window().input_shape_combine_region(region, 0, 0)
+                invocation.return_value(GLib.Variant('(b)', (True,)))
+            except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+                print("Quick view positioning failed:", type(error).__name__, str(error), file=sys.stderr)
+                self.clear()
+                invocation.return_value(GLib.Variant('(b)', (False,)))
+            return False
+        GLib.timeout_add(25, position)
+
+
+popup = Popup()
+
+
 def method(connection, sender, path, interface, name, parameters, invocation):
     try:
         if name == 'GetAnchor':
             invocation.return_value(GLib.Variant('(s)', (anchor(),)))
         elif name == 'SetAutostart':
             invocation.return_value(GLib.Variant('(b)', (set_autostart(parameters.unpack()[0]),)))
+        elif name == 'ShowPopup':
+            popup.show(connection, sender, *parameters.unpack(), invocation)
+        elif name == 'HidePopup':
+            if popup.owner == sender and popup.token == parameters.unpack()[0]:
+                popup.clear()
+            invocation.return_value(None)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
-        invocation.return_dbus_error(NAME + '.Unavailable', 'Desktop geometry unavailable')
+        invocation.return_dbus_error(NAME + '.Unavailable', 'Desktop integration unavailable')
 
 
 def acquired(connection, name):
     node = Gio.DBusNodeInfo.new_for_xml(XML)
     connection.register_object('/dev/rolottr/BambuBar/Hyprland', node.interfaces[0], method, None, None)
+    def owner_changed(connection, sender, path, interface, signal, parameters):
+        name, old, new = parameters.unpack()
+        if name == popup.owner and not new:
+            popup.clear()
+    connection.signal_subscribe('org.freedesktop.DBus', 'org.freedesktop.DBus', 'NameOwnerChanged',
+                                '/org/freedesktop/DBus', None, Gio.DBusSignalFlags.NONE, owner_changed)
 
 
 if __name__ == '__main__':

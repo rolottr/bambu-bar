@@ -153,25 +153,31 @@ internal sealed partial class Shell
         return result;
     }
     private TrayPlacement? _trayPlacement;
+    private HyprlandPopup? _hyprlandPopup;
+    private int? _hyprlandAvailableHeight;
     private void PreparePanel()
     {
         if (_panel is not null) return;
         _panel = Adw.ApplicationWindow.New(_app); ApplyWindowTheme(_panel); WindowSize.Track(_panel);
         _trayPlacement = TrayPlacement.Create(_panel);
-        if (_trayPlacement is not null) _panel.AddCssClass("tray-popup");
-        _panel.SetTitle("Bambu Bar — Quick view"); _panel.SetDefaultSize(420, 1); _panel.SetHideOnClose(true); _panel.SetResizable(false);
+        if (_trayPlacement is not null || Platform.IsHyprland) _panel.AddCssClass("tray-popup");
+        if (Platform.IsHyprland && _trayPlacement is null) _hyprlandPopup = new HyprlandPopup(() => _panel.SetVisible(false));
+        _panel.SetTitle("Bambu Bar — Quick view" + (_hyprlandPopup is null ? "" : " " + _hyprlandPopup.Token)); _panel.SetDefaultSize(420, 1); _panel.SetHideOnClose(true); _panel.SetResizable(false);
         BuildPanel();
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) => { if (e.Keyval != 65307) return false; _panel.SetVisible(false); return true; }; _panel.AddController(keys);
         var hadFocus = false;
         _panel.OnMap += (_, _) => hadFocus = false;
-        _panel.OnNotify += (_, e) =>
+        _panel.OnNotify += (sender, e) =>
         {
-            if (e.Pspec.GetName() == "visible" && !_panel.GetVisible()) _trayPlacement?.ClearDismissalSurfaces();
+            if (e.Pspec.GetName() == "visible" && !_panel.GetVisible())
+            {
+                if (_hyprlandPopup is not null) _ = _hyprlandPopup.Hide();
+            }
             if (e.Pspec.GetName() != "is-active") return;
             var active = _panel.GetIsActive();
             Platform.Trace($"panel focus active={active}, previously={hadFocus}");
             if (active) hadFocus = true;
-            else if (hadFocus) _panel.SetVisible(false);
+            else if (hadFocus && !_positioningPanel) _panel.SetVisible(false);
         };
     }
     private void ShowPanel() => ShowPanelAt(-1, -1);
@@ -182,14 +188,33 @@ internal sealed partial class Shell
         PreparePanel();
         if (_panel!.GetVisible()) { _panel.SetVisible(false); return; }
         _positioningPanel = true;
-        try { if (_trayPlacement is not null) await _trayPlacement.Position(x, y); }
+        try
+        {
+            if (_trayPlacement is not null) _trayPlacement.Position(x, y);
+            if (_hyprlandPopup is not null && await HyprlandAnchor.Read() is { } anchor)
+                _hyprlandAvailableHeight = Math.Max(100, anchor.Height - 70);
+        }
         finally { _positioningPanel = false; }
         if (_disposed) return;
         if (_store.MenuBarSession is { } session) _store.Select(session.Id);
         BuildPanel();
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        _trayPlacement?.ShowDismissalSurfaces(() => _panel!.SetVisible(false));
+        if (_hyprlandPopup is not null) { _panel!.SetOpacity(0.01); _positioningPanel = true; }
         _panel!.Present();
+        if (_hyprlandPopup is not null)
+        {
+            _panel.GetDefaultSize(out _, out var popupHeight);
+            var positioned = await _hyprlandPopup.Show(420, popupHeight, (x, y) != (-1, -1));
+            _positioningPanel = false;
+            if (_disposed) return;
+            if (!positioned)
+            {
+                _panel.SetVisible(false); Present();
+                Error("Install or update the Bambu Bar Hyprland integration to open Quick view beside the tray.");
+                return;
+            }
+            _panel.SetOpacity(1);
+        }
         if (_panel.GetFrameClock() is { } clock)
         {
             GObject.SignalHandler<Gdk.FrameClock>? painted = null;
@@ -224,6 +249,7 @@ internal sealed partial class Shell
             monitor.GetGeometry(out var geometry); using (geometry) availableHeight = Math.Max(300, geometry.Height - 70);
         }
         if (_trayPlacement is not null) availableHeight = _trayPlacement.AvailableHeight;
+        else if (_hyprlandAvailableHeight is { } height) availableHeight = height;
         scroll.SetMaxContentHeight(availableHeight); scroll.SetChild(root); _panel.SetContent(scroll);
         root.Measure(Gtk.Orientation.Vertical, 420, out _, out var naturalHeight, out _, out _);
         _panel.SetDefaultSize(420, Math.Min(naturalHeight, availableHeight));

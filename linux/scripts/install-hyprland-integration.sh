@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# User-local, D-Bus-activated geometry/autostart service. Does not modify desktop config.
+# User-local, D-Bus-activated popup/autostart service. Does not modify desktop config.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
-python3 -c 'from gi.repository import Gio, GLib'
+python3 -c 'import gi; gi.require_version("GtkLayerShell", "0.1"); from gi.repository import Gio, GLib, GtkLayerShell; import cairo'
 command -v hyprctl >/dev/null
 base="${XDG_DATA_HOME:-$HOME/.local/share}"
 lib="$base/bambu-bar-hyprland"
@@ -20,4 +20,4 @@ cat > "$services/dev.rolottr.BambuBar.Hyprland.service" <<SERVICE
 Name=dev.rolottr.BambuBar.Hyprland
 Exec=/usr/bin/python3 "$escaped/anchor.py"
 SERVICE
-printf 'Installed Hyprland geometry/autostart service. No Waybar/Hyprland config changed.\n'
+printf 'Installed Hyprland popup/autostart service. No Waybar/Hyprland config changed.\n'

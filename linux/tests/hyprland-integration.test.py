@@ -19,7 +19,7 @@ class IntegrationTests(unittest.TestCase):
                 dict(name='left', x=0, y=0, width=1920, height=1080, scale=1),
                 dict(name='right', x=1920, y=0, width=2560, height=1440, scale=2)]
         with patch.object(bridge, 'query', query):
-            self.assertEqual(json.loads(bridge.anchor()), dict(connector='right', x=330, y=12, width=1280, height=720))
+            self.assertEqual(json.loads(bridge.anchor()), dict(connector='right', x=330, y=12, width=1280, height=720, originX=1920, originY=0))
 
     def test_rotated_negative_origin(self):
         def query(command):

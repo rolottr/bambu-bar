@@ -195,5 +195,3 @@ window.theme-omarchy, window.theme-omarchy.tray-popup { border-radius: 0; }
 .theme-omarchy .muted { color: var(--omarchy-secondary, var(--window-fg-color)); opacity: 1; }
 .theme-omarchy .preview-wallpaper .muted, .theme-omarchy .widget-stage .muted { color: inherit; opacity: .8; }
 .theme-omarchy button:disabled, .theme-omarchy dropdown:disabled { opacity: .55; }
-
-window.tray-dismissal { background: transparent; box-shadow: none; border: none; }
