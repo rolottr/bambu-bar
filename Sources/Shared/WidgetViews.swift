@@ -189,11 +189,26 @@ struct SmallWidgetView: View {
         }
     }
 
+    /// The printer's name over the footer, so two small widgets side by side tell their printers apart.
+    /// Left out where the footer's title already is the name.
+    @ViewBuilder
+    private func printerLine(unless shown: String) -> some View {
+        if !snapshot.printerName.isEmpty && snapshot.printerName != shown {
+            Text(snapshot.printerName)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .padding(.bottom, 1)
+        }
+    }
+
     @ViewBuilder
     private func footer(_ w: WidgetState) -> some View {
         if let s = w.status {
             if s.state == .idle {
                 // Idle: what's loaded, ready for the next job.
+                let last = snapshot.lastJob.map { String(localized: "Last: \($0.name)") } ?? snapshot.printerName
+                printerLine(unless: last)
                 if !s.allSpools.filter(\.isLoaded).isEmpty {
                     HStack(spacing: 5) {
                         ForEach(s.allSpools.filter(\.isLoaded).prefix(5)) { spool in
@@ -202,10 +217,12 @@ struct SmallWidgetView: View {
                     }
                     .padding(.bottom, 4)
                 }
-                Text(snapshot.lastJob.map { String(localized: "Last: \($0.name)") } ?? snapshot.printerName)
+                Text(last)
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
             } else {
-                Text(s.jobName.isEmpty ? snapshot.printerName : s.jobName)
+                let title = s.jobName.isEmpty ? snapshot.printerName : s.jobName
+                printerLine(unless: title)
+                Text(title)
                     .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
                 Text(detail(w, s))

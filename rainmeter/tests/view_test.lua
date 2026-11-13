@@ -101,6 +101,30 @@ T.test("Small: every state leads with what matters", function()
 	T.eq(v.out.Caption.FontColor, BB.rgba(BB.C.paused, 1), "amber caption")
 end)
 
+T.test("Small: the printer's name over the footer, so two widgets tell their printers apart", function()
+	for _, name in ipairs({ "printing", "preparing", "paused", "finished", "failed", "idle" }) do
+		local v, m = render(name, "Small")
+		T.ok(shown(v, "FootName"), name .. ": name shown")
+		T.eq(v.out.FootName.Text, m.name, name)
+		local below = shown(v, "Swatch1") and "Swatch1" or shown(v, "FootTitle") and "FootTitle" or "FootDetail"
+		local nameY, titleY = tonumber(v.out.FootName.Y), tonumber(v.out[below].Y)
+		T.ok(nameY < titleY, name .. ": above the footer")
+		if shown(v, "ActiveSpool") then T.ok(tonumber(v.out.ActiveSpool.Y) + 16 <= nameY, name .. ": spool clear of it") end
+	end
+	local v = render("printing", "Small", 0, function(s) s.headline = s.name end)
+	T.ok(not shown(v, "FootName"), "not twice when the job has no name")
+	v = render("offline", "Small")
+	T.ok(not shown(v, "FootName"), "offline already titles the footer with it")
+	T.eq(v.out.FootTitle.Text, "P2S Workshop")
+end)
+
+T.test("Small: a finished print with no record of its end says Done", function()
+	local v = render("finished", "Small", 0, function(s) s.lastJob = nil end)
+	T.eq(v.out.Big.Text, "Done")
+	v = render("failed", "Small", 0, function(s) s.lastJob = nil; s.strings.stoppedWord = "Gestoppt" end)
+	T.eq(v.out.Big.Text, "Gestoppt")
+end)
+
 T.test("Small: a word too long for the column moves under the dial", function()
 	local long = "Ошибка температуры нагревательной плиты"
 	local v = render("paused", "Small", 0, function(s) s.reason = long end)
