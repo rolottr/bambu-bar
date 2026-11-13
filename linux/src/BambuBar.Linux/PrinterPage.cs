@@ -165,11 +165,16 @@ internal sealed partial class Shell
         _panel.OnNotify += (_, e) => { if (e.Pspec.GetName() == "is-active" && !_panel.GetIsActive()) _panel.SetVisible(false); };
     }
     private void ShowPanel() => ShowPanelAt(-1, -1);
-    private void ShowPanelAt(int x, int y)
+    private bool _positioningPanel;
+    private async void ShowPanelAt(int x, int y)
     {
+        if (_disposed || _positioningPanel) return;
         PreparePanel();
         if (_panel!.GetVisible()) { _panel.SetVisible(false); return; }
-        _trayPlacement?.Position(x, y);
+        _positioningPanel = true;
+        try { if (_trayPlacement is not null) await _trayPlacement.Position(x, y); }
+        finally { _positioningPanel = false; }
+        if (_disposed) return;
         if (_store.MenuBarSession is { } session) _store.Select(session.Id);
         BuildPanel();
         var watch = System.Diagnostics.Stopwatch.StartNew();

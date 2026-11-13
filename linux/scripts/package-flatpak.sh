@@ -26,11 +26,12 @@ command=bambu-bar
 shared=network;ipc;
 sockets=wayland;fallback-x11;
 devices=dri;
-filesystems=xdg-config/BambuStudio:ro;xdg-config/OrcaSlicer:ro;
+filesystems=xdg-config/BambuStudio:ro;xdg-config/OrcaSlicer:ro;~/.local/state/omarchy/current:ro;xdg-config/omarchy/current:ro;
 
 [Session Bus Policy]
 org.freedesktop.secrets=talk
 org.kde.StatusNotifierWatcher=talk
+dev.rolottr.BambuBar.Hyprland=talk
 dev.rolottr.BambuBar.Shell=talk
 dev.rolottr.BambuBar.Desktop=own
 META

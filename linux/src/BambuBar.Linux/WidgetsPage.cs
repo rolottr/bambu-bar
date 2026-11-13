@@ -88,6 +88,11 @@ internal sealed partial class Shell
     private void WidgetsPage()
     {
         Header(Loc.T("Widgets"), Loc.T("Your printers on the desktop, in three sizes."));
+        if (Platform.IsHyprland)
+        {
+            _pageHost.Append(Module(Label("Hyprland desktop widgets are not available", "heading"),
+                Note("GNOME extensions and Plasma widgets cannot run on Hyprland. Use the tray Quick view for live printer status. The cards below are previews only; no desktop widget or sharing control is enabled.")));
+        }
         WidgetShowcase();
         if (Platform.IsPlasma)
         {

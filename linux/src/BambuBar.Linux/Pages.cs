@@ -180,18 +180,20 @@ internal sealed partial class Shell
     private void SettingsPage()
     {
         Header(Loc.T("Settings"));
-        var theme = Gtk.DropDown.NewFromStrings([Loc.T("Follow desktop") + (Platform.IsPlasma ? " (KDE)" : Platform.IsGnome ? " (GNOME)" : ""), "GNOME (Adwaita)", "KDE (Breeze)", "Bambu Bar"]);
+        var theme = Gtk.DropDown.NewFromStrings([Loc.T("Follow desktop") + (Platform.IsOmarchy ? " (Omarchy)" : Platform.IsPlasma ? " (KDE)" : Platform.IsGnome ? " (GNOME)" : ""), "GNOME (Adwaita)", "KDE (Breeze)", "Bambu Bar", "Omarchy"]);
         theme.SetSelected((uint)Array.IndexOf(ThemeIds, SelectedTheme));
         theme.OnNotify += (_, e) =>
         {
             if (e.Pspec.GetName() != "selected" || theme.GetSelected() >= ThemeIds.Length) return;
             _settings.Set("linuxTheme", ThemeIds[(int)theme.GetSelected()]);
-            UpdateAppearanceClass();
+            ApplyAppearance();
         };
         var appearance = Gtk.DropDown.NewFromStrings([Loc.T("Dark"), Loc.T("Light"), Loc.T("System")]);
         appearance.SetSelected((uint)Math.Clamp(_settings.Get("linuxAppearance", 2), 0, 2));
         appearance.OnNotify += (_, e) => { if (e.Pspec.GetName() == "selected") { _settings.Set("linuxAppearance", (int)appearance.GetSelected()); ApplyAppearance(); } };
         var themeCard = Module(SettingRow("Theme", theme), SettingRow("Color mode", appearance), Note("Choose a desktop style or the original Bambu Bar look. Changes apply immediately."));
+        if (Platform.IsOmarchy || SelectedTheme == "omarchy")
+            themeCard.Append(Note("Omarchy follows the active desktop palette live. System uses its light/dark mode; explicit Light or Dark adapts the palette while retaining its accent. If theme files are unavailable, native Adwaita is used."));
         _pageHost.Append(SettingsSection("Theme", "preferences-desktop-display-symbolic", themeCard));
 
         var general = Module();

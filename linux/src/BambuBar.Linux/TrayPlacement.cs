@@ -3,7 +3,7 @@ using Tmds.DBus;
 
 namespace BambuBar.Linux;
 
-// A regular xdg_toplevel cannot choose its location on Wayland. Only Plasma's
+// A regular xdg_toplevel cannot choose its location on Wayland. Plasma/Hyprland's
 // Quick view uses layer shell; the main window and GNOME remain normal GTK windows.
 [DBusInterface("org.freedesktop.portal.Settings")]
 public interface ITrayCoordinateSettings : IDBusObject
@@ -22,7 +22,7 @@ internal sealed class TrayPlacement(Gtk.Window window)
 
     public static void LoadBeforeGtk()
     {
-        if (!Platform.IsPlasma || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))) return;
+        if ((!Platform.IsPlasma && !Platform.IsHyprland) || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))) return;
         var library = Path.Combine(AppContext.BaseDirectory, "layer-shell", Library);
         if (!File.Exists(library)) return;
         // Interpose Wayland calls before GTK loads libwayland-client (upstream requirement).
@@ -31,6 +31,7 @@ internal sealed class TrayPlacement(Gtk.Window window)
     public static async Task ReadCoordinateMode()
     {
         if (!_loaded) return;
+        if (Platform.IsHyprland) { _nativeCoordinates = false; return; }
         // Plasma's SNI coordinates follow this KDE setting, including on Wayland.
         // Absent means true in Plasma. The portal exposes KDE values as strings.
         try
@@ -54,15 +55,20 @@ internal sealed class TrayPlacement(Gtk.Window window)
         gtk_layer_set_keyboard_mode(placement.Window, 2); // On demand, never lock focus.
         return placement;
     }
-    public void Position(int x, int y)
+    public async Task Position(int x, int y)
     {
         if ((x, y) != (-1, -1)) _lastAnchor = (x, y);
+        // Waybar uses logical coordinates; Quickshell sends (0,0). Neither uses
+        // Plasma's XwaylandClientsScale convention. The read-only host bridge also
+        // identifies the connector because Wayland GDK monitor origins may all be 0.
+        var hypr = Platform.IsHyprland ? await HyprlandAnchor.Read() : null;
         var monitors = Gdk.Display.GetDefault()!.GetMonitors();
         Gdk.Monitor? chosen = null;
         for (uint i = 0; i < monitors.GetNItems(); i++)
         {
             if (monitors.GetObject(i) is not Gdk.Monitor monitor) continue;
             chosen ??= monitor;
+            if (hypr is not null) { if (monitor.GetConnector() == hypr.Connector) { chosen = monitor; break; } continue; }
             monitor.GetGeometry(out var bounds);
             using (bounds)
                 if (_lastAnchor is { } point)
@@ -79,12 +85,16 @@ internal sealed class TrayPlacement(Gtk.Window window)
         {
             var scale = _nativeCoordinates ? chosen.GetScale() : 1;
             var anchor = _lastAnchor is { } raw ? ((int)Math.Round(raw.X / scale), (int)Math.Round(raw.Y / scale)) : (area.X + area.Width - 32, area.Y + area.Height - 32);
-            var px = Math.Clamp(anchor.Item1 - area.X, 0, area.Width);
-            var py = Math.Clamp(anchor.Item2 - area.Y, 0, area.Height);
-            var distances = new[] { px, area.Width - px, py, area.Height - py };
+            var width = hypr?.Width ?? area.Width; var height = hypr?.Height ?? area.Height;
+            var px = hypr?.X ?? Math.Clamp(anchor.Item1 - area.X, 0, width);
+            var py = hypr?.Y ?? Math.Clamp(anchor.Item2 - area.Y, 0, height);
+            // A missing bridge with a coordinate-less host has no truthful anchor.
+            // Use the top-right tray area as a documented fallback, never the center.
+            if (Platform.IsHyprland && hypr is null && (x, y) is (0, 0) or (-1, -1)) { px = width - 32; py = 13; }
+            var distances = new[] { px, width - px, py, height - py };
             var edge = Array.IndexOf(distances, distances.Min());
             Platform.Trace($"tray coordinates {x},{y}; scale={scale}; monitor={area.X},{area.Y} {area.Width}x{area.Height}; local={px},{py}; edge={edge}");
-            AvailableHeight = Math.Max(1, area.Height - (edge >= 2 ? distances[edge] + 24 + 8 : 16));
+            AvailableHeight = Math.Max(1, height - (edge >= 2 ? distances[edge] + 24 + 8 : 16));
             for (var e = 0; e < 4; e++) { gtk_layer_set_anchor(Window, e, 0); gtk_layer_set_margin(Window, e, 0); }
             gtk_layer_set_anchor(Window, edge, 1);
             // Leave half an icon plus a gap between the click and the popup edge.
@@ -92,12 +102,12 @@ internal sealed class TrayPlacement(Gtk.Window window)
             if (edge >= 2)
             {
                 gtk_layer_set_anchor(Window, 0, 1);
-                gtk_layer_set_margin(Window, 0, Math.Clamp(px - 210, 8, Math.Max(8, area.Width - 428)));
+                gtk_layer_set_margin(Window, 0, Math.Clamp(px - 210, 8, Math.Max(8, width - 428)));
             }
             else
             {
-                gtk_layer_set_anchor(Window, py < area.Height / 2 ? 2 : 3, 1);
-                gtk_layer_set_margin(Window, py < area.Height / 2 ? 2 : 3, 8);
+                gtk_layer_set_anchor(Window, py < height / 2 ? 2 : 3, 1);
+                gtk_layer_set_margin(Window, py < height / 2 ? 2 : 3, 8);
             }
         }
     }

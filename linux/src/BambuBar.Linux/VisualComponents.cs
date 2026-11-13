@@ -9,13 +9,18 @@ internal sealed partial class Shell
 {
     private void ApplyAppearance()
     {
-        Adw.StyleManager.GetDefault().SetColorScheme(_settings.Get("linuxAppearance", 2) switch
-        { 1 => Adw.ColorScheme.ForceLight, 2 => Adw.ColorScheme.Default, _ => Adw.ColorScheme.ForceDark });
+        var appearance = _settings.Get("linuxAppearance", 2);
+        _omarchyTheme ??= new OmarchyTheme(() => { if (!_disposed) ApplyAppearance(); });
+        _omarchyTheme.Apply(EffectiveTheme == "omarchy", appearance);
+        Adw.StyleManager.GetDefault().SetColorScheme(appearance switch
+        { 1 => Adw.ColorScheme.ForceLight, 2 when EffectiveTheme == "omarchy" && _omarchyTheme.Dark is { } dark => dark ? Adw.ColorScheme.ForceDark : Adw.ColorScheme.ForceLight,
+          2 => Adw.ColorScheme.Default, _ => Adw.ColorScheme.ForceDark });
         UpdateAppearanceClass();
     }
-    private static readonly string[] ThemeIds = ["system", "gnome", "kde", "bambu"];
+    private OmarchyTheme? _omarchyTheme;
+    private static readonly string[] ThemeIds = ["system", "gnome", "kde", "bambu", "omarchy"];
     private string SelectedTheme => _settings.Get<string>("linuxTheme") is { } value && ThemeIds.Contains(value) ? value : "system";
-    private string EffectiveTheme => SelectedTheme == "system" ? Platform.IsPlasma ? "kde" : "gnome" : SelectedTheme;
+    private string EffectiveTheme => SelectedTheme == "system" ? Platform.IsOmarchy ? "omarchy" : Platform.IsPlasma ? "kde" : "gnome" : SelectedTheme;
     private void UpdateAppearanceClass()
     {
         if (_window is not null) ApplyWindowTheme(_window);
@@ -24,7 +29,7 @@ internal sealed partial class Shell
     }
     private void ApplyWindowTheme(Gtk.Window window)
     {
-        foreach (var name in new[] { "bambu-dark", "theme-native", "theme-gnome", "theme-kde", "theme-dark" }) window.RemoveCssClass(name);
+        foreach (var name in new[] { "bambu-dark", "theme-native", "theme-gnome", "theme-kde", "theme-omarchy", "theme-dark" }) window.RemoveCssClass(name);
         var dark = Adw.StyleManager.GetDefault().GetDark();
         if (dark) window.AddCssClass("theme-dark");
         if (EffectiveTheme == "bambu")

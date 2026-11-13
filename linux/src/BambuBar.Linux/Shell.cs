@@ -46,7 +46,7 @@ internal sealed partial class Shell : IDisposable
         _ephemeral = PrinterStore.IsEphemeralRun(args);
         // Plasma's Breeze theme is not in the GNOME Flatpak runtime. Its requested
         // symbolic names otherwise become missing-image boxes in this GTK app.
-        if (Platform.IsPlasma) Gtk.Settings.GetDefault()!.GtkIconThemeName = "Adwaita";
+        if (Platform.IsPlasma || Platform.IsOmarchy) Gtk.Settings.GetDefault()!.GtkIconThemeName = "Adwaita";
         ApplyAppearance();
         var css = Gtk.CssProvider.New(); css.LoadFromPath(Path.Combine(AppContext.BaseDirectory, "style.css"));
         Gtk.StyleContext.AddProviderForDisplay(Gdk.Display.GetDefault()!, css, 600);
@@ -276,6 +276,6 @@ internal sealed partial class Shell : IDisposable
         foreach (var clean in _cleanup) clean();
         foreach (var clean in _panelCleanup) clean();
         foreach (var camera in _cameraWindows.Values.ToArray()) { camera.Surface.Dispose(); camera.Window.Destroy(); }
-        _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
+        _omarchyTheme?.Dispose(); _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
     }
 }

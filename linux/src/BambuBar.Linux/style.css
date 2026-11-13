@@ -181,3 +181,17 @@ window.theme-kde.tray-popup { border-radius: 6px; }
 .theme-native.theme-dark .nozzle { color: #ff9c63; }
 .theme-native .bed { color: var(--warning-color); }
 .theme-native .feature-on { color: var(--success-color); }
+
+/* Omarchy's default chrome is square, bordered and shadow-free. GTK keeps the
+   desktop font family; colors come from the current theme, not this stylesheet. */
+window.theme-omarchy, window.theme-omarchy.tray-popup { border-radius: 0; }
+.theme-omarchy headerbar { box-shadow: none; border-bottom: 1px solid var(--omarchy-border, alpha(currentColor,.2)); }
+.theme-omarchy .module, .theme-omarchy .tile, .theme-omarchy .job,
+.theme-omarchy .quick-panel .job, .theme-omarchy .issue-banner { border-radius: 0; border-color: var(--omarchy-border, alpha(currentColor,.2)); box-shadow: none; }
+.theme-omarchy .control, .theme-omarchy dropdown > button, .theme-omarchy entry,
+.theme-omarchy .sidebar .navigation-sidebar row { border-radius: 0; }
+.theme-omarchy .sidebar row:selected { background: var(--omarchy-selection, var(--accent-bg-color)); color: var(--omarchy-selection-fg, var(--accent-fg-color)); }
+.theme-omarchy .sidebar row:selected image { color: inherit; }
+.theme-omarchy .muted { color: var(--omarchy-secondary, var(--window-fg-color)); opacity: 1; }
+.theme-omarchy .preview-wallpaper .muted, .theme-omarchy .widget-stage .muted { color: inherit; opacity: .8; }
+.theme-omarchy button:disabled, .theme-omarchy dropdown:disabled { opacity: .55; }
