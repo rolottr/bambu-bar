@@ -85,7 +85,8 @@ ShellRoot {
             anchors.fill: parent
             kit: nativeKit
             onRequest: message => bridge.write(JSON.stringify(message) + "\n")
-            onShowRequested: { window.visible = true }
+            // Remapping also brings an already-open window from another workspace.
+            onShowRequested: { window.visible = false; Qt.callLater(() => window.visible = true) }
             onImportRequested: importDialog.open()
             onCameraRequested: { camera.visible = true; content.send("camera", true) }
             onCameraClosed: camera.visible = false
