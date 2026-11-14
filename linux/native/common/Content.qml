@@ -21,6 +21,7 @@ Control {
     property bool cameraRetry: false
     property string confirmation: ""
     property string confirmationLabel: ""
+    property string capturePath: ""
     signal request(var message)
     signal showRequested()
     signal cameraRequested()
@@ -49,7 +50,10 @@ Control {
         if (message.type === "hide") { hideRequested(); return }
         if (message.type === "clipboard") { clipboard.text = message.text; clipboard.selectAll(); clipboard.copy(); clipboard.text = ""; return }
         if (message.type === "capture") {
-            grabToImage(result => send("capture-result", result.saveToFile(message.path)))
+            capturePath = message.path
+            showRequested()
+            capture.attempts = 0
+            capture.restart()
             return
         }
         if (message.type === "prefill") { drafts = Object.assign({}, drafts, message.fields); return }
@@ -72,6 +76,17 @@ Control {
     }
     // Clipboard ownership belongs to the focused native window on Wayland.
     TextEdit { id: clipboard; visible: false }
+    Timer {
+        id: capture
+        interval: 100
+        property int attempts: 0
+        onTriggered: {
+            if (!root.grabToImage(result => root.send("capture-result", result.saveToFile(root.capturePath)))) {
+                if (++attempts < 20) restart()
+                else root.send("capture-result", false)
+            }
+        }
+    }
     RowLayout {
         anchors.fill: parent; spacing: 0
         Rectangle {

@@ -56,10 +56,13 @@ internal sealed partial class Shell
                 _native.Send(new { type = "capture", path = Path.GetFullPath(path) });
                 if (!await _nativeCapture.Task.WaitAsync(TimeSpan.FromSeconds(10))) throw new IOException("Native captures must be PNG files inside the app data directory (for example /var/data/screenshots).");
             }
-            if (snapshot >= 0 && _ephemeral) DesktopAction("quit", null);
         }
         catch (Exception e) when (e is IOException or TimeoutException) { Console.Error.WriteLine(e.Message); }
-        finally { _nativeCapture = null; complete?.Invoke(); }
+        finally
+        {
+            _nativeCapture = null; complete?.Invoke();
+            if (_ephemeral && args.Contains("--snapshot")) DesktopAction("quit", null);
+        }
     }
 
     private void StartNativeUi()
