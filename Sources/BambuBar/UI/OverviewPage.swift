@@ -92,7 +92,7 @@ struct OverviewPage: View {
                 .panel(radius: 16, padding: 13)
                 VStack(spacing: 9) {
                     DetailRow(title: "Network", value: s.wifiSignal.map { "\(WiFi.describe($0)) (\($0) dBm)" } ?? "—", symbol: "wifi")
-                    DetailRow(title: "Storage", value: s.hasSDCard == true ? String(localized: "SD card inserted") : s.hasSDCard == false ? String(localized: "No SD card") : "—", symbol: "sdcard")
+                    DetailRow(title: "Storage", value: (store.config?.model?.storage).describe(inserted: s.hasSDCard), symbol: (store.config?.model?.storage).symbol)
                     DetailRow(title: "Live View", value: s.liveViewEnabled == true ? String(localized: "On") : s.liveViewEnabled == false ? String(localized: "Off") : "—", symbol: "video")
                     DetailRow(title: "Firmware", value: (s.firmware ?? "—") + (s.updateAvailable ? " · " + String(localized: "Update available") : ""), symbol: "cpu")
                 }

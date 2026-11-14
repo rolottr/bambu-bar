@@ -49,6 +49,21 @@ public static class PrinterShapes
     };
 }
 
+/// <summary>The removable media a printer stores files on.</summary>
+public enum StorageMedia { SdCard, UsbDrive }
+
+public static class StorageMedias
+{
+    /// <summary>The Storage row: what's in the slot, named for the model's media; neutral when the model is unknown.</summary>
+    public static string Describe(this StorageMedia? media, bool? inserted) => (media, inserted) switch
+    {
+        (_, null) => "—",
+        (StorageMedia.SdCard, var i) => i == true ? Loc.T("SD card inserted") : Loc.T("No SD card"),
+        (StorageMedia.UsbDrive, var i) => i == true ? Loc.T("USB drive inserted") : Loc.T("No USB drive"),
+        (_, var i) => i == true ? Loc.T("Inserted", "Storage media") : Loc.T("Not inserted", "Storage media"),
+    };
+}
+
 /// <summary>
 /// What a Bambu Lab model has, so the app and widgets show only what the printer can report. From the printer
 /// profiles Bambu Lab publishes with Bambu Studio (see the Mac's PrinterModel.swift for the fields' sources).
@@ -83,6 +98,13 @@ public sealed record PrinterModel
     public required bool HasLidar { get; init; }
     /// <summary>Takes the laser and cutting modules (H2 family).</summary>
     public required bool HasLaserModule { get; init; }
+
+    /// <summary>Where it keeps print files and recordings. The report's <c>sdcard</c> flag means this media on every model.</summary>
+    public StorageMedia Storage => UsbStorage.Contains(Code) ? StorageMedia.UsbDrive : StorageMedia.SdCard;
+
+    /// <summary>Models with a USB-A port for a flash drive instead of a microSD slot (Bambu Lab's specs: P2S, X2D,
+    /// H2 family, H3C).</summary>
+    private static readonly HashSet<string> UsbStorage = new(StringComparer.Ordinal) { "N7", "N6", "O1D", "O1E", "O1C", "O1S", "N10" };
 
     /// <summary>A switchable chamber light (none on the A series).</summary>
     public bool HasChamberLight => Shape is not (PrinterShape.BedSlinger or PrinterShape.Mini);
