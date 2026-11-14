@@ -12,6 +12,8 @@ PlasmoidItem {
     readonly property bool inPanel: Plasmoid.formFactor !== PlasmaCore.Types.Planar
     preferredRepresentation: inPanel ? compactRepresentation : fullRepresentation
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
+    toolTipMainText: connection.snapshot.title || "Bambu Bar"
+    toolTipSubText: ""
     readonly property int cardSize: Math.max(0, Math.min(2, Plasmoid.configuration.size))
     readonly property bool small: cardSize === 0
     readonly property bool large: cardSize === 2
@@ -57,11 +59,10 @@ PlasmoidItem {
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
             onClicked: mouse => { if (mouse.button === Qt.MiddleButton) connection.openPrinter(""); else if (mouse.button === Qt.RightButton) contextMenu.popup(); else root.expanded = !root.expanded }
         }
-        Controls.ToolTip.visible: hover.hovered
-        Controls.ToolTip.text: connection.snapshot.title || "Bambu Bar"
-        HoverHandler { id: hover }
         Controls.Menu {
             id: contextMenu
+            // Let KWin place the menu outside the narrow panel window.
+            popupType: Controls.Popup.Window
             Controls.MenuItem { text: i18n("Quick view"); onTriggered: root.expanded = true }
             Controls.MenuItem { text: i18n("Open Bambu Bar"); onTriggered: connection.openPrinter("") }
             Controls.MenuItem { text: i18n("Quit"); onTriggered: connection.invoke("quit") }
