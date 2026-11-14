@@ -103,7 +103,7 @@ internal sealed partial class Shell : IDisposable
         foreach (var name in new[] { "show", "panel", "quit" })
         {
             var action = Gio.SimpleAction.New(name, null);
-            action.OnActivate += (_, _) => { if (name == "quit") app.Quit(); else if (name == "panel") ShowPanel(); else Present(); };
+            action.OnActivate += (_, _) => { if (name == "quit") DesktopAction("quit", null); else if (name == "panel") ShowPanel(); else Present(); };
             app.AddAction(action);
         }
         var showPrinter = Gio.SimpleAction.New("printer", GLib.VariantType.New("s"));
