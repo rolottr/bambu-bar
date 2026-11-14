@@ -46,13 +46,21 @@ def main():
             name = (process / 'comm').read_text().strip()
         except OSError:
             continue
+        if name in ('quickshell', 'qs'):
+            try:
+                arguments = (process / 'cmdline').read_bytes().split(b'\0')
+                if any(b'/bambu-bar-native/' in arg for arg in arguments): name = 'bambu-quickshell-ui'
+            except OSError:
+                continue
         if name in ('python', 'python3'):
             try:
                 arguments = (process / 'cmdline').read_bytes().split(b'\0')
                 if any(arg.endswith(b'/bambu-bar-hyprland/anchor.py') for arg in arguments): name = 'bambu-hyprland'
+                elif any(b'/bambu-bar-native/' in arg for arg in arguments): name = 'bambu-native-ui'
+                elif any(b'/omarchy/plugins/dev.rolottr.BambuBar/' in arg for arg in arguments): name = 'bambu-omarchy-plugin'
             except OSError:
                 continue
-        if name in ('bambu-bar', 'gnome-shell', 'plasmashell', 'kwin_wayland', 'Hyprland', 'waybar', 'quickshell', 'bambu-hyprland'):
+        if name in ('bambu-bar', 'gnome-shell', 'plasmashell', 'kwin_wayland', 'Hyprland', 'waybar', 'quickshell', 'qs', 'bambu-hyprland', 'bambu-native-ui', 'bambu-quickshell-ui', 'bambu-omarchy-plugin'):
             processes[process.name] = {'name': name, 'samples': []}
     for index in range(duration + 1):
         for pid, process in processes.items():

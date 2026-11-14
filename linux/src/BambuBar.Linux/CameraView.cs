@@ -24,6 +24,7 @@ internal sealed partial class Shell
     private void OpenCamera(PrinterSession session)
     {
         if (!session.ShowsCamera) return;
+        if (UseNativeUi) { _store.Select(session.Id); _nativeCameraRequested = true; PresentNative("Printer"); return; }
         if (_cameraWindows.TryGetValue(session.Id, out var existing)) { existing.Window.Present(); return; }
         var window = Adw.ApplicationWindow.New(_app); ApplyWindowTheme(window); WindowSize.Track(window); window.SetTitle(session.Config.Name + " — " + Loc.T("Camera")); window.SetDefaultSize(900, 580);
         var header = Adw.HeaderBar.New(); header.SetTitleWidget(Label(session.Config.Name, "heading"));

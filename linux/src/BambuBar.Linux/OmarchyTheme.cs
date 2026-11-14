@@ -13,6 +13,7 @@ internal sealed class OmarchyTheme : IDisposable
     private int _appearance;
     private bool _enabled;
     public bool? Dark { get; private set; }
+    public OmarchyPalette? Palette { get; private set; }
     public OmarchyTheme(Action changed)
     {
         _changed = changed;
@@ -43,6 +44,7 @@ internal sealed class OmarchyTheme : IDisposable
         _enabled = enabled; _appearance = appearance; _source = source;
         var parts = source.Split('\0');
         var palette = enabled && parts.Length == 2 ? OmarchyPalette.Parse(parts[0], parts[1], appearance) : null;
+        Palette = palette;
         Dark = palette?.Dark;
         _provider.LoadFromString(palette?.Css ?? "");
     }

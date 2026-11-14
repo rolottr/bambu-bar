@@ -36,7 +36,7 @@ internal static class Program
             Platform.Trace("command-line handler");
             var commandLine = e.CommandLine;
             var forwarded = commandLine.GetArguments(out var count);
-            if (forwarded.Contains("--quit")) { GLib.Functions.TimeoutAdd(200, 100, () => { application.Quit(); return false; }); commandLine.SetExitStatus(0); commandLine.Done(); commandLine.Dispose(); return 0; }
+            if (forwarded.Contains("--quit")) { _shell?.PrepareQuit(); GLib.Functions.TimeoutAdd(200, 100, () => { application.Quit(); return false; }); commandLine.SetExitStatus(0); commandLine.Done(); commandLine.Dispose(); return 0; }
             launchArgs = forwarded;
             if (_shell is null) application.Activate();
             else if (!forwarded.Contains("--hide") && !forwarded.Contains("--background") && !forwarded.Contains("--panel")) _shell.Present();

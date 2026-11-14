@@ -10,7 +10,7 @@ case "$rid" in linux-x64|linux-arm64) ;; *) exit 2;; esac
 [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { printf 'A full source commit is required.\n' >&2; exit 2; }
 out="$repo/build/linux/release/$rid"
 mkdir -p "$out"
-assets=("Bambu-Bar-$version-$rid.flatpak" "bambu-bar@rolottr.dev.shell-extension.zip" "Bambu-Bar.plasmoid" "Bambu-Bar-hyprland.tar.gz")
+assets=("Bambu-Bar-$version-$rid.flatpak" "bambu-bar@rolottr.dev.shell-extension.zip" "Bambu-Bar.plasmoid" "Bambu-Bar-hyprland.tar.gz" "Bambu-Bar-native-desktop.tar.gz")
 for asset in "${assets[@]}"; do cp "$repo/build/linux/$asset" "$out/$asset"; done
 printf 'Version: %s\nSource commit: %s\nArchitecture: %s\nRuntime: org.gnome.Platform//50\n' \
   "$version" "$revision" "$rid" > "$out/SOURCE-linux.txt"

@@ -1,6 +1,6 @@
 # Bambu Bar on Linux
 
-The Linux port lives in `linux/`. It uses GTK 4/libadwaita through GirCore and the existing, tested .NET 10 printer core in `windows/src/BambuBar.Core`. The Mac and Windows apps stay in the same repository and use the same version, assets, certificates, reports and string catalog.
+The Linux port lives in `linux/`. It uses GTK 4/libadwaita on GNOME, Qt/Kirigami on KDE, and the installed Omarchy Quickshell controls on Omarchy, with the existing .NET 10 printer core in `windows/src/BambuBar.Core`. The Mac and Windows apps stay in the same repository and use the same version, assets, certificates, reports and string catalog.
 
 ## Install
 
@@ -35,6 +35,42 @@ flatpak uninstall --user dev.rolottr.BambuBar
 
 Updates belong to the package channel; this port does not change the Mac/Windows appcast or replace package-manager files. No remote pushes, uploads, submissions or releases were made while developing it.
 
+## Native desktop frontends
+
+The current implementation supersedes the GTK-on-KDE/Hyprland descriptions and measurements in the historical sections below. The Flatpak remains the printer/credential/decoder backend. GNOME keeps its GTK/libadwaita main window and native Shell extension. KDE main and camera windows use Qt/Kirigami; its Plasma applet supplies the panel popup and desktop widgets. Omarchy main and camera windows use Quickshell and import the installed `Ui` and `Commons` components. The Omarchy plugin supplies an anchored `Ui.PopupCard` and Small/Medium/Large layer-shell desktop cards. There is no GTK positioning-helper warning in these native surfaces.
+
+The native companion is a separate release asset, `Bambu-Bar-native-desktop.tar.gz`, installed on KDE/Omarchy alongside the Flatpak. See [the user installation guide](../LINUX.md) for runtime dependencies and desktop setup. The installer validates toolkit availability before changing files, backs up its files, and installs a user D-Bus activation entry. Omarchy setup adds one bar entry and scoped floating-window rules while preserving the rest of the user's shell/Hyprland configuration. The main Omarchy window starts at 960×700 logical pixels rather than filling a tiled workspace.
+
+`linux/native/common/` shares layout and content while `kde/Kit.qml` uses native Qt controls and `omarchy/Kit.qml` uses installed Omarchy buttons, toggles, dropdowns, text fields and confirmation dialogs. All eight pages, multi-printer overview and four lower Printer detail cards are implemented. Main-window camera data travels over an owner-only Unix socket (0700 directory, 0600 socket), never the desktop companion D-Bus API. That public API remains sanitized and actions are allowlisted. Slicer files are read into memory and credentials are saved through Secret Service; no temporary credential files are written. A bounded transport coalesces camera frames/state without discarding lifecycle messages. Each backend/demo has an independent endpoint and native-window lock.
+
+Qt Quick 3D uses the same six shared printer GLBs as the other apps. `linux/scripts/generate-qt-models.py` preconverts them with Qt's `balsam` into the checked-in `shared/Printers/qt-models.tar.gz`; this preserves named parts and independently colored spools on the tested Qt 6.10 runtime. Regenerate that archive when the GLBs change. `linux/tests/native-assets.test.py` verifies source hashes, required nodes and mesh references. Models unload when hidden/minimized or fully offscreen. Motion follows Kirigami’s animation duration or Omarchy’s actual reduced-motion setting. The Qt scene avoids multisample antialiasing to reduce software-rendering cost. Desktop popups/widgets use static printer artwork.
+
+System color mode follows each native desktop. Omarchy watches the actual current-theme directory and reloads its installed color/style components; live Tokyo Night → Catppuccin Latte → Tokyo Night switching was visually exercised in main and popup surfaces. An explicit opposite mode adapts foreground/background and control-state colors locally without changing the desktop. KDE explicit modes use installed Breeze Dark/Light schemes and the `KDE_COLOR_SCHEME_PATH` application integration; a generic Qt color-scheme hint alone did not update Kirigami correctly. Main and camera share their application's palette; shell popups/widgets follow the shell. GTK theme IDs and all earlier appearance preferences remain stored.
+
+New native validation artifacts live under `build/linux/evidence/native/`, separately from the earlier GTK evidence. Real P2S MQTT status, AMS colors and RTSPS camera rendering were exercised in the native KDE and Omarchy windows without sending print/hardware commands. Closing the camera released its stream connection while MQTT monitoring continued. GNOME was checked after a real session restart and keyring unlock. The earlier historical figures below must not be presented as native frontend resource usage.
+
+Current native VM measurements (60-second settled intervals, four logical CPUs, llvmpipe, scale 1):
+
+| Desktop | Cold hidden CPU / RSS | Main Printer CPU / RSS | Warm hidden after 24 visits CPU / RSS |
+| --- | --- | --- | --- |
+| GNOME | 1.74% / 174.5 MiB | 1.31% / 410.2 MiB | 0.53% / 505.4 MiB |
+| KDE | 1.64% / 202.2 MiB | 2.75% / 584.0 MiB | 1.30% / 621.8 MiB |
+| Omarchy | 1.32% / 256.3 MiB | 1.54% / 700.2 MiB | 0.71% / 767.0 MiB |
+
+CPU is percent of one logical CPU. Totals include the app's backend/UI/bridge/activation processes; whole desktop shells and compositors are separately recorded. RSS sums double-count shared mappings; PSS and process identities are in `build/linux/evidence/native/resources.md` and the raw JSON. These cold/main/warm samples preceded the final minor form/clipboard corrections. Cold RSS is not representative of a warm process. Three Omarchy desktop cards measured 1.23% app-process CPU / 768.3 MiB RSS after navigation; the shared desktop Quickshell process was separately 931.1 MiB RSS, including all its other modules.
+
+Qt animation remains expensive with llvmpipe: after removing MSAA, the isolated printing demo used 55.49% CPU / 680.0 MiB RSS on KDE and 64.81% / 734.1 MiB on Omarchy with animations temporarily enabled. Scrolling the same model fully offscreen reduced those to 1.02% / 679.0 MiB and 1.13% / 723.6 MiB. The original MSAA UI process alone exceeded 130% CPU. Physical-GPU performance is unverified. Omarchy's recorded desktop has animations disabled; the app now follows that setting instead of animating against the user's preference. With that actual reduced-motion setting, the visible printing demo measured 1.36% CPU / 724.01 MiB RSS.
+
+Native smoke test (run inside the logged-in desktop session):
+
+```sh
+python3 linux/tests/native-ui-smoke.py
+python3 linux/tests/native-assets.test.py
+# Optional: pass a demo's distinct ui-<id>.sock to the smoke test.
+```
+
+Known scope: Omarchy requires its installed Quickshell component/plugin API, not merely Hyprland. Desktop-card placement uses the first Quickshell output and corner stacks, without free dragging; dense layouts on very small outputs and physical multi-monitor placement remain unverified. Qt/QML uses the shared translations where supplied; some new native labels still fall back to English. ARM64, X11, other distro/toolkit combinations and physical-GPU performance remain unverified. Native printer controls are implemented but were not exercised against a real print. Historical GNOME/Plasma behavior checks are distinguished from current native VM checks in the evidence.
+
 ## Consolidated Linux branch validation
 
 The local `linux` branch merges the completed GNOME → KDE → Omarchy history with the newer main-checkout changes, including version 2.2.1 and the portable save-failure fixes. The translation catalog retains both Mac and Linux notification strings: all 697 entries pass the translation check across 17 languages.
@@ -64,9 +100,9 @@ Local evidence is in `build/linux/evidence/consolidation/`. Before removing the 
 
 ## Deliberate desktop differences
 
-One GTK build serves all three desktops, with a companion Shell extension for GNOME's rich panel popup. Tray IPC probes services. Desktop-specific widget instructions and the KDE icon-theme fallback use `XDG_CURRENT_DESKTOP`. GNOME 50 and KDE Plasma 6.6 have been exercised on Ubuntu 26.04 VMs; see the separate KDE results below. Omarchy 4.5 / Hyprland 0.56 is validated below.
+In the earlier GTK-only implementation, one GTK build served all three desktops, with a companion Shell extension for GNOME's rich panel popup. Tray IPC probes services. Desktop-specific widget instructions and the KDE icon-theme fallback use `XDG_CURRENT_DESKTOP`. GNOME 50 and KDE Plasma 6.6 have been exercised on Ubuntu 26.04 VMs; see the separate KDE results below. Omarchy 4.5 / Hyprland 0.56 is validated below.
 
-The companion GNOME Shell extension now supplies desktop widgets. In **Widgets**, add a Small, Medium or Large card, choose a printer (or Automatic), and pick a desktop corner. Cards update from the existing printer core, stay beneath normal windows, hide in the overview/lock screen, and open their printer when clicked. The app must remain running and the extension enabled. Widget settings survive app restarts. Placement currently uses the primary monitor and corner stacks; free dragging is not implemented by the GNOME companion. Plasma uses its own native draggable widgets (below); Hyprland widgets are unsupported.
+The companion GNOME Shell extension now supplies desktop widgets. In **Widgets**, add a Small, Medium or Large card, choose a printer (or Automatic), and pick a desktop corner. Cards update from the existing printer core, stay beneath normal windows, hide in the overview/lock screen, and open their printer when clicked. The app must remain running and the extension enabled. Widget settings survive app restarts. Placement currently uses the primary monitor and corner stacks; free dragging is not implemented by the GNOME companion. Plasma uses its own native draggable widgets (below); The earlier generic Hyprland implementation had no widgets; the current Omarchy Quickshell integration supplies native desktop cards.
 
 Standalone Quick view remains available as a small, scrollable GTK window. The Shell popup and the Menu Bar settings preview share content preferences for temperatures, chamber temperature, fans, filament and print controls.
 

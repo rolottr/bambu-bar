@@ -1,6 +1,6 @@
 # Bambu Bar on Linux
 
-Bambu Bar uses GTK 4/libadwaita with the shared printer core. One **Flatpak** runs on GNOME, KDE Plasma and Omarchy/Hyprland; choose the optional desktop companion separately. You do not need the .NET SDK or a compiler to install a release.
+Bambu Bar uses a shared printer backend with a native UI for each desktop: **GTK 4/libadwaita on GNOME, Qt/Kirigami on KDE Plasma, and Quickshell with Omarchy’s own controls on Omarchy**. Install the **Flatpak**, then the matching desktop package below. The native desktop package is required on KDE and Omarchy. You do not need the .NET SDK or a compiler to install a release.
 
 Linux packages will be attached to [GitHub releases](https://github.com/rolottr/bambu-bar/releases). Until a release includes the Linux assets listed below, build them from source using [the developer guide](docs/linux.md#build-locally-on-linux). This branch does not publish a release or add Bambu Bar to Flathub. Flathub supplies its runtime.
 
@@ -10,8 +10,9 @@ Linux packages will be attached to [GitHub releases](https://github.com/rolottr/
 | --- | --- |
 | `Bambu-Bar-<version>-linux-x64.flatpak` | Application for Intel/AMD 64-bit PCs; same download for every supported distribution. |
 | `bambu-bar@rolottr.dev.shell-extension.zip` | Optional GNOME 50 top-bar popup and desktop widgets. |
-| `Bambu-Bar.plasmoid` | Optional KDE Plasma 6.6+ desktop widgets. The standard tray needs no extra widget. |
-| `Bambu-Bar-hyprland.tar.gz` | Omarchy/Hyprland popup placement and login-startup helper, with an optional compact-window rule. |
+| `Bambu-Bar.plasmoid` | Native Plasma panel Quick view and optional desktop widgets. |
+| `Bambu-Bar-native-desktop.tar.gz` | Native KDE/Omarchy main windows, camera UI and Omarchy bar/widget plugin. |
+| `Bambu-Bar-hyprland.tar.gz` | Legacy GTK popup helper for other Hyprland installations; not the Omarchy native UI. |
 | `SHA256SUMS-linux.txt`, `SOURCE-linux.txt` | Package checksums and source/version identity. |
 
 `uname -m` reports `x86_64` on Intel/AMD PCs. The build recipe also supports `aarch64` → `linux-arm64`, but ARM64 has not been validated and is not part of the currently tested release set. Do not install the x64 package on ARM. Separate `.deb`, `.rpm`, AppImage and AUR packages are not produced.
@@ -77,41 +78,46 @@ The native extension replaces the generic tray item while enabled, avoiding a du
 
 ### KDE Plasma 6.6+
 
-The standard system tray works without an add-on: left click opens Quick view, middle click opens the main window, right click opens its menu. Quick view uses a GTK layer-shell surface beside the tray on Plasma Wayland. Plasma shows progress text in the tooltip rather than inline beside the icon.
-
-For optional desktop widgets:
+Install the native window package and the Plasma panel/widget package from the same release. On Ubuntu/Kubuntu:
 
 ```sh
+sudo apt install python3-gi python3-pyqt6 python3-pyqt6.qtquick python3-pyqt6.qtqml \
+  qml6-module-org-kde-kirigami qml6-module-qtquick3d \
+  qml6-module-qtquick-controls qml6-module-qtquick-dialogs \
+  qml6-module-qtquick-layouts qml6-module-qtquick-window \
+  qml6-module-qtqml-workerscript
+tar -xzf Bambu-Bar-native-desktop.tar.gz
+bash bambu-bar-native/linux/scripts/install-native-desktop.sh
 kpackagetool6 --type Plasma/Applet --install ./Bambu-Bar.plasmoid
-# For an existing installation, use --upgrade instead of --install.
+# Use --upgrade for an already-installed Plasma widget.
 ```
 
-You can also use Plasma's **Add Widgets → Get New Widgets → Install Widget From Local File**. In Bambu Bar, enable **Widgets → Share printer status with Plasma widgets**, then add Bambu Bar from Plasma's desktop Edit Mode. Configure each widget's size/printer, and move or resize it with Plasma. The companion requires Plasma 6.6's D-Bus QML support.
+In Plasma Edit Mode, add **Bambu Bar** to your panel. Its icon opens a native Plasma popup; middle click opens the Qt/Kirigami main window. The generic tray item becomes passive while the native panel item is present. The same applet can be added to the desktop in Small, Medium or Large sizes; enable widget sharing in Bambu Bar and configure each desktop widget through Plasma. Plasma controls popup placement and dismissal.
+
+Other Plasma distributions need Python/PyQt6 with QtQml and QtQuick, PyGObject, Kirigami, and Qt Quick 3D. The installer checks the Python Qt bindings. Only the Ubuntu package names and the recorded Plasma VM have been validated; distro package names can differ.
 
 ### Omarchy 4.5 / Hyprland 0.56
 
-The actual tested Omarchy installation uses **Quickshell** for its bar; Waybar's StatusNotifier tray was tested separately. Neither bar configuration is replaced. Install the host helper for correctly anchored Quick view and Open at login: Hyprland withholds the layer-shell protocol from Flatpak clients, and this desktop's portals do not provide Background support.
-
-On Arch/Omarchy:
+The tested Omarchy installation has a **Quickshell plugin API** and shared `Ui`/`Commons` modules. Bambu Bar uses its actual buttons, toggles, dropdowns, theme tokens, bar icon and anchored popup. It also supplies native layer-shell desktop cards. The main and camera windows run as a separate Quickshell application.
 
 ```sh
-sudo pacman -S --needed python python-gobject python-cairo gtk-layer-shell
-mkdir -p bambu-bar-hyprland
-tar -xzf ./Bambu-Bar-hyprland.tar.gz -C bambu-bar-hyprland
-cd bambu-bar-hyprland
-bash linux/scripts/install-hyprland-integration.sh --compact-window
-hyprctl reload
+sudo pacman -S --needed python python-gobject qt6-quick3d
+tar -xzf Bambu-Bar-native-desktop.tar.gz
+bash bambu-bar-native/linux/scripts/install-native-desktop.sh
+python3 bambu-bar-native/linux/scripts/install-omarchy-plugin.py
 ```
 
-The installer backs up files it changes. `--compact-window` adds one include to your existing Hyprland Lua configuration and a rule matching only Bambu Bar's main window, making it floating, centered and 960×700. Omit the flag to keep compositor-managed tiling. Quick view and camera windows do not match the compact rule. The helper uses Python/PyGObject, Pycairo and GTK3 layer-shell, starts on D-Bus demand, and can position only Bambu Bar's token-identified popup. It does not expose arbitrary compositor commands, printer credentials or camera frames.
+The plugin installer backs up `shell.json`, preserves its contents, and adds only the Bambu Bar bar entry. It installs under `~/.config/omarchy/plugins/dev.rolottr.BambuBar/`. Restart the Omarchy shell if an updated plugin remains cached. No GTK popup-positioning helper is involved. **Widgets** controls sharing and primary-monitor corner placement; choose Small, Medium or Large. The native desktop package handles the fixed Bambu Bar login command because Omarchy’s portals have no Background interface.
 
-Quick view supports Escape, repeated-click and outside-click dismissal, scrolling and mixed monitor scaling. Without the helper, the app explains the missing integration instead of opening Quick view in the screen center. This helper targets Hyprland 0.56's Lua API; other releases are not verified. **Hyprland desktop widgets are not implemented**; the Widgets page says so and does not offer GNOME/Plasma controls.
+Omarchy’s native controls are loaded from the installed Omarchy shell, rather than copied or approximated. This requires the tested plugin/component API; a generic Hyprland installation without that API is not equivalent to Omarchy support.
 
 ### Themes
 
-**Settings → Theme → Follow desktop** selects Adwaita on GNOME, Breeze styling on Plasma, and the active Omarchy palette on Omarchy. Explicit GNOME, KDE, Omarchy and Bambu Bar styles remain available. Dark / Light / System is a separate preference.
+GNOME uses GTK/libadwaita and the Shell extension inherits GNOME Shell’s colors. Existing GTK theme IDs and Dark / Light / System preferences remain saved. KDE uses its Qt desktop style and Kirigami palette. Omarchy uses the active shell palette, font, borders, spacing and corner treatment. Its main application watches theme changes and reloads the installed Omarchy color/style components; the bar plugin shares the shell’s live theme directly. Filament colors remain printer data.
 
-Omarchy reads the active `colors.toml` and optional `shell.toml` under its current-theme directory, updating main, Quick view and camera within about two seconds of a theme switch. System follows the palette's light/dark mode; explicit Dark or Light adapts it while retaining the accent. Desktop font family is retained; filament colors keep their meaning. This imports palette values, not arbitrary shell CSS/Lua. Flatpak has read-only access to the current-theme parents (`~/.local/state/omarchy/current` and legacy `~/.config/omarchy/current`), not your whole home directory. Missing/malformed theme data falls back to Adwaita.
+Main and camera windows retain the independent **Dark / Light / System** choice. KDE System follows the desktop; explicit modes load the installed Breeze Dark/Light color schemes through KDE’s application palette integration. Omarchy System uses the exact active palette; explicit opposite modes adapt its foreground/background and interactive state colors for contrast while retaining the theme’s accent, font and native control geometry. Native shell popups and widgets always follow their desktop, independently of the main-window mode. Earlier GTK theme IDs remain saved for GTK sessions. Desktop companions receive sanitized state and explicit actions; **credentials and camera frames never enter their D-Bus interface**. The separate main UI uses an owner-only local socket. Camera images stay in memory, and imported slicer settings are parsed without writing temporary credential files.
+
+The Flatpak reads only the two discovered Omarchy current-theme directories to resolve an explicit color-mode adaptation; portal preferences cannot supply the theme’s palette. It has no general home-directory access. Native host packages run outside the sandbox, like desktop extensions, and depend on the desktop’s installed toolkit.
 
 ## Updates and removal
 
@@ -124,14 +130,16 @@ flatpak run dev.rolottr.BambuBar --quit
 flatpak uninstall --user dev.rolottr.BambuBar
 ```
 
-Flatpak keeps app data unless you explicitly request deletion. Remove optional companions with `gnome-extensions uninstall bambu-bar@rolottr.dev` or `kpackagetool6 --type Plasma/Applet --remove dev.rolottr.BambuBar`. On Hyprland remove the installed `~/.local/share/dbus-1/services/dev.rolottr.BambuBar.Hyprland.service` and `~/.local/share/bambu-bar-hyprland/anchor.py`; sign out/in to stop a running helper. To undo the compact rule, remove only the Bambu Bar `dofile(...)` include from `~/.config/hypr/hyprland.lua`, then its `bambu-bar.lua`, and reload Hyprland. Do not replace the entire configuration.
+Flatpak keeps app data unless you explicitly request deletion. Remove optional companions with `gnome-extensions uninstall bambu-bar@rolottr.dev` or `kpackagetool6 --type Plasma/Applet --remove dev.rolottr.BambuBar`. Remove the native main-window package by deleting only `~/.local/share/bambu-bar-native/` and its `~/.local/share/dbus-1/services/dev.rolottr.BambuBar.Native.service`. On Omarchy, remove the `dev.rolottr.BambuBar` entry from `shell.json` and its plugin directory; remove only the Bambu Bar include and managed `bambu-bar-native.lua` rule from Hyprland. Sign out/in to stop the native activation service. Backups are under `~/.local/state/bambu-bar/backups/`; do not restore an old whole-desktop backup over later personal changes.
+
+For the legacy generic Hyprland helper, remove the installed `~/.local/share/dbus-1/services/dev.rolottr.BambuBar.Hyprland.service` and `~/.local/share/bambu-bar-hyprland/anchor.py`; sign out/in to stop a running helper. To undo the compact rule, remove only the Bambu Bar `dofile(...)` include from `~/.config/hypr/hyprland.lua`, then its `bambu-bar.lua`, and reload Hyprland. Do not replace the entire configuration.
 
 ## Troubleshooting and development
 
 - **No tray icon after installation:** sign out/in after first installing Flatpak; check the desktop has a StatusNotifier host or enable the GNOME companion. Do not copy temporary icons into your theme.
 - **Printer offline after login:** unlock the desktop wallet/keyring and check LAN reachability. A locked KWallet can delay startup; the app waits for credential access.
-- **Quick view unavailable on Hyprland:** install/update the helper from the same release, and check the supported Hyprland version above.
+- **Quick view unavailable on Omarchy:** install the native package and bar plugin from the same release, then restart the Omarchy shell to clear cached plugin code. On Plasma, add the Bambu Bar applet to the panel.
 - **High CPU while animating:** the VMs use llvmpipe software rendering. Scrolling the model fully offscreen or hiding the window stops its animation work. VM figures do not predict hardware-GPU performance.
 - **Need logs:** Flatpak stores app configuration/state under `~/.var/app/dev.rolottr.BambuBar/`. Do not post access codes or keyring files.
 
-See [developer/build instructions and desktop validation](docs/linux.md) and [release packaging](docs/releasing.md#linux-release-assets). The GTK app, GNOME/Plasma companions and Hyprland host bridge are in `linux/`; the portable printer core remains in `windows/src/BambuBar.Core`.
+See [developer/build instructions and desktop validation](docs/linux.md) and [release packaging](docs/releasing.md#linux-release-assets). The GTK app, native Qt/Quickshell UIs and desktop companions are in `linux/`; the portable printer core remains in `windows/src/BambuBar.Core`.

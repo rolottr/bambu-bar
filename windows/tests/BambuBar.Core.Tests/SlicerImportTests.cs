@@ -28,6 +28,21 @@ public sealed class SlicerImportTests : IDisposable
         new() { Serial = serial, AccessCodes = codes, Host = host, Source = source };
 
     [Fact]
+    public void PrivateFilePickerTextUsesTheSameParserWithoutWritingCredentials()
+    {
+        const string json = """
+        {"access_code":{"22EF00000000001":"EXAMPLE1"},"ip_address":{"22ef00000000001":"192.0.2.1"}}
+        # MD5 checksum ignored
+        """;
+        var file = Assert.Single(Read(json));
+        var memory = Assert.Single(SlicerImport.ReadText(json, "Test"));
+        Assert.Equal(file.Serial, memory.Serial);
+        Assert.Equal(file.Host, memory.Host);
+        Assert.Equal(file.AccessCodes, memory.AccessCodes);
+        Assert.Empty(SlicerImport.ReadText("not a settings file", "Test"));
+    }
+
+    [Fact]
     public void SerialSpelledDifferentlyInEachSectionIsOnePrinter()
     {
         var rows = Read("""

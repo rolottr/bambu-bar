@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.rolottr.BambuBar",
+  "name": "Bambu Bar",
+  "version": "2.2.1",
+  "author": "Bambu Bar",
+  "description": "Native printer status, Quick view and desktop cards",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": { "displayName": "Bambu Bar", "category": "Info", "allowMultiple": false, "defaultSection": "right" }
+}

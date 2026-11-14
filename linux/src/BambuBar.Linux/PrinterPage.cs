@@ -186,6 +186,7 @@ internal sealed partial class Shell
     private async void ShowPanelAt(int x, int y)
     {
         if (_disposed || _positioningPanel) return;
+        if (UseNativeUi) { PresentNative("", panel: true); return; }
         PreparePanel();
         if (_panel!.GetVisible()) { _panel.SetVisible(false); return; }
         _positioningPanel = true;

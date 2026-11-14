@@ -21,4 +21,5 @@ version="$("$out/bambu-bar" --version | awk '{print $3}')"
 ./scripts/package-gnome-extension.sh
 ./scripts/package-plasma-widget.sh
 ./scripts/package-hyprland-integration.sh
+./scripts/package-native-desktop.sh
 ./scripts/package-release.sh "$rid" "$version" "$revision"

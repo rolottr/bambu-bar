@@ -32,6 +32,7 @@ filesystems=xdg-config/BambuStudio:ro;xdg-config/OrcaSlicer:ro;~/.local/state/om
 org.freedesktop.secrets=talk
 org.kde.StatusNotifierWatcher=talk
 dev.rolottr.BambuBar.Hyprland=talk
+dev.rolottr.BambuBar.Native=talk
 dev.rolottr.BambuBar.Shell=talk
 dev.rolottr.BambuBar.Desktop=own
 META

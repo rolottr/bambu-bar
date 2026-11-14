@@ -160,7 +160,7 @@ export class DesktopWidgets {
             }
         }
         const [width, height] = model.dimensions[widget.size] ?? model.dimensions.medium;
-        const actor = new St.Button({style_class: `bambu-desktop-widget ${widget.size}`, can_focus: true, reactive: true, child: content,
+        const actor = new St.Button({style_class: `popup-menu-content bambu-desktop-widget ${widget.size}`, can_focus: true, reactive: true, child: content,
             width, height, x_align: Clutter.ActorAlign.FILL, y_align: Clutter.ActorAlign.FILL,
             accessible_name: `${state.name}: ${state.caption}. Open printer.`});
         actor.connect('clicked', () => this._invoke('show', state.serial));

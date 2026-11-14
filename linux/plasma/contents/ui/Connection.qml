@@ -19,7 +19,17 @@ Item {
         DBus.SessionBus.asyncCall({service, path, iface: service, member: "GetState"},
             reply => root.accept(reply.value), () => { root.snapshot = {}; });
     }
+    function invoke(action) {
+        DBus.SessionBus.asyncCall({service, path, iface:service, member:"Invoke", arguments:[action, snapshot.printer ? snapshot.printer.id : ""]}, () => {}, () => {});
+    }
+    function setOpen(open) {
+        DBus.SessionBus.asyncCall({service, path, iface:service, member:"SetOpen", arguments:[open]}, () => {}, () => {});
+    }
     function openPrinter(serial) {
+        if (!connected) {
+            DBus.SessionBus.asyncCall({service:"dev.rolottr.BambuBar.Native",path:"/dev/rolottr/BambuBar/Native",iface:"dev.rolottr.BambuBar.Native",member:"Open",arguments:["Printer"]}, () => {}, () => {});
+            return;
+        }
         DBus.SessionBus.asyncCall({service, path, iface: service, member: "Invoke",
             arguments: ["show", serial]}, () => {}, error => console.warn("Bambu Bar open failed:", error.error.message));
     }

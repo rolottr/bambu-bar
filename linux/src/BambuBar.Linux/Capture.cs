@@ -11,6 +11,7 @@ internal sealed partial class Shell
         Platform.Trace($"command ready={_ready}");
         if (!_ready) { _pendingCommand = args; _pendingCompletion = complete; return; }
         var page = Array.IndexOf(args, "--page");
+        if (UseNativeUi) { HandleNativeCommand(args, complete); return; }
         if (page >= 0 && page + 1 < args.Length && _pages.Contains(args[page + 1]))
         {
             _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, args[page + 1])));

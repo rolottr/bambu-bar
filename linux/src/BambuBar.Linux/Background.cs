@@ -24,6 +24,11 @@ internal sealed class Background : IDisposable
         if (!_connected) { _localName = (await _connection.ConnectAsync()).LocalName; _connected = true; }
         // xdg-desktop-portal-hyprland/gtk have no Background interface. The
         // optional host companion manages only our fixed Flatpak login command.
+        if (Platform.IsOmarchy)
+        {
+            try { return await _connection.CreateProxy<INativeHost>(Platform.AppId + ".Native", "/dev/rolottr/BambuBar/Native").SetAutostartAsync(autostart).WaitAsync(TimeSpan.FromSeconds(3)); }
+            catch (Exception) { throw new IOException("The native desktop package is required to manage startup at login."); }
+        }
         if (Platform.IsHyprland)
         {
             try { return await _connection.CreateProxy<IHyprlandAnchor>("dev.rolottr.BambuBar.Hyprland", "/dev/rolottr/BambuBar/Hyprland").SetAutostartAsync(autostart).WaitAsync(TimeSpan.FromSeconds(3)); }

@@ -11,11 +11,12 @@ internal sealed partial class Shell
     {
         var appearance = _settings.Get("linuxAppearance", 2);
         _omarchyTheme ??= new OmarchyTheme(() => { if (!_disposed) ApplyAppearance(); });
-        _omarchyTheme.Apply(EffectiveTheme == "omarchy", appearance);
+        _omarchyTheme.Apply(EffectiveTheme == "omarchy" || (UseNativeUi && Platform.IsOmarchy), appearance);
         Adw.StyleManager.GetDefault().SetColorScheme(appearance switch
         { 1 => Adw.ColorScheme.ForceLight, 2 when EffectiveTheme == "omarchy" && _omarchyTheme.Dark is { } dark => dark ? Adw.ColorScheme.ForceDark : Adw.ColorScheme.ForceLight,
           2 => Adw.ColorScheme.Default, _ => Adw.ColorScheme.ForceDark });
         UpdateAppearanceClass();
+        QueueNative();
     }
     private OmarchyTheme? _omarchyTheme;
     private static readonly string[] ThemeIds = ["system", "gnome", "kde", "bambu", "omarchy"];

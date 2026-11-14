@@ -116,9 +116,10 @@ internal sealed partial class Shell : IDisposable
         foreach (var s in _store.Sessions) { s.PropertyChanged -= Changed; s.PropertyChanged += Changed; }
     }
     private void HideMain() { _window.SetVisible(false); }
-    public void Present() { if (_hyprlandPopup is not null) _panel?.SetVisible(false); Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
+    public void PrepareQuit() => _native?.Send(new { type = "quit" });
+    public void Present() { if (UseNativeUi) { PresentNative(_page); return; } if (_hyprlandPopup is not null) _panel?.SetVisible(false); Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
     public void ShowQuickView() => ShowPanel();
-    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (!_ephemeral) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _ = StartDesktop(); } _tray = new Tray(_store, ShowPanelAt, Present, _app.Quit); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (!_ephemeral || UseNativeUi) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _desktop.Published += QueueNative; if (!_ephemeral) _ = StartDesktop(); StartNativeUi(); } _tray = new Tray(_store, ShowPanelAt, Present, () => DesktopAction("quit", null)); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
     private async Task StartDesktop() { try { await _desktop!.Start(); } catch (Exception) { Platform.Log("Native desktop panel unavailable; standard tray remains available."); } }
     private void DesktopAction(string action, PrinterSession? session)
     {
@@ -132,13 +133,14 @@ internal sealed partial class Shell : IDisposable
             case "settings": Navigate("Settings"); Present(); break;
             case "filament": Navigate("Filament"); Present(); break;
             case "fleet": Navigate("All Printers"); Present(); break;
-            case "quit": _app.Quit(); break;
+            case "quit": PrepareQuit(); GLib.Functions.TimeoutAdd(200, 100, () => { _app.Quit(); return false; }); break;
             case "refresh": session?.Refresh(); break;
             case "camera" when session?.ShowsCamera == true && session.IsOnline: OpenCamera(session); break;
             case "light" when session?.IsOnline == true && (session.Config.Model?.HasChamberLight == true || session.Status?.ChamberLightOn is not null): session.ToggleLight(); break;
             case "pause" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false, State: JobState.Printing }: session.Pause(); break;
             case "resume" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false, State: JobState.Paused }: session.Resume(); break;
             case var speed when speed.StartsWith("speed:", StringComparison.Ordinal) && int.TryParse(speed[6..], out var raw) && Enum.IsDefined(typeof(SpeedLevel), raw) && _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false }: session.SetSpeed((SpeedLevel)raw); break;
+            case "stop-confirmed" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false } confirmed && confirmed.State.IsActive(): session.StopPrint(); break;
             case "stop" when _store.ShowPrinterActions && session?.IsOnline == true && session.Status is { ControlsLocked: false } s && s.State.IsActive():
                 if (_store.ConfirmStop) { Present(); Confirm(Loc.T("Stop this print?"), s.JobName, Loc.T("Stop"), session.StopPrint); }
                 else session.StopPrint();
@@ -156,6 +158,7 @@ internal sealed partial class Shell : IDisposable
     private void Changed(object? sender, PropertyChangedEventArgs e)
     {
         if (_disposed) return;
+        QueueNative();
         if (e.PropertyName == nameof(PrinterStore.SelectedSerial)) { Rebuild(); if (_panel is not null) BuildPanel(); }
         if (!_window.GetVisible() && _panel?.GetVisible() != true) return;
         if (_queued) return; _queued = true;
@@ -204,6 +207,7 @@ internal sealed partial class Shell : IDisposable
     }
     private void Rebuild()
     {
+        if (UseNativeUi) { QueueNative(); return; }
         if (_page == "All Printers" && !_store.HasMultiplePrinters) { Navigate("Printer"); return; }
         _schema = Schema;
         foreach (var clean in _cleanup) clean(); _cleanup.Clear(); _updates.Clear();
@@ -220,7 +224,7 @@ internal sealed partial class Shell : IDisposable
         else AboutPage();
         Refresh();
     }
-    public void Error(string message) { _error = message; _message.SetText(message); _message.SetVisible(true); }
+    public void Error(string message) { _nativeError = message; QueueNative(); _error = message; _message.SetText(message); _message.SetVisible(true); }
     private void Async(Func<Task> work) { _ = Execute(); async Task Execute() { try { await work(); } catch (Exception e) { Error(e.Message); } } }
     private void Open(string uri) => Gtk.Functions.ShowUri(_window, uri, 0);
     private static Gtk.Box Column(int gap = 12) => Gtk.Box.New(Gtk.Orientation.Vertical, gap);
@@ -276,6 +280,6 @@ internal sealed partial class Shell : IDisposable
         foreach (var clean in _cleanup) clean();
         foreach (var clean in _panelCleanup) clean();
         foreach (var camera in _cameraWindows.Values.ToArray()) { camera.Surface.Dispose(); camera.Window.Destroy(); }
-        _hyprlandPopup?.Dispose(); _omarchyTheme?.Dispose(); _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
+        _nativeCamera?.Dispose(); _native?.Dispose(); _hyprlandPopup?.Dispose(); _omarchyTheme?.Dispose(); _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
     }
 }

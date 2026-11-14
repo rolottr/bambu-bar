@@ -224,13 +224,13 @@ export default class BambuBarExtension extends Extension {
     }
 
     _iconButton(icon, title, action, close = false) {
-        const button = new St.Button({style_class: 'bambu-icon-button', can_focus: true, accessible_name: title,
+        const button = new St.Button({style_class: 'button bambu-icon-button', can_focus: true, accessible_name: title,
             child: new St.Icon({icon_name: icon, icon_size: 16})});
         button.connect('clicked', () => this._invoke(action, close));
         return button;
     }
     _textButton(text, action) {
-        const button = new St.Button({style_class: 'bambu-action', can_focus: true, x_expand: true, label: text});
+        const button = new St.Button({style_class: 'button bambu-action', can_focus: true, x_expand: true, label: text});
         button.connect('clicked', action);
         return button;
     }
