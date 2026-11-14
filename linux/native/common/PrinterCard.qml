@@ -76,7 +76,7 @@ ColumnLayout {
                 {key: "stop", label: root.t("Stop"), note: "confirmation", shown: root.printer.showControls, enabled: root.printer.stop}]
             Field { required property var modelData; visible: !!modelData.shown; field: Object.assign({kind: "button"}, modelData); controller: root.controller; kit: root.kit }
         }
-        Field { visible: !!root.printer.canSpeed; field: ({key: "speed", label: root.t("Speed"), kind: "choice", value: String(root.printer.speed || 2), options: (root.printer.speeds || []).map(s => ({value: String(s.id), label: s.title}))}); controller: root.controller; kit: root.kit; width: 130 }
+        Field { visible: !!root.printer.canSpeed; field: ({key: "speed", label: root.t("Speed"), kind: "choice", value: String(root.printer.speed || 2), options: (root.printer.speeds || []).map(s => ({value: String(s.id), label: s.title}))}); controller: root.controller; kit: root.kit; width: Math.min(root.width, 300) }
     }
     Label { Layout.fillWidth: true; visible: !!root.printer.locked && !!root.printer.showControls; text: "Enable Developer Mode on the printer to use controls"; wrapMode: Text.Wrap; color: root.kit.muted }
     Flow {

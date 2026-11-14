@@ -69,6 +69,8 @@ python3 linux/tests/native-assets.test.py
 # Optional: pass a demo's distinct ui-<id>.sock to the smoke test.
 ```
 
+The native pass ran the portable core executable on all three hosts: 274 tests passed, two optional exporters were skipped (276 total). All 1,230 tray checks, seven GNOME widget tests, extension syntax checks and native model-asset checks passed. Paused six-printer German snapshots exercised long labels and independent demo cleanup. Native capture waits for a mapped window; snapshot demos quit after success or failure. Omarchy was visually checked at 125% scale, at the 720×460 minimum, with keyboard navigation, and when reopening from another workspace. Scale, theme, motion, camera, widget sharing and autostart test settings were restored. Physical mixed-monitor testing remains outside this native pass.
+
 Known scope: Omarchy requires its installed Quickshell component/plugin API, not merely Hyprland. Desktop-card placement uses the first Quickshell output and corner stacks, without free dragging; dense layouts on very small outputs and physical multi-monitor placement remain unverified. Qt/QML uses the shared translations where supplied; some new native labels still fall back to English. ARM64, X11, other distro/toolkit combinations and physical-GPU performance remain unverified. Native printer controls are implemented but were not exercised against a real print. Historical GNOME/Plasma behavior checks are distinguished from current native VM checks in the evidence.
 
 ## Consolidated Linux branch validation
