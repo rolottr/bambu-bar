@@ -372,23 +372,28 @@ enum ReportParser {
             let a = UInt32(truncatingIfNeeded: attr), c = UInt32(truncatingIfNeeded: code)
             if c & 0xFFFF < 0x4000 && c >> 16 == 0 { continue }
             let key = String(format: "%08X%08X", a, c)
+            let text = catalog.hmsText(key)
+            // Bambu lists some codes with no text (the X2D's 0503_0000_0003_0027, sent while it runs); its apps don't show them.
+            if text?.isEmpty == true { continue }
             let pretty = String(format: "HMS_%04X_%04X_%04X_%04X", a >> 16, a & 0xFFFF, c >> 16, c & 0xFFFF)
             let severity = IssueSeverity(rawValue: Int(c >> 16)) ?? .common
             out.append(PrinterIssue(id: pretty, severity: severity,
-                                    message: catalog.hmsText(key) ?? String(localized: "The printer reported \(pretty).", comment: "An HMS code"),
+                                    message: text ?? String(localized: "The printer reported \(pretty).", comment: "An HMS code"),
                                     wikiURL: HMSCatalog.wikiURL(code: key, serial: serial)))
         }
         if let error = int(p["print_error"]), error != 0 {
             let e = UInt32(truncatingIfNeeded: error)
             let key = String(format: "%08X", e)
-            // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault.
-            if key != "0300400C" && key != "0500400E" {
+            let text = catalog.errorText(key)
+            // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault. Errors Bambu lists with no
+            // text are internal ones its apps don't show.
+            if key != "0300400C" && key != "0500400E" && text?.isEmpty != true {
                 let pretty = String(format: "%04X_%04X", e >> 16, e & 0xFFFF)
                 let level = (e & 0xF000) >> 12
                 let severity: IssueSeverity = level == 0x4 ? .fatal : level == 0x8 ? .serious : .common
                 if !out.contains(where: { $0.id.hasSuffix(pretty) }) {
                     out.append(PrinterIssue(id: pretty, severity: severity,
-                                            message: catalog.errorText(key) ?? String(localized: "The printer reported error \(pretty).", comment: "An error code"),
+                                            message: text ?? String(localized: "The printer reported error \(pretty).", comment: "An error code"),
                                             wikiURL: HMSCatalog.wikiURL(code: key, serial: serial)))
                 }
             }

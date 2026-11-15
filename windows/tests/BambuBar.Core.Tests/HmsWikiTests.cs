@@ -84,6 +84,31 @@ public class HmsWikiTests
         Assert.Equal("wiki.bambulab.com", error.WikiUrl!.Host);
     }
 
+    [Fact]
+    public void ParserSkipsCodesBambuListsWithoutText()
+    {
+        var doc = new ReportDocument();
+        // HMS_0503_0000_0003_0027 and _0028, which the X2D reports while it runs, and internal print error 0C00_8002,
+        // next to a real code and one the catalogue doesn't know.
+        doc.Apply(new()
+        {
+            ["print"] = new Dictionary<string, object?>
+            {
+                ["gcode_state"] = "RUNNING",
+                ["print_error"] = 0x0C00_8002L,
+                ["hms"] = new List<object?>
+                {
+                    new Dictionary<string, object?> { ["attr"] = 0x0503_0000L, ["code"] = 0x0003_0027L },
+                    new Dictionary<string, object?> { ["attr"] = 0x0503_0000L, ["code"] = 0x0003_0028L },
+                    new Dictionary<string, object?> { ["attr"] = 0x0700_2100L, ["code"] = 0x0002_0019L },
+                    new Dictionary<string, object?> { ["attr"] = 0x0F0F_0000L, ["code"] = 0x0002_0001L },
+                },
+            },
+        });
+        var ids = ReportParser.Status(doc, new HmsCatalog("en"), null).Issues.Select(i => i.Id).ToHashSet();
+        Assert.Equal(["HMS_0700_2100_0002_0019", "HMS_0F0F_0000_0002_0001"], ids.Order());
+    }
+
     /// <summary>A redirect that sends the slot-specific code to the index but the shared AMS page to the real one.</summary>
     private sealed class FakeRedirect : HttpMessageHandler
     {
