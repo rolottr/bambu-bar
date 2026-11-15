@@ -6,7 +6,8 @@ namespace BambuBar.Core.Model;
 /// <summary>
 /// Bambu Lab's texts for HMS codes and print errors in the app's language, P2S wording where it differs; English for
 /// languages Bambu's HMS service doesn't offer and for codes a translation lacks. Generated from ha-bambulab's
-/// catalogues (MIT) by shared/scripts/make-hms.py, stored as raw DEFLATE (not zlib or gzip).
+/// catalogues (MIT) by shared/scripts/make-hms.py, stored as raw DEFLATE (not zlib or gzip). A code Bambu lists with
+/// no text maps to "": its apps don't show those, so <see cref="Protocol.ReportParser"/> skips them.
 /// </summary>
 public sealed class HmsCatalog
 {

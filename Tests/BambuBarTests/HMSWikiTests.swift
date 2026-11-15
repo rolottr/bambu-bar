@@ -57,4 +57,19 @@ final class HMSWikiTests: XCTestCase {
         let error = try XCTUnwrap(issues.first { $0.id == "0700_8006" })
         XCTAssertEqual(error.wikiURL?.host, "wiki.bambulab.com")
     }
+
+    func testParserSkipsCodesBambuListsWithoutText() {
+        var doc = ReportDocument()
+        // HMS_0503_0000_0003_0027 and _0028, which the X2D reports while it runs, and internal print error 0C00_8002,
+        // next to a real code and one the catalogue doesn't know.
+        _ = doc.apply(["print": ["gcode_state": "RUNNING", "print_error": 0x0C00_8002,
+                                 "hms": [["attr": 0x0503_0000, "code": 0x0003_0027],
+                                         ["attr": 0x0503_0000, "code": 0x0003_0028],
+                                         ["attr": 0x0700_2100, "code": 0x0002_0019],
+                                         ["attr": 0x0F0F_0000, "code": 0x0002_0001]]] as [String: Any]])
+        let catalog = HMSCatalog(bundle: Bundle(for: Self.self))
+        XCTAssertNotNil(catalog.hmsText("0700210000020019"), "the test bundle carries the catalogue")
+        let ids = ReportParser.status(from: doc, hms: catalog).issues.map(\.id)
+        XCTAssertEqual(Set(ids), ["HMS_0700_2100_0002_0019", "HMS_0F0F_0000_0002_0001"])
+    }
 }

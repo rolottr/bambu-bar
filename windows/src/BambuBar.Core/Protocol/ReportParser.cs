@@ -350,12 +350,15 @@ public static class ReportParser
             uint a = unchecked((uint)attr), c = unchecked((uint)code);
             if ((c & 0xFFFF) < 0x4000 && c >> 16 == 0) continue;
             var key = $"{a:X8}{c:X8}";
+            var text = catalog.HmsText(key);
+            // Bambu lists some codes with no text (the X2D's 0503_0000_0003_0027, sent while it runs); its apps don't show them.
+            if (text is "") continue;
             var pretty = $"HMS_{a >> 16:X4}_{a & 0xFFFF:X4}_{c >> 16:X4}_{c & 0xFFFF:X4}";
             var severity = (c >> 16) is >= 1 and <= 4 ? (IssueSeverity)(c >> 16) : IssueSeverity.Common;
             out_.Add(new PrinterIssue
             {
                 Id = pretty, Severity = severity,
-                Message = catalog.HmsText(key) ?? Loc.F("The printer reported %@.", pretty),
+                Message = text ?? Loc.F("The printer reported %@.", pretty),
                 WikiUrl = HmsCatalog.WikiUrl(key, serial),
             });
         }
@@ -363,8 +366,10 @@ public static class ReportParser
         {
             var e = unchecked((uint)error);
             var key = $"{e:X8}";
-            // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault.
-            if (key is not ("0300400C" or "0500400E"))
+            var text = catalog.ErrorText(key);
+            // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault. Errors Bambu lists with no
+            // text are internal ones its apps don't show.
+            if (key is not ("0300400C" or "0500400E") && text is not "")
             {
                 var pretty = $"{e >> 16:X4}_{e & 0xFFFF:X4}";
                 var level = (e & 0xF000) >> 12;
@@ -374,7 +379,7 @@ public static class ReportParser
                     out_.Add(new PrinterIssue
                     {
                         Id = pretty, Severity = severity,
-                        Message = catalog.ErrorText(key) ?? Loc.F("The printer reported error %@.", pretty),
+                        Message = text ?? Loc.F("The printer reported error %@.", pretty),
                         WikiUrl = HmsCatalog.WikiUrl(key, serial),
                     });
                 }

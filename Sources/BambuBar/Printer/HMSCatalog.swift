@@ -2,13 +2,19 @@ import Foundation
 
 /// Bambu Lab's texts for HMS codes and print errors in the app's language, P2S wording where it differs; English
 /// for languages Bambu's HMS service doesn't offer and for codes a translation lacks.
-/// Generated from ha-bambulab's catalogues (MIT) by shared/scripts/make-hms.py.
+/// Generated from ha-bambulab's catalogues (MIT) by shared/scripts/make-hms.py. A code Bambu lists with no text maps
+/// to "": its apps don't show those, so `ReportParser` skips them.
 final class HMSCatalog {
     static let shared = HMSCatalog()
 
     private typealias Tables = (hms: [String: String], errors: [String: String])
-    private lazy var localized: Tables = Self.load(Self.language)
-    private lazy var english: Tables = Self.language == "en" ? localized : Self.load("en")
+    private let bundle: Bundle
+    private lazy var language = Self.language(in: bundle)
+    private lazy var localized: Tables = Self.load(language, from: bundle)
+    private lazy var english: Tables = language == "en" ? localized : Self.load("en", from: bundle)
+
+    /// `bundle` holds the hms_<lang>.json.deflate files; the tests pass theirs.
+    init(bundle: Bundle = .main) { self.bundle = bundle }
 
     func hmsText(_ key: String) -> String? {
         let key = key.uppercased()
@@ -66,13 +72,13 @@ final class HMSCatalog {
 
     /// The app's language if there's a catalogue for it. Traditional Chinese readers get the Simplified one,
     /// which Bambu Lab does publish, rather than English.
-    private static var language: String {
+    private static func language(in bundle: Bundle) -> String {
         let lang = AppLanguage.current == "zh-Hant" ? "zh-Hans" : AppLanguage.current
-        return Bundle.main.url(forResource: "hms_\(lang)", withExtension: "json.deflate") == nil ? "en" : lang
+        return bundle.url(forResource: "hms_\(lang)", withExtension: "json.deflate") == nil ? "en" : lang
     }
 
-    private static func load(_ language: String) -> Tables {
-        guard let url = Bundle.main.url(forResource: "hms_\(language)", withExtension: "json.deflate"),
+    private static func load(_ language: String, from bundle: Bundle) -> Tables {
+        guard let url = bundle.url(forResource: "hms_\(language)", withExtension: "json.deflate"),
               let data = try? (Data(contentsOf: url) as NSData).decompressed(using: .zlib) as Data,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: [String: String]] else { return ([:], [:]) }
         return (json["hms"] ?? [:], json["error"] ?? [:])
