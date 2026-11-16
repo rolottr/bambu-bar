@@ -58,7 +58,9 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 
 | Version | Channel | Build | Commit | Date | Status |
 | --- | --- | --- | --- | --- | --- |
-| 2.2.3 | GitHub (Mac) | 202611151845 | `v2.2.3` | 2026-11-15 | Published, latest release; zip SHA-256 `25669f51df3da70a4a4e532bc05fd27f3a447f4e3232e336dab2ee61011f30a2` |
+| 2.3.0 | GitHub (Mac) | 202611161712 | `v2.3.0` | 2026-11-16 | Published, latest release; includes the unreleased 2.2.4; zip SHA-256 `095fb2dbae59f2263266c7dd242a8a0bd55f90c4244f358d0b64589c22e55857` |
+| 2.3.0 | GitHub (Windows) | CI run 43904888989 | `v2.3.0` | 2026-11-16 | Published, unsigned; x64 SHA-256 `b741d6267f2708d2605cc37c2e635ddfb920320ece257000895007d8b0f3122c`, ARM64 SHA-256 `d7801fb5f1f861925833c208980faa1be8c0aa51a19cf89f4d3bc7b131b1713c`; with `rainmeter-5.0.0.5293-source.zip` |
+| 2.2.3 | GitHub (Mac) | 202611151845 | `v2.2.3` | 2026-11-15 | Published; zip SHA-256 `25669f51df3da70a4a4e532bc05fd27f3a447f4e3232e336dab2ee61011f30a2` |
 | 2.2.3 | GitHub (Windows) | CI run 43743999830 | `v2.2.3` | 2026-11-15 | Published, unsigned; x64 SHA-256 `e05550bd6ee979b97806f68b302c5520b3d0ef043c2d9f6947db7a46ff27e32e`, ARM64 SHA-256 `7a48fa8e0d528653634f48e2d382c8c8e76e6fea6c4c0d0d14ab7e7f2ea6048b`; with `rainmeter-5.0.0.5293-source.zip` |
 | 2.2.2 | GitHub (Mac) | 202611140056 | `v2.2.2` | 2026-11-14 | Published; zip SHA-256 `477299d94e19c291b9fa9b59a4b3934b7a19133605213c72ab57fa0b695f4d9d` |
 | 2.2.2 | GitHub (Windows) | CI run 43530745494 | `v2.2.2` | 2026-11-14 | Published, unsigned; x64 SHA-256 `22753ca0b58174b076341770ae88031e218074380a1f46f19106f47f5cf17a00`, ARM64 SHA-256 `478ea0a6a047296ef62def502af6b6eec75fda077bd69a98188ebd054a5c0203`; with `rainmeter-5.0.0.5293-source.zip` |
