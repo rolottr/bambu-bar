@@ -64,13 +64,14 @@ public sealed class HmsCatalog
     {
         key = key.ToUpperInvariant();
         model = model?.ToUpperInvariant();
-        foreach (var tables in new[] { _localized.Value, _english.Value })
+        string? Find(Tables tables)
         {
             if (model is not null && tables.Models.TryGetValue(model, out var own)
                 && (hms ? own.Hms : own.Errors).TryGetValue(key, out var modelText)) return modelText;
-            if ((hms ? tables.Hms : tables.Errors).TryGetValue(key, out var text)) return text;
+            return (hms ? tables.Hms : tables.Errors).GetValueOrDefault(key);
         }
-        return null;
+        // English only when the translation lacks the code, so it's loaded only then.
+        return Find(_localized.Value) ?? (Language == "en" ? null : Find(_english.Value));
     }
 
     private static string FilePath(string language) => Assets.PathOf("HMS", $"hms_{language}.json.deflate");

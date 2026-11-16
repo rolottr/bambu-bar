@@ -331,6 +331,9 @@ final class PrinterStore {
         if !isDemo { Keychain.setAccessCode(code, for: config.serial) }
         let session: PrinterSession
         if let existing = self.session(config.serial) {
+            var config = config
+            // Setting a known printer up again keeps the codes ignored for it.
+            config.ignoredIssues = config.ignoredIssues ?? existing.config.ignoredIssues
             existing.config = config
             session = existing
         } else {

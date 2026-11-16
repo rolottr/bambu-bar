@@ -402,7 +402,8 @@ public sealed class PrinterStore : Observable, IDisposable
         PrinterSession session;
         if (Session(config.Serial) is { } existing)
         {
-            existing.Config = config;
+            // Setting a known printer up again keeps the codes ignored for it.
+            existing.Config = config with { IgnoredIssues = config.IgnoredIssues ?? existing.Config.IgnoredIssues };
             session = existing;
         }
         else

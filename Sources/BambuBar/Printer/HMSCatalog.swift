@@ -37,11 +37,12 @@ final class HMSCatalog {
 
     private func text(_ key: String, _ model: String?, _ table: KeyPath<Table, [String: String]>) -> String? {
         let model = model?.uppercased()
-        for tables in [localized, english] {
+        func find(in tables: Tables) -> String? {
             if let model, let text = tables.models[model]?[keyPath: table][key] { return text }
-            if let text = tables.common[keyPath: table][key] { return text }
+            return tables.common[keyPath: table][key]
         }
-        return nil
+        // English only when the translation lacks the code, so it's loaded only then.
+        return find(in: localized) ?? (language == "en" ? nil : find(in: english))
     }
 
     /// Bambu Lab's wiki page for a code on this printer model, through the redirect Bambu Studio uses: it picks the

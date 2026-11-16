@@ -213,6 +213,7 @@ final class PrinterSession: Identifiable {
     /// Shows a code again, right away if the last report has it: the printer only resends its issues when they
     /// change, so an idle one may not report it again for a long time.
     func unignore(_ id: String) {
+        guard isIgnored(id) else { return }
         config.ignoredIssues?.removeAll { $0 == id }
         if config.ignoredIssues?.isEmpty == true { config.ignoredIssues = nil }
         guard status != nil, let issue = lastReported?.issues.first(where: { $0.id == id }), dismissed[id] == nil else { return }
