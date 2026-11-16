@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import OSLog
 import WidgetKit
 
 /// What the menu bar shows next to the icon.
@@ -106,6 +107,21 @@ final class PrinterStore {
     private let discovery = PrinterDiscovery()
     private let notifier = Notifier()
     private var lastWidgetReload = Date.distantPast
+    /// The status each printer had when the widgets were last asked to reload: what they show, for printers without
+    /// a recent receipt from the extension.
+    private var lastWidgetStatus: [String: PrinterStatus] = [:]
+    /// What the widgets last built their timelines from, read from the extension's receipts at most every 30 s.
+    private var widgetReceipts: [String: WidgetReceipt] = [:]
+    private var widgetReceiptsRead = Date.distantPast
+    /// Reload requests in a row that no widget answered by building a timeline: macOS dropped them, or no widget is
+    /// on the desktop. Retries back off with it.
+    private var unansweredWidgetReloads = 0
+    /// The last request a widget answered. A printer whose receipt predates it has no widget that rebuilt with the
+    /// others: removed, or never placed.
+    private var answeredWidgetReload = Date.distantPast
+    /// Reload requests over the last day, to cap the optional ones.
+    private var widgetRequests: [Date] = []
+    private static let widgetLog = Logger(subsystem: "dev.rolottr.BambuBar", category: "widget")
     private var lastSnapshotWrite = Date.distantPast
     private var lastSavedKey = ""
     private var lastWidgetKey = ""
@@ -730,27 +746,148 @@ final class PrinterStore {
         SharedFleet(printers: sessions.map(snapshot(of:)), menuBarSerial: menuBarSession?.id, savedAt: Date())
     }
 
-    /// Writes the widgets' snapshot and asks WidgetKit to reload when something a person would notice changed.
-    /// Widget timelines extrapolate progress on their own, so routine progress needs only occasional reloads.
-    private func writeSnapshot(force: Bool) {
+    /// Writes the widgets' snapshot and asks WidgetKit to reload when the widgets would otherwise show something wrong.
+    /// macOS rations reloads (a daily allowance per widget, spent by every request from an app in the background)
+    /// and drops the rest without a word, after which a widget plays out its old timeline for hours. So reloads go
+    /// to what a glance would catch: a new state, job or problem, and a print running off the timeline the widget
+    /// projects. Routine progress needs none, since the widget projects it, nor does a multicolour print's spool
+    /// changing every few layers, or the stage that cycles with it (the widget's tint and active swatch may lag a
+    /// swap until the next reload; the stage isn't shown while printing).
+    /// The extension's receipts say what the widgets really show, so a dropped reload is asked for again, spaced out.
+    private func writeSnapshot(force: Bool, opened: Bool = false) {
         // Demo and developer sessions must never show up in the real widgets.
         guard !isDemo else { return }
         let fleet = fleet
+        let now = Date()
         let key = fleet.printers.map { snap -> String in
             let s = snap.status
-            return "\(snap.serial)|\(snap.link)|\(snap.printerName)|\(s?.state.rawValue ?? "-")|\(s?.stageID ?? -9)|\((s?.progress ?? 0) / 5)|\(s?.jobName ?? "")|\(s?.issues.count ?? 0)|\(s?.activeSpoolID ?? -1)|\(s?.ams.flatMap(\.spools).map(\.color).joined() ?? "")"
+            let stage = s?.state == .printing ? -8 : s?.stageID ?? -9
+            return "\(snap.serial)|\(snap.link)|\(snap.printerName)|\(s?.state.rawValue ?? "-")|\(stage)|\(s?.jobName ?? "")|\(s?.issues.count ?? 0)|\(s?.ams.flatMap(\.spools).map(\.color).joined() ?? "")"
         }.joined(separator: "#") + "|\(fleet.menuBarSerial ?? "")"
+        let elapsed = now.timeIntervalSince(lastWidgetReload)
+        widgetRequests.removeAll { now.timeIntervalSince($0) > 86400 }
+        // Corrections and keep-alives stop at a daily cap, leaving the allowance to what changes on the printer.
+        let mayCorrect = widgetRequests.count < Self.widgetDailyCorrections
+        let reload: Bool
+        if opened {
+            // Someone opened the panel or the window, likely to compare. Reloads asked for while the app is in
+            // front don't count against the allowance; still, skip them when the widgets already show this.
+            reload = elapsed > 120 && (key != lastWidgetKey || (mayCorrect && widgetsBehind(fleet, now: now, progress: 0.02, minutes: 3)))
+        } else {
+            // Ten minutes between retries, doubling while macOS drops them, up to an hour.
+            let spacing = min(3600, 600 * pow(2, Double(min(unansweredWidgetReloads, 3))))
+            reload = (key != lastWidgetKey && (force || elapsed > 120))
+                || (mayCorrect && elapsed > spacing
+                    && (widgetsBehind(fleet, now: now, progress: 0.03, minutes: 5) || widgetsAging(fleet, now: now)))
+        }
         // Reports arrive every second; the file only needs to be fresh when the widget next reads it.
-        if force || key != lastSavedKey || Date().timeIntervalSince(lastSnapshotWrite) > 20 {
+        if reload || force || key != lastSavedKey || now.timeIntervalSince(lastSnapshotWrite) > 20 {
             SharedStore.save(fleet)
-            lastSnapshotWrite = Date()
+            lastSnapshotWrite = now
             lastSavedKey = key
         }
-        let elapsed = Date().timeIntervalSince(lastWidgetReload)
-        guard key != lastWidgetKey, force || elapsed > 120 else { return }
+        guard reload else { return }
+        // Was the previous request answered? A receipt built since says so. One only seconds old (a connect forces
+        // two) may still be on its way, so it isn't judged.
+        let receipts = readWidgetReceipts(now: now, fresh: true)
+        if lastWidgetReload != .distantPast, elapsed > 60 {
+            if receipts.values.contains(where: { $0.builtAt >= lastWidgetReload }) {
+                unansweredWidgetReloads = 0
+            } else {
+                unansweredWidgetReloads += 1
+                let asked = lastWidgetReload.formatted(date: .omitted, time: .standard)
+                Self.widgetLog.info("No widget answered the reload asked for at \(asked, privacy: .public) (\(self.unansweredWidgetReloads) in a row)")
+            }
+        }
         lastWidgetKey = key
-        lastWidgetReload = Date()
+        lastWidgetReload = now
+        widgetRequests.append(now)
+        lastWidgetStatus = Dictionary(fleet.printers.compactMap { snap in snap.status.map { (snap.serial, $0) } },
+                                      uniquingKeysWith: { first, _ in first })
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// How old the figures a printing widget shows may get before the app reloads it; inside
+    /// `WidgetState.projectionWindow` with room for WidgetKit to take its time. About 30 reloads a day for a printer
+    /// that never stops, well inside the allowance.
+    private static let widgetKeepAlive: TimeInterval = 45 * 60
+
+    /// Requests a day beyond which the app only asks for reloads when something changes on a printer. Widgets get
+    /// about 40 to 70 a day, and their own fallback refreshes come out of the same allowance.
+    private static let widgetDailyCorrections = 40
+
+    /// Receipts older than this are left over (the app wasn't running, say); the app then goes by what it asked for.
+    private static let widgetReceiptLifetime: TimeInterval = 6 * 3600
+
+    /// The extension's receipts still current, read from the file at most every 30 s (reports come every second).
+    private func readWidgetReceipts(now: Date, fresh: Bool = false) -> [String: WidgetReceipt] {
+        if fresh || now.timeIntervalSince(widgetReceiptsRead) > 30 {
+            widgetReceipts = WidgetReceipts.load().filter { now.timeIntervalSince($0.value.builtAt) < Self.widgetReceiptLifetime }
+            widgetReceiptsRead = now
+            if lastWidgetReload != .distantPast, widgetReceipts.values.contains(where: { $0.builtAt >= lastWidgetReload }) {
+                answeredWidgetReload = lastWidgetReload
+            }
+        }
+        return widgetReceipts
+    }
+
+    /// What the widgets show for a printer, as far as the app can tell; nil when no widget shows it.
+    private struct ShownOnWidget {
+        /// nil when unknown.
+        var link: SharedSnapshot.Link?
+        var status: PrinterStatus?
+        var savedAt: Date
+    }
+
+    private func shownOnWidget(_ serial: String, now: Date) -> ShownOnWidget? {
+        let receipts = readWidgetReceipts(now: now)
+        // No receipts yet (an extension from before 2.2.4, or none built since): go by what the app last asked for.
+        guard !receipts.isEmpty else {
+            return ShownOnWidget(link: nil, status: lastWidgetStatus[serial], savedAt: lastWidgetReload)
+        }
+        // Every reload rebuilds every widget; a printer whose receipt didn't follow the others' has no widget, and
+        // chasing it would spend the other widgets' allowance.
+        guard let receipt = receipts[serial], receipt.builtAt >= answeredWidgetReload else { return nil }
+        return ShownOnWidget(link: receipt.link, status: receipt.status, savedAt: receipt.savedAt)
+    }
+
+    /// Whether a reload would change what the widgets show for any printer: its connection, state or job, or, while
+    /// printing, its progress by at least `progress` (a fraction) or its finish time by `minutes`. Projections are
+    /// compared with projections (not with the reported percentage): while a print levels or heats at 0 %, both
+    /// climb alike and a reload changes nothing.
+    private func widgetsBehind(_ fleet: SharedFleet, now: Date, progress: Double, minutes: Double) -> Bool {
+        fleet.printers.contains { snap in
+            guard let widget = shownOnWidget(snap.serial, now: now) else { return false }
+            if let link = widget.link, link != snap.link { return true }
+            if let a = widget.status, let b = snap.status, widget.link != nil, a.state != b.state || a.jobName != b.jobName {
+                return true
+            }
+            guard snap.link == .online, let s = snap.status, s.state == .printing,
+                  let shown = widget.status, shown.state == .printing else { return false }
+            // The widget stops projecting at the end of its window.
+            let shownAt = min(now, widget.savedAt.addingTimeInterval(WidgetState.projectionWindow))
+            if abs(shown.projectedProgress(at: shownAt) - s.projectedProgress(at: now)) >= progress { return true }
+            switch (shown.estimatedEnd, s.estimatedEnd) {
+            case let (a?, b?): return abs(a.timeIntervalSince(b)) >= minutes * 60
+            case (nil, _?): return true
+            default: return false
+            }
+        }
+    }
+
+    /// Whether a widget's figures for a running print are about to leave its projection window.
+    private func widgetsAging(_ fleet: SharedFleet, now: Date) -> Bool {
+        fleet.printers.contains { snap in
+            guard snap.link == .online, snap.status?.state == .printing,
+                  let widget = shownOnWidget(snap.serial, now: now) else { return false }
+            return now.timeIntervalSince(widget.savedAt) > Self.widgetKeepAlive
+        }
+    }
+
+    /// The menu bar panel or the window opened. Only while the app is in front, where reloads are free.
+    func appOpened() {
+        guard isStarted, NSApp.isActive else { return }
+        writeSnapshot(force: false, opened: true)
     }
 
     // MARK: - Demo

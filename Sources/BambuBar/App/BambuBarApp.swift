@@ -151,7 +151,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { LoginItem.shared.refresh() }
+            MainActor.assumeIsolated {
+                LoginItem.shared.refresh()
+                PrinterStore.shared.appOpened()
+            }
         }
     }
 

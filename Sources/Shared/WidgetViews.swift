@@ -5,10 +5,35 @@ import SwiftUI
 
 /// Widget layouts. They live in the shared sources so the app can show the very same views in Settings.
 /// `date` is the timeline entry's date: progress and time left are projected to it, so the widget keeps
-/// moving between the app's updates.
+/// moving between the app's updates, for `projectionWindow` after the snapshot.
 struct WidgetState {
     var snapshot: SharedSnapshot
     var date: Date
+
+    /// How long after the app's snapshot the widget goes on projecting a print. macOS rations widget reloads and
+    /// can leave a widget on an old timeline for hours; a projection left running drifts off as soon as the
+    /// printer's estimate slips (93 % on the widget, 87 % in the app). Past the window the widget holds its
+    /// figures and says how old they are. The app reloads well inside it while a print runs.
+    static let projectionWindow: TimeInterval = 60 * 60
+
+    /// The moment progress and time left are projected to.
+    private var projectedDate: Date { min(date, snapshot.savedAt.addingTimeInterval(Self.projectionWindow)) }
+
+    /// A print whose figures are older than the projection window.
+    var isStale: Bool { state == .printing && date.timeIntervalSince(snapshot.savedAt) > Self.projectionWindow }
+
+    /// "Updated 2 hr. ago", in place of the finish time once the figures are stale.
+    var staleText: String? {
+        guard isStale else { return nil }
+        return String(localized: "Updated \(Self.relative.localizedString(for: snapshot.savedAt, relativeTo: date))",
+                      comment: "Relative time such as “3 min. ago”")
+    }
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .short
+        return f
+    }()
 
     var status: PrinterStatus? { snapshot.link == .online || snapshot.link == .connecting ? snapshot.status : nil }
     var isLive: Bool { status != nil }
@@ -18,15 +43,21 @@ struct WidgetState {
 
     var progress: Double {
         guard let s = status else { return 0 }
-        return s.projectedProgress(at: date)
+        return s.projectedProgress(at: projectedDate)
     }
 
     var percentText: String { "\(Int((progress * 100).rounded(.down)))" }
 
+    /// "170/305", moving with the projected progress.
+    var layerText: String? {
+        guard let s = status, s.totalLayers > 0 else { return nil }
+        return "\(s.projectedLayer(at: projectedDate))/\(s.totalLayers)"
+    }
+
     var minutesLeft: Int? {
         guard let s = status, let end = s.estimatedEnd, s.state.isActive else { return nil }
         if s.state == .paused { return s.remainingMinutes }
-        return max(0, Int((end.timeIntervalSince(date) / 60).rounded(.up)))
+        return max(0, Int((end.timeIntervalSince(projectedDate) / 60).rounded(.up)))
     }
 
     var tint: Color {
@@ -73,7 +104,7 @@ struct WidgetState {
     }
 
     var finishText: String? {
-        guard let left = minutesLeft, state == .printing else { return nil }
+        guard !isStale, let left = minutesLeft, state == .printing else { return nil }
         return Format.finish(date.addingTimeInterval(TimeInterval(left * 60)), now: date)
     }
 }
@@ -133,6 +164,13 @@ struct SmallWidgetView: View {
     private func primary(_ w: WidgetState) -> some View {
         if let s = w.status {
             switch s.state {
+            case .printing where w.isStale:
+                // Old figures: the age leads, so the frozen time left isn't read as current.
+                Text(w.staleText ?? "")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             case .printing:
                 Text(w.minutesLeft.map { Format.duration(minutes: $0) } ?? "–")
                     .font(.system(size: 19, weight: .semibold, design: .rounded))
@@ -238,10 +276,12 @@ struct SmallWidgetView: View {
     }
 
     private func detail(_ w: WidgetState, _ s: PrinterStatus) -> String {
-        let layers = s.totalLayers > 0 ? "\(s.layer)/\(s.totalLayers)" : nil
+        let layers = w.layerText
         switch s.state {
         case .printing:
-            return [w.finishText.map { String(localized: "Done \($0)", comment: "Finish time, such as “Done 14:32”") }, layers].compactMap { $0 }.joined(separator: " · ")
+            // Stale, the age is beside the dial already.
+            return [w.finishText.map { String(localized: "Done \($0)", comment: "Finish time, such as “Done 14:32”") }, layers]
+                .compactMap { $0 }.joined(separator: " · ")
         case .preparing:
             let n = s.activeNozzle
             return n.isHeating ? "\(s.activeNozzleTitle) \(Int(n.current))° → \(Int(n.target))°" : String(localized: "Starting soon")
@@ -342,8 +382,8 @@ struct MediumWidgetView: View {
                             .monospacedDigit()
                         Text("%").font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundStyle(.secondary)
                         Spacer()
-                        if let s = w.status, s.totalLayers > 0 {
-                            Text("\(s.layer)/\(s.totalLayers)")
+                        if let layers = w.layerText {
+                            Text(layers)
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
@@ -355,7 +395,11 @@ struct MediumWidgetView: View {
                     HStack {
                         Text(w.stateLine).lineLimit(1)
                         Spacer(minLength: 4)
-                        if let finish = w.finishText { Text("Done \(finish)").foregroundStyle(.secondary) }
+                        if let finish = w.finishText {
+                            Text("Done \(finish)").foregroundStyle(.secondary)
+                        } else if let stale = w.staleText {
+                            Text(stale).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+                        }
                     }
                     .font(.system(size: 11, weight: .medium))
                 } else {

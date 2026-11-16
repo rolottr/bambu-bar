@@ -15,7 +15,10 @@ struct MenuPanelHost: View {
                 Color.clear.frame(width: size?.width, height: size?.height)
             }
         }
-        .onAppear { isOpen = true }
+        .onAppear {
+            isOpen = true
+            PrinterStore.shared.appOpened()
+        }
         .onDisappear { isOpen = false }
     }
 }

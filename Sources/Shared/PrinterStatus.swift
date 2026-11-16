@@ -345,9 +345,19 @@ struct PrinterStatus: Codable, Equatable, Sendable {
     /// Progress expected at `date`, extrapolated linearly over the remaining time. Lets widgets advance between updates.
     func projectedProgress(at date: Date) -> Double {
         let now = Double(progress) / 100
-        guard state == .printing, let end = estimatedEnd, end > updatedAt else { return now }
-        let fraction = min(1, max(0, date.timeIntervalSince(updatedAt) / end.timeIntervalSince(updatedAt)))
-        return min(0.99, now + (1 - now) * fraction)
+        return min(0.99, now + (1 - now) * remainingFraction(at: date))
+    }
+
+    /// The layer expected at `date`, on the same line as `projectedProgress`, so the two agree on a widget.
+    func projectedLayer(at date: Date) -> Int {
+        guard totalLayers > layer else { return layer }
+        return min(totalLayers - 1, layer + Int(Double(totalLayers - layer) * remainingFraction(at: date)))
+    }
+
+    /// How much of the remaining time has passed by `date`; 0 unless printing with an estimate.
+    private func remainingFraction(at date: Date) -> Double {
+        guard state == .printing, let end = estimatedEnd, end > updatedAt else { return 0 }
+        return min(1, max(0, date.timeIntervalSince(updatedAt) / end.timeIntervalSince(updatedAt)))
     }
 
     static let stageNames: [Int: String] = [
