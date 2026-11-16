@@ -210,10 +210,14 @@ final class PrinterSession: Identifiable {
         status?.issues.removeAll { $0.id == issue.id }
     }
 
-    /// Shows a code again from the next report on.
+    /// Shows a code again, right away if the last report has it: the printer only resends its issues when they
+    /// change, so an idle one may not report it again for a long time.
     func unignore(_ id: String) {
         config.ignoredIssues?.removeAll { $0 == id }
         if config.ignoredIssues?.isEmpty == true { config.ignoredIssues = nil }
+        guard status != nil, let issue = lastReported?.issues.first(where: { $0.id == id }), dismissed[id] == nil else { return }
+        status?.issues.append(issue)
+        status?.issues.sort { $0.severity < $1.severity }
     }
 
     func isIgnored(_ id: String) -> Bool { config.ignoredIssues?.contains(id) == true }
@@ -234,7 +238,11 @@ final class PrinterSession: Identifiable {
     }
     @ObservationIgnored private var lastDismissalSave = Date.distantPast
 
+    /// The last report as parsed, before ignored and dismissed issues are dropped.
+    @ObservationIgnored private var lastReported: PrinterStatus?
+
     private func received(_ reported: PrinterStatus, canceled: Bool) {
+        lastReported = reported
         var new = reported
         new.fit(to: config.model)
         hideDismissed(&new)

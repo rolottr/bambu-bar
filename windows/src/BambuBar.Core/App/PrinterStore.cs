@@ -480,6 +480,7 @@ public sealed class PrinterStore : Observable, IDisposable
         if (Session(serial) is not { } session) return;
         session.Unignore(id);
         SaveConfigs();
+        WriteSnapshot(force: true);
     }
 
     /// <summary>Turns one printer's camera on or off (Printers page).</summary>

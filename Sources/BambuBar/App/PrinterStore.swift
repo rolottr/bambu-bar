@@ -406,6 +406,7 @@ final class PrinterStore {
         guard let session = session(serial) else { return }
         session.unignore(id)
         saveConfigs()
+        writeSnapshot(force: true)
     }
 
     /// Turns one printer's camera on or off (Printers page).

@@ -297,12 +297,18 @@ public sealed class PrinterSession : Observable, IDisposable
         }
     }
 
-    /// <summary>Shows a code again from the next report on.</summary>
+    /// <summary>Shows a code again, right away if the last report has it: the printer only resends its issues when
+    /// they change, so an idle one may not report it again for a long time.</summary>
     internal void Unignore(string id)
     {
         if (!IsIgnored(id)) return;
         var left = Config.IgnoredIssues!.Where(i => i != id).ToList();
         Config = Config with { IgnoredIssues = left.Count == 0 ? null : left };
+        if (Status is not { } status || _lastReported?.Issues.Find(i => i.Id == id) is not { } issue || Dismissed.ContainsKey(id)) return;
+        var copy = status.Clone();
+        copy.Issues.Add(issue);
+        copy.Issues = copy.Issues.OrderBy(i => i.Severity).ToList();
+        Status = copy;
     }
 
     /// <summary>Drops ignored and dismissed issues from a report, and notes that the printer still has the dismissed
@@ -326,8 +332,12 @@ public sealed class PrinterSession : Observable, IDisposable
     /// <summary>Shows a scripted status, as if the printer had reported it (snapshots, tests).</summary>
     public void ShowStatus(PrinterStatus status, bool canceled = false) => Received(status, canceled);
 
+    /// <summary>The last report as parsed, before ignored and dismissed issues are dropped.</summary>
+    private PrinterStatus? _lastReported;
+
     private void Received(PrinterStatus reported, bool canceled)
     {
+        _lastReported = reported;
         var fresh = reported.Clone();
         fresh.FitTo(Config.Model);
         HideDismissed(fresh);
