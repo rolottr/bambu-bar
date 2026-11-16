@@ -85,9 +85,9 @@ public partial class CatalogTests
         Assert.NotNull(english.ErrorText("0300400D") ?? english.HmsText("0300010000010007"));
         var german = new HmsCatalog("de");
         Assert.Equal("de", german.Language);
-        // Languages Bambu's HMS service doesn't offer fall back to English; Traditional Chinese reads Simplified.
+        // Languages Bambu's HMS service doesn't offer fall back to English; Traditional Chinese has its own.
         Assert.Equal("en", new HmsCatalog("cs").Language);
-        Assert.Equal("zh-Hans", new HmsCatalog("zh-Hant").Language);
+        Assert.Equal("zh-Hant", new HmsCatalog("zh-Hant").Language);
     }
 
     [Fact]

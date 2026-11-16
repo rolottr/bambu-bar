@@ -679,6 +679,8 @@ struct IssueBanner: View {
     var issue: PrinterIssue
     /// Hides the issue until the printer stops reporting it; nil shows no dismiss button.
     var onDismiss: (() -> Void)? = nil
+    /// Hides the code on this printer for good (listed on the Printers page); nil shows no Ignore button.
+    var onIgnore: (() -> Void)? = nil
     @State private var copied = false
 
     var body: some View {
@@ -712,6 +714,12 @@ struct IssueBanner: View {
                         Button("Wiki") { HMSWiki.open(url) }
                             .buttonStyle(.link)
                             .font(.system(size: 10.5, weight: .semibold))
+                    }
+                    if let onIgnore {
+                        Button(String(localized: "Ignore", comment: "Never show this issue's code for this printer"), action: onIgnore)
+                            .buttonStyle(.link)
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .help("Never show this code for this printer. You can show it again on the Printers page.")
                     }
                 }
             }

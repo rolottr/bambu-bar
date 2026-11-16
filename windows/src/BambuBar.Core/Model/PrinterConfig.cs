@@ -11,6 +11,9 @@ public sealed record PrinterConfig
     /// <summary>The camera is on for this printer (Printers page). Off, or never set, it's hidden; the switch in
     /// Settings has to be on too.</summary>
     public bool? CameraEnabled { get; init; }
+    /// <summary>Issue codes never to show for this printer (<c>HMS_0300_0100_0001_0007</c>, <c>0700_8006</c>), added
+    /// with Ignore next to an issue and removed on the Printers page. Null for printers saved by earlier versions.</summary>
+    public List<string>? IgnoredIssues { get; init; }
 
     public string ModelName => PrinterModel.NameFor(ModelCode, Serial);
     public PrinterModel? Model => PrinterModel.Find(ModelCode, Serial);

@@ -280,9 +280,36 @@ public sealed class PrinterSession : Observable, IDisposable
         }
     }
 
-    /// <summary>Drops dismissed issues from a report and notes that the printer still has them.</summary>
+    /// <summary>Whether this printer's issues never show this code (Ignore next to an issue).</summary>
+    public bool IsIgnored(string id) => Config.IgnoredIssues?.Contains(id) == true;
+
+    /// <summary>Hides an issue's code on this printer for good, also after it clears and comes back; the Printers page
+    /// lists the codes and can show them again. <see cref="PrinterStore.Ignore"/> saves it.</summary>
+    internal void Ignore(PrinterIssue issue)
+    {
+        if (IsIgnored(issue.Id)) return;
+        Config = Config with { IgnoredIssues = [.. Config.IgnoredIssues ?? [], issue.Id] };
+        if (Status is { } status)
+        {
+            var copy = status.Clone();
+            copy.Issues.RemoveAll(i => i.Id == issue.Id);
+            Status = copy;
+        }
+    }
+
+    /// <summary>Shows a code again from the next report on.</summary>
+    internal void Unignore(string id)
+    {
+        if (!IsIgnored(id)) return;
+        var left = Config.IgnoredIssues!.Where(i => i != id).ToList();
+        Config = Config with { IgnoredIssues = left.Count == 0 ? null : left };
+    }
+
+    /// <summary>Drops ignored and dismissed issues from a report, and notes that the printer still has the dismissed
+    /// ones.</summary>
     private void HideDismissed(PrinterStatus status)
     {
+        if (Config.IgnoredIssues is not null) status.Issues.RemoveAll(i => IsIgnored(i.Id));
         if (Dismissed.Count == 0) return;
         var now = DateTimeOffset.Now;
         foreach (var issue in status.Issues.Where(i => Dismissed.ContainsKey(i.Id))) Dismissed[issue.Id] = now;

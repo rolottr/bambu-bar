@@ -119,7 +119,11 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
             {
                 if (issues.Count == 0) return null;
                 var list = new Stack { Spacing = 10 };
-                foreach (var issue in issues) list.Children.Add(new IssueBanner(Ctx, issue, () => Store.Current?.Dismiss(issue)));
+                foreach (var issue in issues)
+                {
+                    var serial = session!.Id;
+                    list.Children.Add(new IssueBanner(Ctx, issue, () => Store.Current?.Dismiss(issue), () => Store.Ignore(issue, serial)));
+                }
                 return list;
             });
             var camera = session.ShowsCamera;

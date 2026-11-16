@@ -151,7 +151,7 @@
   "issues" : [
     {
       "id" : "HMS_0500_0500_0001_0007",
-      "message" : "MQTT Command verification failed. Please update Studio (including the network plugin) or Handy to the latest version, then restart the software and try again.",
+      "message" : "MQTT Command verification failed. Please update Studio\/Suite (including the network plugin) or Handy to the latest version, then restart the software and try again.",
       "severity" : 1
     }
   ],
