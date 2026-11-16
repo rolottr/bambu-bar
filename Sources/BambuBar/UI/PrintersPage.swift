@@ -106,6 +106,7 @@ struct PrintersPage: View {
                             Button("Open Settings") { MainWindow.show(.settings) }.controlSize(.small)
                         }
                     }
+                    ignoredCodes(config)
                     Divider()
                     HStack {
                         Text("Bambu Bar follows the printer if its IP address changes.")
@@ -138,6 +139,36 @@ struct PrintersPage: View {
             return "Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen)."
         }
         return "Shows the printer's live view."
+    }
+
+    /// The codes hidden with Ignore next to an issue, each with Bambu's text for this model and a way to show it again.
+    /// Codes are only added from an issue the printer reported, never typed in.
+    @ViewBuilder private func ignoredCodes(_ config: PrinterConfig) -> some View {
+        let ids = config.ignoredIssues ?? []
+        Divider()
+        SettingsRow("Ignored codes") {
+            if ids.isEmpty { Text("None", comment: "Printers page: no ignored codes").foregroundStyle(.secondary) }
+        }
+        if ids.isEmpty {
+            Text("To stop showing a code for this printer, click **Ignore** next to the issue on the Printer page.")
+                .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        ForEach(ids, id: \.self) { id in
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(id).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                    if let text = HMSCatalog.shared.issueText(id, model: String(config.serial.prefix(3))), !text.isEmpty {
+                        Text(text).font(.system(size: 11.5)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 12)
+                Button("Show Again") { store.unignore(id, for: config.serial) }
+                    .controlSize(.small)
+                    .help("Remove this code from the ignored codes")
+            }
+        }
     }
 
     private func printerRow(_ session: PrinterSession) -> some View {

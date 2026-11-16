@@ -202,8 +202,25 @@ final class PrinterSession: Identifiable {
         status?.issues.removeAll { $0.id == issue.id }
     }
 
-    /// Drops dismissed issues from a report and notes that the printer still has them.
+    /// Hides an issue's code on this printer for good, also after it clears and comes back; the Printers page lists
+    /// the codes and can show them again.
+    func ignore(_ issue: PrinterIssue) {
+        guard !isIgnored(issue.id) else { return }
+        config.ignoredIssues = (config.ignoredIssues ?? []) + [issue.id]
+        status?.issues.removeAll { $0.id == issue.id }
+    }
+
+    /// Shows a code again from the next report on.
+    func unignore(_ id: String) {
+        config.ignoredIssues?.removeAll { $0 == id }
+        if config.ignoredIssues?.isEmpty == true { config.ignoredIssues = nil }
+    }
+
+    func isIgnored(_ id: String) -> Bool { config.ignoredIssues?.contains(id) == true }
+
+    /// Drops ignored and dismissed issues from a report, and notes that the printer still has the dismissed ones.
     private func hideDismissed(_ status: inout PrinterStatus) {
+        if config.ignoredIssues != nil { status.issues.removeAll { isIgnored($0.id) } }
         guard !dismissed.isEmpty else { return }
         let now = Date()
         for issue in status.issues where dismissed[issue.id] != nil { dismissed[issue.id] = now }

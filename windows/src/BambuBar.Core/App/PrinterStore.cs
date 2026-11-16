@@ -465,6 +465,23 @@ public sealed class PrinterStore : Observable, IDisposable
         WriteSnapshot(force: true);
     }
 
+    /// <summary>Never shows this issue's code for the printer again, until it's removed on the Printers page.</summary>
+    public void Ignore(PrinterIssue issue, string serial)
+    {
+        if (Session(serial) is not { } session) return;
+        session.Ignore(issue);
+        SaveConfigs();
+        WriteSnapshot(force: true);
+    }
+
+    /// <summary>Shows an ignored code again (Printers page); it's back with the printer's next report.</summary>
+    public void Unignore(string id, string serial)
+    {
+        if (Session(serial) is not { } session) return;
+        session.Unignore(id);
+        SaveConfigs();
+    }
+
     /// <summary>Turns one printer's camera on or off (Printers page).</summary>
     public void SetCameraEnabled(bool on, string serial)
     {

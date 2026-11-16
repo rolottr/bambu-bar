@@ -344,14 +344,16 @@ public static class ReportParser
     private static List<PrinterIssue> Issues(Obj p, HmsCatalog catalog, string? serial)
     {
         var out_ = new List<PrinterIssue>();
+        var model = serial is { Length: >= 3 } ? serial[..3] : null;
         foreach (var entry in Cast.DictArray(p.Get("hms")) ?? [])
         {
             if (Int(entry.Get("attr")) is not { } attr || Int(entry.Get("code")) is not { } code) continue;
             uint a = unchecked((uint)attr), c = unchecked((uint)code);
             if ((c & 0xFFFF) < 0x4000 && c >> 16 == 0) continue;
             var key = $"{a:X8}{c:X8}";
-            var text = catalog.HmsText(key);
-            // Bambu lists some codes with no text (the X2D's 0503_0000_0003_0027, sent while it runs); its apps don't show them.
+            var text = catalog.HmsText(key, model);
+            // Bambu lists some codes with no text on some models (the X2D's 0503_0000_0003_0027, sent while it runs);
+            // its apps don't show them.
             if (text is "") continue;
             var pretty = $"HMS_{a >> 16:X4}_{a & 0xFFFF:X4}_{c >> 16:X4}_{c & 0xFFFF:X4}";
             var severity = (c >> 16) is >= 1 and <= 4 ? (IssueSeverity)(c >> 16) : IssueSeverity.Common;
@@ -366,7 +368,7 @@ public static class ReportParser
         {
             var e = unchecked((uint)error);
             var key = $"{e:X8}";
-            var text = catalog.ErrorText(key);
+            var text = catalog.ErrorText(key, model);
             // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault. Errors Bambu lists with no
             // text are internal ones its apps don't show.
             if (key is not ("0300400C" or "0500400E") && text is not "")

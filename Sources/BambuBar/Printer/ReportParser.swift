@@ -367,13 +367,15 @@ enum ReportParser {
 
     private static func issues(_ p: [String: Any], hms catalog: HMSCatalog, state: JobState, serial: String?) -> [PrinterIssue] {
         var out: [PrinterIssue] = []
+        let model = serial.flatMap { $0.count >= 3 ? String($0.prefix(3)) : nil }
         for entry in (p["hms"] as? [[String: Any]]) ?? [] {
             guard let attr = int(entry["attr"]), let code = int(entry["code"]) else { continue }
             let a = UInt32(truncatingIfNeeded: attr), c = UInt32(truncatingIfNeeded: code)
             if c & 0xFFFF < 0x4000 && c >> 16 == 0 { continue }
             let key = String(format: "%08X%08X", a, c)
-            let text = catalog.hmsText(key)
-            // Bambu lists some codes with no text (the X2D's 0503_0000_0003_0027, sent while it runs); its apps don't show them.
+            let text = catalog.hmsText(key, model: model)
+            // Bambu lists some codes with no text on some models (the X2D's 0503_0000_0003_0027, sent while it runs);
+            // its apps don't show them.
             if text?.isEmpty == true { continue }
             let pretty = String(format: "HMS_%04X_%04X_%04X_%04X", a >> 16, a & 0xFFFF, c >> 16, c & 0xFFFF)
             let severity = IssueSeverity(rawValue: Int(c >> 16)) ?? .common
@@ -384,7 +386,7 @@ enum ReportParser {
         if let error = int(p["print_error"]), error != 0 {
             let e = UInt32(truncatingIfNeeded: error)
             let key = String(format: "%08X", e)
-            let text = catalog.errorText(key)
+            let text = catalog.errorText(key, model: model)
             // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault. Errors Bambu lists with no
             // text are internal ones its apps don't show.
             if key != "0300400C" && key != "0500400E" && text?.isEmpty != true {

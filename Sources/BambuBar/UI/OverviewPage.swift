@@ -24,7 +24,10 @@ struct OverviewPage: View {
                         lockedNote
                     }
                 }
-                ForEach(status.issues) { issue in IssueBanner(issue: issue) { store.current?.dismiss(issue) } }
+                ForEach(status.issues) { issue in
+                    IssueBanner(issue: issue, onDismiss: { store.current?.dismiss(issue) },
+                                onIgnore: { if let serial = store.config?.serial { store.ignore(issue, for: serial) } })
+                }
                 // Only with the camera on, in Settings and for this printer (never for the demo printers).
                 if let session = store.current, session.showsCamera {
                     CameraCard(session: session)
