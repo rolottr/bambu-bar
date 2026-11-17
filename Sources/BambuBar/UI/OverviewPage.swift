@@ -88,7 +88,10 @@ struct OverviewPage: View {
                     if let open = s.doorOpen {
                         DetailRow(title: "Door", value: open ? String(localized: "Open", comment: "Door") : String(localized: "Closed", comment: "Door"), symbol: "door.left.hand.closed")
                     }
-                    if s.chamberLightOn != nil {
+                    if s.chamberLight2On != nil {
+                        DetailRow(title: "Left", value: store.chamberLightOn ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
+                        DetailRow(title: "Right", value: (store.chamberLight2On ?? false) ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
+                    } else if s.chamberLightOn != nil {
                         DetailRow(title: "Light", value: store.chamberLightOn ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
                     }
                 }

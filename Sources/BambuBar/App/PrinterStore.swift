@@ -565,6 +565,7 @@ final class PrinterStore {
     var isOnline: Bool { current?.isOnline ?? false }
     var printerName: String { current?.config.name ?? String(localized: "Printer") }
     var chamberLightOn: Bool { current?.chamberLightOn ?? false }
+    var chamberLight2On: Bool? { current?.chamberLight2On }
     var speed: SpeedLevel { current?.speed ?? .standard }
     var accessCode: String? { current?.accessCode }
     var linkSummary: String { current?.linkSummary ?? String(localized: "No printer set up") }
@@ -611,7 +612,7 @@ final class PrinterStore {
         showToast(String(localized: "Stopping…"))
     }
 
-    func toggleLight() { current?.toggleLight() }
+    func toggleLight(_ light: ChamberLight = .left) { current?.toggleLight(light) }
 
     func setSpeed(_ level: SpeedLevel) {
         guard let current, ensureControllable(current) else { return }

@@ -142,9 +142,17 @@ enum ReportParser {
         s.heatbreakFan = fan(p["heatbreak_fan_speed"])
 
         s.speed = SpeedLevel(rawValue: int(p["spd_lvl"]) ?? 2) ?? .standard
-        if let lights = p["lights_report"] as? [[String: Any]],
-           let chamber = lights.first(where: { string($0["node"]) == "chamber_light" }) {
-            s.chamberLightOn = string(chamber["mode"]) != "off"
+        // chamber_light is the chamber bar (the left one, where there are two). chamber_light2 is the right bar
+        // on the H2 series. work_light is the toolhead and isn't switched here.
+        if let lights = p["lights_report"] as? [[String: Any]] {
+            for light in lights {
+                let on = string(light["mode"]) != "off"
+                switch string(light["node"]) {
+                case "chamber_light": s.chamberLightOn = on
+                case "chamber_light2": s.chamberLight2On = on
+                default: break
+                }
+            }
         }
         // The door, only from printers that say they have a door sensor (`fun` bit 12, as Bambu Studio checks):
         // others leave the bit at 0, which would read as a door that's always closed.

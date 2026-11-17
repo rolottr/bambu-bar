@@ -1029,6 +1029,10 @@
    {
     "mode": "flashing",
     "node": "work_light"
+   },
+   {
+    "mode": "on",
+    "node": "chamber_light2"
    }
   ],
   "mapping": [

@@ -67,6 +67,45 @@ public class ModelReportTests
         }
     }
 
+    /// <summary>Each model's <c>lights_report</c>, from the real reports: two chamber bars on the H2 series, one
+    /// chamber bar plus the toolhead light on X1, P2S, X2D and H3C, and a single <c>chamber_light</c> on P1 and
+    /// the A series. The chamber counts as lit when either bar is on.</summary>
+    [Fact]
+    public void ChamberLightsMatchThePrinter()
+    {
+        string[] twoBars = ["chamber_light", "work_light", "chamber_light2"];
+        string[] withToolhead = ["chamber_light", "work_light"];
+        string[] chamberOnly = ["chamber_light"];
+        var expected = new Dictionary<string, string[]>
+        {
+            ["O1C"] = twoBars, ["O1D"] = twoBars, ["O1E"] = twoBars, ["O1S"] = twoBars,
+            ["BL-P001"] = withToolhead, ["BL-P002"] = withToolhead, ["C13"] = withToolhead,
+            ["N6"] = withToolhead, ["N7"] = withToolhead, ["N10"] = withToolhead,
+            ["C11"] = chamberOnly, ["C12"] = chamberOnly, ["N1"] = chamberOnly, ["N2S"] = chamberOnly, ["N9"] = chamberOnly,
+        };
+        Assert.Equal(PrinterModel.All.Select(m => m.Code).ToHashSet(), expected.Keys.ToHashSet());
+        foreach (var (model, _, print) in Reports())
+        {
+            var nodes = Cast.DictArray(print.GetValueOrDefault("lights_report"))?
+                .Select(light => Cast.AsString(light.GetValueOrDefault("node")) ?? "").ToList() ?? [];
+            Assert.Equal(expected[model.Code], nodes);
+        }
+        var doc = new ReportDocument();
+        doc.Apply(new()
+        {
+            ["print"] = new Dictionary<string, object?>
+            {
+                ["lights_report"] = new List<object?>
+                {
+                    new Dictionary<string, object?> { ["node"] = "chamber_light", ["mode"] = "off" },
+                    new Dictionary<string, object?> { ["node"] = "work_light", ["mode"] = "flashing" },
+                    new Dictionary<string, object?> { ["node"] = "chamber_light2", ["mode"] = "on" },
+                },
+            },
+        });
+        Assert.Equal(true, ReportParser.Status(doc, HmsCatalog.Shared).ChamberLightOn);
+    }
+
     /// <summary>The door shows only for printers that say they have a sensor (<c>fun</c> bit 12), as Bambu Studio checks.</summary>
     [Fact]
     public void DoorFollowsTheSensorFlag()

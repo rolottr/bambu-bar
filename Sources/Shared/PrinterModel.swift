@@ -162,7 +162,7 @@ extension PrinterStatus {
         if !model.hasAuxFan { auxFan = nil; leftAuxFan = nil }
         if !model.hasChamberFan { exhaustFan = nil; circulationFan = nil }
         if !model.isEnclosed { doorOpen = nil }
-        if !model.hasChamberLight { chamberLightOn = nil }
+        if !model.hasChamberLight { chamberLightOn = nil; chamberLight2On = nil }
         if model.nozzleCount < 2 { secondNozzle = nil; leftNozzleInUse = nil }
         if !model.hasAMSHumidity {
             for i in ams.indices where ams[i].kind == .lite { ams[i].humidity = nil; ams[i].humidityLevel = nil }

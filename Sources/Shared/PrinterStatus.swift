@@ -241,7 +241,10 @@ struct PrinterStatus: Codable, Equatable, Sendable {
     /// The H3C's chamber fan (`airduct` part 15, "Chamber" in Bambu Studio), besides the exhaust (`exhaustFan`).
     var circulationFan: Int?
     var speed: SpeedLevel = .standard
+    /// The chamber bar every enclosed printer has (`chamber_light`). On an H2 this is the left bar.
     var chamberLightOn: Bool?
+    /// The H2's second chamber bar (`chamber_light2`), on the right. Nil when the printer has one bar.
+    var chamberLight2On: Bool?
     var doorOpen: Bool?
     var wifiSignal: Int?
     var ams: [AMSUnit] = []

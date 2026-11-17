@@ -47,6 +47,8 @@ struct PrinterArt: View {
     var spools: [Color?] = []
     var activeSpool: Int?
     var lightOn = true
+    /// The right chamber bar, on a printer that has two. Nil when there is one bar.
+    var rightLightOn: Bool? = nil
     var doorOpen = false
     var dimmed = false
     /// Toolhead motion; off in widgets and when the panel is static.
@@ -61,7 +63,7 @@ struct PrinterArt: View {
     var body: some View {
         if !monochrome, let renders = PrinterRenderSet.named(shape.assetName) {
             PrinterRender(renders: renders, state: state, progress: progress, filament: filament, spools: spools,
-                          lightOn: lightOn, dimmed: dimmed)
+                          lightOn: lightOn || rightLightOn == true, dimmed: dimmed)
                 .saturation(dimmed ? 0.1 : 1)
                 .opacity(dimmed ? 0.55 : 1)
                 .accessibilityHidden(true)
@@ -155,13 +157,17 @@ struct PrinterArt: View {
         var inner = ctx
         inner.clip(to: chamberPath)
 
-        // Chamber light: a warm wash from the top.
-        if lightOn && !dimmed && !open {
-            inner.fill(chamberPath, with: .linearGradient(
-                Gradient(colors: [Color(red: 1, green: 0.95, blue: 0.85).opacity(0.38), .clear]),
-                startPoint: CGPoint(x: 50, y: chamber.minY), endPoint: CGPoint(x: 50, y: chamber.minY + chamber.height * 0.75)))
-            inner.fill(Path(roundedRect: CGRect(x: chamber.minX + 6, y: chamber.minY + 0.8, width: chamber.width - 12, height: 1.2), cornerRadius: 0.6),
-                       with: .color(Color(red: 1, green: 0.97, blue: 0.9).opacity(0.95)))
+        // Chamber light: one wash, or a wash from each bar when the printer has two.
+        if !dimmed && !open {
+            if let right = rightLightOn {
+                chamberWash(&inner, chamber: chamber, left: lightOn, right: right)
+            } else if lightOn {
+                inner.fill(chamberPath, with: .linearGradient(
+                    Gradient(colors: [Color(red: 1, green: 0.95, blue: 0.85).opacity(0.38), .clear]),
+                    startPoint: CGPoint(x: 50, y: chamber.minY), endPoint: CGPoint(x: 50, y: chamber.minY + chamber.height * 0.75)))
+                inner.fill(Path(roundedRect: CGRect(x: chamber.minX + 6, y: chamber.minY + 0.8, width: chamber.width - 12, height: 1.2), cornerRadius: 0.6),
+                           with: .color(Color(red: 1, green: 0.97, blue: 0.9).opacity(0.95)))
+            }
         }
 
         // Gantry rails.
@@ -256,7 +262,18 @@ struct PrinterArt: View {
                    with: .color(white.opacity(0.9)), lineWidth: 1.8)
         let chamber = CGRect(x: 14, y: top + 6, width: 72, height: 114 - top - 18)
         ctx.stroke(Path(roundedRect: chamber, cornerRadius: 3.5, style: .continuous), with: .color(white.opacity(0.45)), lineWidth: 1)
-        if lightOn {
+        if let right = rightLightOn {
+            let gap: CGFloat = 4
+            let w = (chamber.width - 12 - gap) / 2
+            if lightOn {
+                ctx.fill(Path(roundedRect: CGRect(x: chamber.minX + 6, y: chamber.minY + 1.5, width: w, height: 1.4), cornerRadius: 0.7),
+                         with: .color(white.opacity(0.9)))
+            }
+            if right {
+                ctx.fill(Path(roundedRect: CGRect(x: chamber.minX + 6 + w + gap, y: chamber.minY + 1.5, width: w, height: 1.4), cornerRadius: 0.7),
+                         with: .color(white.opacity(0.9)))
+            }
+        } else if lightOn {
             ctx.fill(Path(roundedRect: CGRect(x: chamber.minX + 6, y: chamber.minY + 1.5, width: chamber.width - 12, height: 1.4), cornerRadius: 0.7),
                      with: .color(white.opacity(0.9)))
         }
@@ -525,6 +542,26 @@ struct PrinterArt: View {
         ctx.fill(Path(roundedRect: CGRect(x: box.minX + 3, y: box.minY + 0.8, width: box.width - 6, height: 1.4), cornerRadius: 0.7),
                  with: .color(.white.opacity(0.12)))
     }
+
+    /// A wash and a strip for each chamber bar. The left bar is `chamber_light`, the right is `chamber_light2`.
+    private func chamberWash(_ ctx: inout GraphicsContext, chamber: CGRect, left: Bool, right: Bool) {
+        let wash = Color(red: 1, green: 0.95, blue: 0.85)
+        let strip = Color(red: 1, green: 0.97, blue: 0.9)
+        let gap: CGFloat = 4
+        let width = (chamber.width - gap) / 2
+        func side(_ on: Bool, x: CGFloat, fromLeft: Bool) {
+            guard on else { return }
+            let rect = CGRect(x: x, y: chamber.minY, width: width, height: chamber.height * 0.75)
+            ctx.fill(Path(rect), with: .linearGradient(
+                Gradient(colors: [wash.opacity(0.42), .clear]),
+                startPoint: CGPoint(x: fromLeft ? rect.minX : rect.maxX, y: chamber.minY),
+                endPoint: CGPoint(x: fromLeft ? rect.maxX : rect.minX, y: chamber.minY + rect.height)))
+            ctx.fill(Path(roundedRect: CGRect(x: x + 3, y: chamber.minY + 0.8, width: width - 6, height: 1.2), cornerRadius: 0.6),
+                     with: .color(strip.opacity(0.95)))
+        }
+        side(left, x: chamber.minX, fromLeft: true)
+        side(right, x: chamber.minX + width + gap, fromLeft: false)
+    }
 }
 
 extension PrinterArt {
@@ -540,6 +577,7 @@ extension PrinterArt {
                   spools: unit?.spools.map { $0.isLoaded ? Color(bambuHex: $0.color) : nil } ?? [],
                   activeSpool: unit.flatMap { u in u.spools.firstIndex { $0.id == s?.activeSpoolID } },
                   lightOn: lightOverride ?? s?.chamberLightOn ?? false,
+                  rightLightOn: s?.chamberLight2On,
                   doorOpen: s?.doorOpen ?? false,
                   dimmed: dimmed || s == nil,
                   animated: animated,

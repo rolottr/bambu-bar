@@ -1,6 +1,12 @@
 import Foundation
 import Observation
 
+/// Which chamber bar a switch moves. `left` is `chamber_light` (the only bar, on a printer that has one).
+enum ChamberLight {
+    case left, right
+    var node: String { self == .left ? "chamber_light" : "chamber_light2" }
+}
+
 /// One configured printer: its connection, live status and the commands in flight.
 /// `PrinterStore` owns the sessions and handles what spans printers (history, notifications, widgets).
 @MainActor
@@ -12,7 +18,8 @@ final class PrinterSession: Identifiable {
     private(set) var phase: PrinterConnection.Phase = .idle
     private(set) var status: PrinterStatus?
     /// Commands sent but not yet reflected in a report, so the controls respond immediately.
-    private(set) var pendingLight: Bool?
+    private(set) var pendingLeftLight: Bool?
+    private(set) var pendingRightLight: Bool?
     private(set) var pendingSpeed: SpeedLevel?
     /// More codes to try if the printer rejects the current one (a slicer may hold an old and a new one).
     var fallbackCodes: [String] = []
@@ -42,7 +49,7 @@ final class PrinterSession: Identifiable {
         connection.onStatus = { [weak self] status, doc in self?.received(status, canceled: ReportParser.wasCanceled(doc)) }
         connection.onAck = { [weak self] command, ok, reason in
             guard let self else { return }
-            if !ok { self.pendingLight = nil; self.pendingSpeed = nil }
+            if !ok { self.pendingLeftLight = nil; self.pendingRightLight = nil; self.pendingSpeed = nil }
             self.onAck?(self, command, ok, reason)
         }
         connection.onHeartbeat = { [weak self] in
@@ -99,7 +106,13 @@ final class PrinterSession: Identifiable {
 
     /// A live status is on hand: connected, or briefly reconnecting after a drop.
     var isOnline: Bool { status != nil && (phase == .online || phase == .connecting) }
-    var chamberLightOn: Bool { pendingLight ?? status?.chamberLightOn ?? false }
+    /// The left chamber bar, or the only one.
+    var chamberLightOn: Bool { pendingLeftLight ?? status?.chamberLightOn ?? false }
+    /// The right chamber bar. Nil when this printer has one bar.
+    var chamberLight2On: Bool? {
+        guard status?.chamberLight2On != nil || pendingRightLight != nil else { return nil }
+        return pendingRightLight ?? status?.chamberLight2On
+    }
     var speed: SpeedLevel { pendingSpeed ?? status?.speed ?? .standard }
     var accessCode: String? { Keychain.accessCode(for: config.serial) }
     var isDemo: Bool { demo != nil }
@@ -143,10 +156,17 @@ final class PrinterSession: Identifiable {
     func resume() { if let demo { demo.resume() } else { connection.resume() } }
     func stopPrint() { if let demo { demo.stop() } else { connection.stopPrint() } }
 
-    func toggleLight() {
-        let on = !chamberLightOn
-        pendingLight = on
-        if let demo { demo.setLight(on) } else { connection.setChamberLight(on) }
+    func toggleLight(_ light: ChamberLight = .left) {
+        switch light {
+        case .left:
+            let on = !chamberLightOn
+            pendingLeftLight = on
+            if let demo { demo.setLight(on) } else { connection.setChamberLight(on, node: light.node) }
+        case .right:
+            let on = !(chamberLight2On ?? false)
+            pendingRightLight = on
+            if let demo { demo.setRightLight(on) } else { connection.setChamberLight(on, node: light.node) }
+        }
         clearPendingSoon()
     }
 
@@ -161,7 +181,8 @@ final class PrinterSession: Identifiable {
         pendingTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(6))
             guard !Task.isCancelled else { return }
-            self?.pendingLight = nil
+            self?.pendingLeftLight = nil
+            self?.pendingRightLight = nil
             self?.pendingSpeed = nil
         }
     }
@@ -249,7 +270,8 @@ final class PrinterSession: Identifiable {
         let old = status
         status = new
         lastHeard = Date()
-        if let light = pendingLight, new.chamberLightOn == light { pendingLight = nil }
+        if let light = pendingLeftLight, new.chamberLightOn == light { pendingLeftLight = nil }
+        if let light = pendingRightLight, new.chamberLight2On == light { pendingRightLight = nil }
         if let level = pendingSpeed, new.speed == level { pendingSpeed = nil }
         onStatus?(self, old, new, canceled)
         hasBaseline = true

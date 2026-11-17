@@ -87,8 +87,14 @@ final class PrinterConnection {
     func stopPrint() { sendPrint(["command": "stop"]) }
     func setSpeed(_ level: SpeedLevel) { sendPrint(["command": "print_speed", "param": "\(level.rawValue)"]) }
 
-    func setChamberLight(_ on: Bool) {
-        send(["system": ["command": "ledctrl", "led_node": "chamber_light", "led_mode": on ? "on" : "off",
+    /// `chamber_light` is the bar every enclosed printer has (the left one on an H2). `chamber_light2` is the
+    /// right bar, and only an H2 has it.
+    func setChamberLight(_ on: Bool, node: String = "chamber_light") {
+        sendLight(node, on ? "on" : "off")
+    }
+
+    private func sendLight(_ node: String, _ mode: String) {
+        send(["system": ["command": "ledctrl", "led_node": node, "led_mode": mode,
                          "led_on_time": 500, "led_off_time": 500, "loop_times": 0, "interval_time": 0]], key: "system")
     }
 

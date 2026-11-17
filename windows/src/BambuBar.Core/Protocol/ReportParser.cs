@@ -96,10 +96,11 @@ public static class ReportParser
 
         var speed = Int(p.Get("spd_lvl")) ?? 2;
         s.Speed = speed is >= 1 and <= 4 ? (SpeedLevel)speed : SpeedLevel.Standard;
-        if (Cast.DictArray(p.Get("lights_report")) is { } lights
-            && lights.FirstOrDefault(l => String(l.Get("node")) == "chamber_light") is { } light)
+        // chamber_light and chamber_light2 are the chamber bars. Lit when either is on. work_light is the toolhead.
+        if (Cast.DictArray(p.Get("lights_report")) is { } lights)
         {
-            s.ChamberLightOn = String(light.Get("mode")) != "off";
+            var bars = lights.Where(l => String(l.Get("node")) is "chamber_light" or "chamber_light2").ToList();
+            if (bars.Count > 0) s.ChamberLightOn = bars.Any(l => String(l.Get("mode")) != "off");
         }
         // The door, only from printers that say they have a door sensor (`fun` bit 12, as Bambu Studio checks):
         // others leave the bit at 0, which would read as a door that's always closed.
