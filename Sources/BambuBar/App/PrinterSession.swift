@@ -103,7 +103,6 @@ final class PrinterSession: Identifiable {
     var speed: SpeedLevel { pendingSpeed ?? status?.speed ?? .standard }
     var accessCode: String? { Keychain.accessCode(for: config.serial) }
     var isDemo: Bool { demo != nil }
-    var allowsInsecureTLS: Bool { insecure }
     var cameraTransport: CameraTransport { CameraTransport.forModel(config.modelName) }
     var cameraAccessCode: String? { activeCode ?? accessCode }
     /// The camera appears (and may stream) only with both switches on: Settings → Camera, and this printer's on

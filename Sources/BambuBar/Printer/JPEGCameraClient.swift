@@ -30,8 +30,7 @@ final class JPEGCameraClient: CameraClient {
     }
 
     private func open() {
-        let socket = CameraSocket(host: config.host, port: CameraTransport.jpeg.port, serial: config.serial,
-                                  insecure: config.insecure, queue: queue)
+        let socket = CameraSocket(host: config.host, port: CameraTransport.jpeg.port, serial: config.serial, queue: queue)
         socket.log = log
         socket.onReady = { [weak self] in self?.login() }
         socket.onData = { [weak self] data in self?.received(data) }

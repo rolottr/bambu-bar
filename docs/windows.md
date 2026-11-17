@@ -37,10 +37,10 @@ printer store also handles the Mac's `--demo [scenario] [--fleet]`, `--connect <
 `--emulator <BambuStudio.conf> [--add-all]` (none of them saves anything); the app passes them on once its shell
 exists (P3.1).
 
-`--probe-camera <host> <serial> <access-code> [seconds] [--jpeg|--rtsp] [--model <name>] [--insecure-tls] [--out <file.png>]`
+`--probe-camera <host> <serial> <access-code> [seconds] [--jpeg|--rtsp] [--model <name>] [--out <file.png>]`
 opens the camera like the app, logs the handshake and the frames, decodes them with FFmpeg and saves the first picture
 as a PNG (`bambubar-camera.png` in the temporary folder). Against the mock camera of `tools/integration-test.sh --keep`:
-`dotnet run --project tools/BambuBar.Cli -- --probe-camera 127.0.0.1 01P00C000000001 12345678 5 --rtsp --insecure-tls`.
+`dotnet run --project tools/BambuBar.Cli -- --probe-camera 127.0.0.1 01P00C000000001 12345678 5 --rtsp`.
 
 ## Camera decoding (FFmpeg)
 

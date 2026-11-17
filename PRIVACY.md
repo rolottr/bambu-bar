@@ -1,6 +1,6 @@
 # Bambu Bar Privacy Policy
 
-_Last updated: October 26, 2026_
+_Last updated: November 17, 2026_
 
 Bambu Bar is a macOS app that shows the status of Bambu Lab 3D printers on your local network. It is made by an independent developer (NINA LABS, LLC) and is not affiliated with Bambu Lab.
 
@@ -13,7 +13,7 @@ Bambu Bar has no app analytics, advertising or tracking. Printer data stays on y
 Printer data is stored on your Mac:
 
 - **Printers you add** (name, IP address, serial number, model) and your preferences: in the app's local settings.
-- **Printer access codes:** in your macOS keychain. A code is only ever sent to the printer it belongs to, over an encrypted connection that checks the printer's certificate.
+- **Printer access codes:** in your macOS keychain. A code is only ever sent to the printer it belongs to, over an encrypted connection. The status connection checks the printer's certificate; the camera connection, like Bambu Studio's, goes to the printer's address without checking it.
 - **Your last few prints** (job name, times, result), used for finish times and notifications: in a file in the app's own container.
 - **A snapshot of each printer's status** for the desktop widgets: in a container shared only with Bambu Bar's widget.
 - **Bambu Studio or OrcaSlicer settings:** if you choose that app's folder or settings file during setup, Bambu Bar reads the printers' access codes and addresses from it. It never changes the file, and it remembers only your permission to read it again.

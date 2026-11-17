@@ -25,13 +25,10 @@ struct CameraConfig {
     var serial: String
     var accessCode: String
     var transport: CameraTransport
-    /// Accept any certificate (`--insecure-tls`, the local emulator only).
-    var insecure = false
 }
 
 enum CameraFailure: Error, Equatable {
     case unauthorized
-    case certificate(String)
     case unreachable(String)
     case timedOut
     case closed
@@ -41,7 +38,7 @@ enum CameraFailure: Error, Equatable {
     /// Retrying won't help until something changes (the access code, the printer, the app).
     var isPermanent: Bool {
         switch self {
-        case .unauthorized, .certificate, .unsupported: return true
+        case .unauthorized, .unsupported: return true
         default: return false
         }
     }
@@ -49,7 +46,6 @@ enum CameraFailure: Error, Equatable {
     var message: String {
         switch self {
         case .unauthorized: return String(localized: "The printer didn't accept the access code for the camera.")
-        case .certificate(let reason): return String(localized: "The camera's certificate couldn't be verified: \(reason)", comment: "A technical reason, in English")
         case .unreachable(let reason): return reason
         case .timedOut: return String(localized: "The camera stopped sending video.")
         case .closed: return String(localized: "The printer closed the camera connection.")
@@ -85,8 +81,9 @@ func makeCameraClient(_ config: CameraConfig) -> CameraClient {
     }
 }
 
-/// A TLS connection to one of the printer's camera ports, trusted the same way as MQTT (see `BambuTrust`).
-/// Every callback runs on the queue passed in.
+/// A TLS connection to one of the printer's camera ports. Unlike MQTT, any certificate is accepted, as Bambu Studio
+/// does: some models (the H3C) present one on the camera port that can't be chained to a bundled Bambu root. The
+/// verdict is only logged. Every callback runs on the queue passed in.
 final class CameraSocket {
     var onReady: (() -> Void)?
     var onData: ((Data) -> Void)?
@@ -97,17 +94,14 @@ final class CameraSocket {
     private let host: String
     private let port: UInt16
     private let serial: String
-    private let insecure: Bool
     private let queue: DispatchQueue
     private var connection: NWConnection?
-    private var verdict: BambuTrust.Verdict?
     private var closed = false
 
-    init(host: String, port: UInt16, serial: String, insecure: Bool, queue: DispatchQueue) {
+    init(host: String, port: UInt16, serial: String, queue: DispatchQueue) {
         self.host = host
         self.port = port
         self.serial = serial
-        self.insecure = insecure
         self.queue = queue
     }
 
@@ -115,11 +109,8 @@ final class CameraSocket {
     func open(timeout: TimeInterval = 10) {
         let tls = MQTTClient.tlsOptions(queue: queue) { [weak self] trust in
             guard let self else { return false }
-            if self.insecure { return true }
-            let verdict = BambuTrust.evaluate(trust, serial: self.serial)
-            self.verdict = verdict
-            self.log?("certificate on port \(self.port): \(verdict)")
-            return !verdict.isRejected
+            self.log?("certificate on port \(self.port): \(BambuTrust.evaluate(trust, serial: self.serial))")
+            return true
         }
         let tcp = NWProtocolTCP.Options()
         tcp.connectionTimeout = Int(timeout)
@@ -161,11 +152,7 @@ final class CameraSocket {
             onReady?()
             receive()
         case .waiting(let error), .failed(let error):
-            if case .rejected(let reason)? = verdict {
-                fail(.certificate(reason))
-            } else {
-                fail(.unreachable(MQTTClient.describe(error)))
-            }
+            fail(.unreachable(MQTTClient.describe(error)))
         case .cancelled:
             fail(.closed)
         default:

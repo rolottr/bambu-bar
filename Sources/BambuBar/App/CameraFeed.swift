@@ -161,7 +161,7 @@ final class CameraFeed {
             return
         }
         let client = makeCameraClient(CameraConfig(host: session.config.host, serial: session.config.serial, accessCode: code,
-                                                   transport: session.cameraTransport, insecure: session.allowsInsecureTLS))
+                                                   transport: session.cameraTransport))
         client.onEvent = { [weak self, weak client] event in
             MainActor.assumeIsolated {
                 guard let self, let client, client === self.client else { return }

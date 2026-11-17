@@ -142,7 +142,6 @@ public sealed class PrinterSession : Observable, IDisposable
     public SpeedLevel Speed => _pendingSpeed ?? Status?.Speed ?? SpeedLevel.Standard;
     public string? AccessCode => _store.Secrets.AccessCode(Config.Serial);
     public bool IsDemo => _demo is not null;
-    public bool AllowsInsecureTls => _insecure;
     public string? CameraAccessCode => _activeCode ?? AccessCode;
     /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printers page.</summary>
     public bool ShowsCamera => !IsDemo && _store.CameraEnabled && Config.CameraEnabled == true;
@@ -155,7 +154,7 @@ public sealed class PrinterSession : Observable, IDisposable
         IsDemo = IsDemo, ShowsCamera = ShowsCamera, IsMockFleet = _store.IsMockFleet, IsOnline = IsOnline,
         Transport = CameraTransport, LiveViewEnabled = Status?.LiveViewEnabled, IsPrinting = Status?.State.IsActive() == true,
         StaysOnWhilePrinting = _store.CameraStaysOnWhilePrinting, Host = Config.Endpoint.Host, Serial = Config.Serial,
-        AccessCode = CameraAccessCode, Insecure = _insecure,
+        AccessCode = CameraAccessCode,
     };
 
     public string LinkSummary => Phase switch

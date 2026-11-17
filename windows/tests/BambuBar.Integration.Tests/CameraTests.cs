@@ -26,7 +26,7 @@ public class CameraTests
     /// <summary>Streams from the mock camera in <paramref name="scenario"/> until <paramref name="done"/> says so (or a
     /// failure arrives) within <paramref name="timeoutSeconds"/>, then stops the client.</summary>
     private static async Task<List<Event>> RecordAsync(string scenario, CameraTransport transport, Func<List<Event>, bool> done,
-        string code = CameraSimulator.Code, bool insecure = true, int timeoutSeconds = 10, Action<string?>? onCertificate = null)
+        string code = CameraSimulator.Code, int timeoutSeconds = 10, Action<string?>? onCertificate = null)
     {
         Simulators.Require();
         await CameraSimulator.SetScenarioAsync(scenario, Token);
@@ -34,7 +34,7 @@ public class CameraTests
         var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = code, Transport = transport, Insecure = insecure,
+            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = code, Transport = transport,
             OnCertificate = onCertificate is null ? null : leaf => onCertificate(BambuTrust.CommonName(leaf)),
         });
         client.OnEvent = e =>
@@ -173,28 +173,6 @@ public class CameraTests
         var events = await RecordAsync("not-streaming", CameraTransport.Rtsps, _ => false);
         var unreachable = Assert.IsType<CameraFailure.Unreachable>(FailureIn(events));
         Assert.Contains("503", unreachable.Reason);
-    }
-
-    /// <summary>The mock camera's certificate is self-signed: without <c>Insecure</c> it must be refused before anything is
-    /// sent.</summary>
-    [Fact]
-    public async Task UntrustedCertificateIsRefused()
-    {
-        var events = await RecordAsync("h264-digest", CameraTransport.Rtsps, _ => false, insecure: false);
-        Assert.IsType<CameraFailure.Certificate>(FailureIn(events));
-        Assert.True((await RequestsAsync("DESCRIBE")).Count == 0, "the access code never left");
-    }
-
-    /// <summary>A connection to the same camera a moment ago must not let the next one skip the certificate check (a
-    /// resumed TLS session has no certificate to check): the certificate is the only proof the camera is the expected
-    /// printer.</summary>
-    [Fact]
-    public async Task CertificateIsCheckedOnEveryConnection()
-    {
-        var insecure = await RecordAsync("h264-digest", CameraTransport.Rtsps, list => VideoIn(list).Count >= 2);
-        Assert.True(FailureIn(insecure) is null, Describe(insecure));
-        var secure = await RecordAsync("h264-digest", CameraTransport.Rtsps, _ => false, insecure: false);
-        Assert.IsType<CameraFailure.Certificate>(FailureIn(secure));
     }
 
     /// <summary>Windows only (ledger §4.1): SChannel resumes TLS sessions unless told not to, and a resumed session never

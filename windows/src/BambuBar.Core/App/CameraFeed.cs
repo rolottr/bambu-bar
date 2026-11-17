@@ -36,7 +36,6 @@ public sealed record CameraSituation
     public string Host { get; init; } = "";
     public string Serial { get; init; } = "";
     public string? AccessCode { get; init; }
-    public bool Insecure { get; init; }
 }
 
 /// <summary>How a feed reaches the camera and decodes it; the defaults are the real ones, tests replace them.</summary>
@@ -274,7 +273,7 @@ public sealed class CameraFeed : Observable, IDisposable
             State = new FeedState.Unavailable(Loc.T("The access code isn't available."));
             return;
         }
-        var client = _services.Client(new CameraConfig { Host = s.Host, Serial = s.Serial, AccessCode = code, Transport = s.Transport, Insecure = s.Insecure });
+        var client = _services.Client(new CameraConfig { Host = s.Host, Serial = s.Serial, AccessCode = code, Transport = s.Transport });
         client.OnEvent = e =>
         {
             if (ReferenceEquals(client, _client)) Handle(e);

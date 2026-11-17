@@ -34,18 +34,15 @@ public sealed record CameraConfig
     public required string Serial { get; init; }
     public required string AccessCode { get; init; }
     public required CameraTransport Transport { get; init; }
-    /// <summary>Accept any certificate (the local emulators only).</summary>
-    public bool Insecure { get; init; }
     /// <summary>Another port than the transport's (tests).</summary>
     public int? Port { get; init; }
-    /// <summary>Called with the camera's certificate on every handshake, before it's judged (tests, probe).</summary>
+    /// <summary>Called with the camera's certificate on every handshake (tests, probe).</summary>
     public Action<X509Certificate2>? OnCertificate { get; init; }
 }
 
 public abstract record CameraFailure
 {
     public sealed record Unauthorized : CameraFailure;
-    public sealed record Certificate(string Reason) : CameraFailure;
     public sealed record Unreachable(string Reason) : CameraFailure;
     public sealed record TimedOut : CameraFailure;
     public sealed record Closed : CameraFailure;
@@ -53,13 +50,12 @@ public abstract record CameraFailure
     public sealed record Malformed(string Reason) : CameraFailure;
 
     /// <summary>Retrying won't help until something changes (the access code, the printer, the app).</summary>
-    public bool IsPermanent => this is Unauthorized or Certificate or Unsupported;
+    public bool IsPermanent => this is Unauthorized or Unsupported;
 
     /// <summary>What to tell the person.</summary>
     public string Message => this switch
     {
         Unauthorized => Loc.T("The printer didn't accept the access code for the camera."),
-        Certificate c => Loc.F("The camera's certificate couldn't be verified: %@", c.Reason),
         Unreachable u => u.Reason,
         TimedOut => Loc.T("The camera stopped sending video."),
         Closed => Loc.T("The printer closed the camera connection."),
@@ -138,9 +134,9 @@ internal sealed class CameraQueue : SynchronizationContext
 }
 
 /// <summary>
-/// A TLS connection to one of the printer's camera ports, trusted the same way as MQTT (see <see cref="BambuTrust"/>):
-/// TLS 1.2 only, no session resumption, the certificate checked on every connection. Every callback runs on the
-/// queue passed in.
+/// A TLS connection to one of the printer's camera ports, TLS 1.2 only like MQTT. Unlike MQTT, any certificate is
+/// accepted, as Bambu Studio does: some models (the H3C) present one on the camera port that can't be chained to a
+/// bundled Bambu root. The verdict is only logged. Every callback runs on the queue passed in.
 /// </summary>
 internal sealed class CameraSocket
 {
@@ -153,7 +149,6 @@ internal sealed class CameraSocket
     private readonly string _host;
     private readonly int _port;
     private readonly string _serial;
-    private readonly bool _insecure;
     private readonly Action<X509Certificate2>? _onCertificate;
     private readonly CameraQueue _queue;
     private readonly CancellationTokenSource _stop = new();
@@ -162,17 +157,14 @@ internal sealed class CameraSocket
     private Socket? _socket;
     private SslStream? _stream;
     private Task? _writer;
-    private BambuTrust.Verdict? _verdict;
     // Read and written on the queue only.
     private bool _closed;
 
-    public CameraSocket(string host, int port, string serial, bool insecure, CameraQueue queue,
-        Action<X509Certificate2>? onCertificate = null)
+    public CameraSocket(string host, int port, string serial, CameraQueue queue, Action<X509Certificate2>? onCertificate = null)
     {
         _host = host;
         _port = port;
         _serial = serial;
-        _insecure = insecure;
         _queue = queue;
         _onCertificate = onCertificate;
     }
@@ -275,9 +267,7 @@ internal sealed class CameraSocket
         }
         catch (AuthenticationException e)
         {
-            Fail(_verdict is BambuTrust.Verdict.Rejected rejected
-                ? new CameraFailure.Certificate(rejected.Reason)
-                : new CameraFailure.Unreachable(e.Message));
+            Fail(new CameraFailure.Unreachable(e.Message));
         }
         catch (SocketException e)
         {
@@ -285,11 +275,9 @@ internal sealed class CameraSocket
         }
         catch (IOException e)
         {
-            Fail(_verdict is BambuTrust.Verdict.Rejected rejected
-                ? new CameraFailure.Certificate(rejected.Reason)
-                : new CameraFailure.Unreachable(e.InnerException is SocketException se
-                    ? MqttClient.Describe(se.SocketErrorCode, se.Message)
-                    : e.Message));
+            Fail(new CameraFailure.Unreachable(e.InnerException is SocketException se
+                ? MqttClient.Describe(se.SocketErrorCode, se.Message)
+                : e.Message));
         }
         catch (ObjectDisposedException)
         {
@@ -301,15 +289,13 @@ internal sealed class CameraSocket
     {
         if (leaf is null)
         {
-            _verdict = new BambuTrust.Verdict.Rejected(Loc.T("The printer sent no certificate."));
-            return false;
+            _queue.Run(() => Log?.Invoke($"no certificate on port {_port}"));
+            return true;
         }
         _onCertificate?.Invoke(leaf);
-        if (_insecure) return true;
         var verdict = BambuTrust.Evaluate(leaf, presented, _serial);
-        _verdict = verdict;
         _queue.Run(() => Log?.Invoke($"certificate on port {_port}: {verdict}"));
-        return !verdict.IsRejected;
+        return true;
     }
 
     private async Task ReadLoopAsync(SslStream stream, CancellationToken token)

@@ -473,7 +473,7 @@ public class CameraFeedTests
         // A new report (say, the printer reconnected) is a reason to try again.
         _feed.Update();
         Assert.Equal(2, _clients.Count);
-        Current.Send(new CameraEvent.Failed(new CameraFailure.Certificate("not signed by Bambu Lab")));
+        Current.Send(new CameraEvent.Failed(new CameraFailure.Unsupported("VP8")));
         _feed.TryAgain();
         Assert.Equal(3, _clients.Count);
     }
