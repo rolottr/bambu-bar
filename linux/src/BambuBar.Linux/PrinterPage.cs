@@ -18,7 +18,7 @@ internal sealed partial class Shell
             var explanation = Live(() => session.LinkDetail ?? "", null, "muted"); explanation.SetWrap(true); connection.Append(explanation);
             connection.Append(Button("network-connect-symbolic", Loc.T("Connect"), () => BeginSetup(session.Config), true)); _pageHost.Append(connection);
         }
-        if (_store.ReplacementCode is { } replacement)
+        if (session.Phase is BambuBar.Core.Protocol.PrinterConnection.Phase.Unauthorized && _store.ReplacementCode is { } replacement)
             _pageHost.Append(Button("view-refresh-symbolic", Loc.T("Enter the access code again in the app"), () => Async(async () => { if (!_ephemeral) await _secrets.Save(replacement.Serial, replacement.AccessCodes[0]); _store.UseReplacementCode(); }), true));
         _pageHost.Append(JobCard(session, _updates));
         _pageHost.Append(IssueCard(session));

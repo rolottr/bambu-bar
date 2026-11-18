@@ -61,7 +61,7 @@ internal sealed partial class Shell : IDisposable
         _window.SetHideOnClose(true);
         var root = Column(0);
         var header = Adw.HeaderBar.New();
-        header.SetTitleWidget(Label("Bambu Bar", "heading"));
+        header.SetTitleWidget(Label(_testDesktop ? "Bambu Bar — Virtual printers" : "Bambu Bar", "heading"));
         header.PackEnd(Button("application-exit-symbolic", "Quit Bambu Bar", app.Quit));
         var support = Button("starred-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); header.PackEnd(support);
         root.Append(header);
