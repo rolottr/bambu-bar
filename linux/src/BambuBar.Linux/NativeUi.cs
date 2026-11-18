@@ -68,7 +68,7 @@ internal sealed partial class Shell
     private void StartNativeUi()
     {
         if (!UseNativeUi) return;
-        _native = new NativeUiServer(NativeRequest, PublishNative, () => { _nativeCamera?.Dispose(); _nativeCamera = null; }, _ephemeral ? "-" + _nativeInstance : "");
+        _native = new NativeUiServer(NativeRequest, PublishNative, () => { _nativeCamera?.Dispose(); _nativeCamera = null; }, OwnsDesktop ? "" : "-" + _nativeInstance);
         _license.Changed += QueueNative;
         _store.SaveFailed += _ => { _nativeError = Loc.T("Changes could not be saved. Check file permissions and your keyring."); QueueNative(); };
     }
@@ -84,7 +84,7 @@ internal sealed partial class Shell
             await connection.ConnectAsync();
             if (presentation != _nativePresentation) return;
             var host = connection.CreateProxy<INativeHost>(Platform.AppId + ".Native", new ObjectPath("/dev/rolottr/BambuBar/Native"));
-            if (_ephemeral) await host.OpenDemoAsync(_nativeInstance);
+            if (!OwnsDesktop) await host.OpenDemoAsync(_nativeInstance);
             else if (panel) await host.PanelAsync();
             else { await host.OpenAsync(requestedPage); PublishNative(); }
         }

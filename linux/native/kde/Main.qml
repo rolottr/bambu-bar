@@ -8,7 +8,7 @@ import "../common" as Common
 
 Kirigami.ApplicationWindow {
     id: window
-    title: backend.demo ? "Bambu Bar — Demo" : "Bambu Bar"
+    title: content.desktop.simulated ? "Bambu Bar — Virtual printers" : backend.demo ? "Bambu Bar — Demo" : "Bambu Bar"
     width: 1040; height: 760
     minimumWidth: 720; minimumHeight: 460
     visible: true

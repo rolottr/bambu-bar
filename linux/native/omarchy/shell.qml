@@ -73,7 +73,7 @@ ShellRoot {
     }
     FloatingWindow {
         id: window
-        title: Quickshell.env("BAMBUBAR_DEMO") ? "Bambu Bar — Demo" : "Bambu Bar"
+        title: content.desktop.simulated ? "Bambu Bar — Virtual printers" : Quickshell.env("BAMBUBAR_DEMO") ? "Bambu Bar — Demo" : "Bambu Bar"
         implicitWidth: Math.min(960, screen ? screen.width - 40 : 960); implicitHeight: Math.min(700, screen ? screen.height - 80 : 700)
         minimumSize: Qt.size(720, 460)
         visible: true

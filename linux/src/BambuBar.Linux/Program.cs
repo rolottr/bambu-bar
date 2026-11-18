@@ -11,6 +11,11 @@ internal static class Program
     private static Shell? _shell;
     public static int Main(string[] args)
     {
+        if (args.Contains("--test-desktop") && PrinterStore.EmulatorSettings(args) is null)
+        {
+            Console.Error.WriteLine("--test-desktop requires --emulator <settings-file>.");
+            return 1;
+        }
         if (args.Contains("--version")) { Console.WriteLine($"Bambu Bar {AppVersion.Marketing} ({Platform.Commit})"); return 0; }
         var codecFolder = Path.Combine(AppContext.BaseDirectory, "ffmpeg");
         if (Directory.Exists(codecFolder)) BambuBar.Core.Camera.Decoding.FFmpeg.Folder = codecFolder;
@@ -29,7 +34,9 @@ internal static class Program
         AppDomain.CurrentDomain.UnhandledException += (_, e) => { if (!ephemeral && e.ExceptionObject is Exception error) Platform.Log(error.GetType().Name + "\n" + error.StackTrace); };
         var timer = Stopwatch.StartNew();
         TrayPlacement.LoadBeforeGtk();
-        var application = Adw.Application.New(Platform.AppId, Gio.ApplicationFlags.HandlesCommandLine | (ephemeral ? Gio.ApplicationFlags.NonUnique : Gio.ApplicationFlags.DefaultFlags));
+        // An explicit simulator desktop session owns the normal launcher/panel
+        // endpoints while retaining in-memory settings, history and credentials.
+        var application = Adw.Application.New(Platform.AppId, Gio.ApplicationFlags.HandlesCommandLine | (ephemeral && !args.Contains("--test-desktop") ? Gio.ApplicationFlags.NonUnique : Gio.ApplicationFlags.DefaultFlags));
         var launchArgs = args;
         application.OnCommandLine += (_, e) =>
         {

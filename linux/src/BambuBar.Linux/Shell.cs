@@ -13,6 +13,8 @@ internal sealed partial class Shell : IDisposable
     private readonly SecretStore _secrets;
     private readonly Notifier _notifier;
     private readonly bool _ephemeral;
+    private readonly bool _testDesktop;
+    private bool OwnsDesktop => !_ephemeral || _testDesktop;
     private readonly Licensing _license;
     private readonly Background _background = new();
     private readonly Adw.ApplicationWindow _window;
@@ -44,6 +46,7 @@ internal sealed partial class Shell : IDisposable
     {
         _app = app; _store = store; _settings = settings; _secrets = secrets; _notifier = notifier;
         _ephemeral = PrinterStore.IsEphemeralRun(args);
+        _testDesktop = args.Contains("--test-desktop") && PrinterStore.EmulatorSettings(args) is not null;
         // Plasma's Breeze theme is not in the GNOME Flatpak runtime. Its requested
         // symbolic names otherwise become missing-image boxes in this GTK app.
         if (Platform.IsPlasma || Platform.IsOmarchy) Gtk.Settings.GetDefault()!.GtkIconThemeName = "Adwaita";
@@ -54,7 +57,7 @@ internal sealed partial class Shell : IDisposable
         UpdateAppearanceClass();
         Adw.StyleManager.GetDefault().OnNotify += (_, e) => { if (e.Pspec.GetName() == "dark") UpdateAppearanceClass(); };
         WindowSize.Track(_window);
-        _window.SetTitle("Bambu Bar"); _window.SetDefaultSize(Platform.IsOmarchy ? 960 : 1120, Platform.IsOmarchy ? 700 : 940); _window.SetSizeRequest(760, 460);
+        _window.SetTitle(_testDesktop ? "Bambu Bar — Virtual printers" : "Bambu Bar"); _window.SetDefaultSize(Platform.IsOmarchy ? 960 : 1120, Platform.IsOmarchy ? 700 : 940); _window.SetSizeRequest(760, 460);
         _window.SetHideOnClose(true);
         var root = Column(0);
         var header = Adw.HeaderBar.New();
@@ -119,7 +122,7 @@ internal sealed partial class Shell : IDisposable
     public void PrepareQuit() => _native?.Send(new { type = "quit" });
     public void Present() { if (UseNativeUi) { PresentNative(_page); return; } if (_hyprlandPopup is not null) _panel?.SetVisible(false); Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
     public void ShowQuickView() => ShowPanel();
-    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (!_ephemeral || UseNativeUi) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _desktop.Published += QueueNative; if (!_ephemeral) _ = StartDesktop(); StartNativeUi(); } _tray = new Tray(_store, ShowPanelAt, Present, () => DesktopAction("quit", null)); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (OwnsDesktop || UseNativeUi) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _desktop.Published += QueueNative; if (OwnsDesktop) _ = StartDesktop(); StartNativeUi(); } _tray = new Tray(_store, ShowPanelAt, Present, () => DesktopAction("quit", null)); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
     private async Task StartDesktop() { try { await _desktop!.Start(); } catch (Exception) { Platform.Log("Native desktop panel unavailable; standard tray remains available."); } }
     private void DesktopAction(string action, PrinterSession? session)
     {
