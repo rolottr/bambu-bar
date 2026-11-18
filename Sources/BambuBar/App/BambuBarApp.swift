@@ -72,9 +72,18 @@ struct AppCommands: Commands {
                     .disabled(!(store.status?.state.isActive ?? false))
             }
             Divider()
-            Button(store.chamberLightOn ? "Turn Chamber Light Off" : "Turn Chamber Light On") { store.toggleLight() }
-                .keyboardShortcut("l")
-                .disabled(!store.isOnline || store.status?.chamberLightOn == nil)
+            if store.status?.chamberLight2On != nil {
+                Button(store.chamberLightOn ? "Turn Left Off" : "Turn Left On") { store.toggleLight(.left) }
+                    .keyboardShortcut("l")
+                    .disabled(!store.isOnline)
+                Button((store.chamberLight2On ?? false) ? "Turn Right Off" : "Turn Right On") { store.toggleLight(.right) }
+                    .keyboardShortcut("l", modifiers: [.shift])
+                    .disabled(!store.isOnline)
+            } else {
+                Button(store.chamberLightOn ? "Turn Chamber Light Off" : "Turn Chamber Light On") { store.toggleLight() }
+                    .keyboardShortcut("l")
+                    .disabled(!store.isOnline || store.status?.chamberLightOn == nil)
+            }
             // Only with the camera on, in Settings and for this printer.
             if let session = store.current, session.showsCamera {
                 Button("Show Camera") { CameraWindow.show(session) }
@@ -151,7 +160,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { LoginItem.shared.refresh() }
+            MainActor.assumeIsolated {
+                LoginItem.shared.refresh()
+                PrinterStore.shared.appOpened()
+            }
         }
     }
 

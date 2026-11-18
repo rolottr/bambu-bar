@@ -60,6 +60,7 @@ BB.styles = {
 	tempRow = { face = "num", px = 14, weight = 600, lh = 1.25 },
 	spoolLine = { face = "text", px = 11, weight = 500, color = "sec", lh = 1.25 },
 	footTitle = { face = "text", px = 13, weight = 600, lh = 1.25 },
+	footName = { face = "text", px = 11, weight = 600, color = "sec", lh = 1.25 },
 	footDetail = { face = "num", px = 11, weight = 600, color = "sec", lh = 1.25 },
 	footLine = { face = "text", px = 11, weight = 400, color = "sec", lh = 1.25 },
 	dialPct = { face = "num", px = 18, weight = 700, lh = 1.1, pct = { px = 9.5, color = "sec" } },
@@ -704,7 +705,11 @@ function BB.viewSmall(m, ctx)
 			end
 		elseif m.state == "finished" or m.state == "failed" then
 			local job = m.lastJob or {}
-			y = y + v:text("Big", "bigAgo", job.ago or "", colX, y, { w = colW, fit = 0.7 }) + 1
+			-- No record of the print's end (the app started after it): say it's done, as the Mac does.
+			local function word(text, fallback) return (text and text ~= "") and text or fallback end
+			local ended = m.state == "finished" and word(m.strings.doneWord, "Done") or word(m.strings.stoppedWord, "Stopped")
+			local ago = (job.ago and job.ago ~= "") and job.ago or ended
+			y = y + v:text("Big", "bigAgo", ago, colX, y, { w = colW, fit = 0.7 }) + 1
 			if job.took then y = y + v:text("Sub", "sub", job.took, colX, y, { w = colW }) + 1 end
 		elseif m.state == "idle" then
 			y = y + 2
@@ -729,11 +734,25 @@ function BB.viewSmall(m, ctx)
 	-- Footer, from the bottom up
 	local bottom = 180 - P
 	local footTop = bottom
+	-- The printer's name over the footer, so two Small widgets side by side tell their printers apart. Left out
+	-- where the footer already says it, or where it would run into the text above.
+	local function nameAbove(top, shown, above)
+		local name = m.name or ""
+		if name == "" or name == shown then return top end
+		local h = v:text("FootName", "footName", name, P, 0, { w = fullW, measureOnly = true })
+		if top - h - 1 < (above or topBottom) + 4 then return top end
+		v:text("FootName", "footName", name, P, top - h - 1, { w = fullW })
+		return top - h - 1
+	end
 	if m.live and m.state == "idle" then
 		local hd = v:text("FootDetail", "footLine", m.stateLine or "", P, 0, { w = fullW, measureOnly = true })
-		footTop = bottom - hd - 4 - 21
 		v:text("FootDetail", "footLine", m.stateLine or "", P, bottom - hd, { w = fullW })
 		local x, n = P, 0
+		for _, sp in ipairs(m.spools) do
+			if not sp.empty and n < 5 then n = n + 1 end
+		end
+		footTop = n > 0 and (bottom - hd - 4 - 21) or (bottom - hd)
+		n = 0
 		for _, sp in ipairs(m.spools) do
 			if not sp.empty and n < 5 then
 				n = n + 1
@@ -743,6 +762,7 @@ function BB.viewSmall(m, ctx)
 				x = x + 26
 			end
 		end
+		footTop = nameAbove(n > 0 and footTop - 2 or footTop, m.stateLine)
 	elseif m.live then
 		local detail = (not reflow) and m.detail or nil
 		local hd = 0
@@ -753,6 +773,9 @@ function BB.viewSmall(m, ctx)
 		local ht = v:text("FootTitle", "footTitle", m.headline or "", P, 0, { w = fullW, measureOnly = true })
 		footTop = bottom - hd - ht
 		v:text("FootTitle", "footTitle", m.headline or "", P, footTop, { w = fullW })
+		local above = topBottom
+		if reflow then above = topBottom + 8 + v:text("ReasonFull", "reason", m.reason, P, 0, { w = fullW, lines = 3, measureOnly = true }) end
+		footTop = nameAbove(footTop, m.headline, above)
 	else
 		local hd = v:text("FootDetail", "footLine", m.stateLine or "", P, 0, { w = fullW, lines = 2, measureOnly = true })
 		v:text("FootDetail", "footLine", m.stateLine or "", P, bottom - hd, { w = fullW, lines = 2 })
@@ -963,7 +986,7 @@ BB.views = { Small = BB.viewSmall, Medium = BB.viewMedium, Large = BB.viewLarge 
 BB.METERS = {
 	Small = { "ArtA", "ArtB", "Ring", "Spinner", "DialPct", "DialIcon", "Caption", "Big", "Sub", "Reason",
 		"TempIcon1", "Temp1", "TempIcon2", "Temp2", "TempIcon3", "Temp3", "ReasonFull", "ActiveSpool",
-		"ActiveSpoolText", "Swatch1", "Swatch2", "Swatch3", "Swatch4", "Swatch5", "FootTitle", "FootDetail" },
+		"ActiveSpoolText", "Swatch1", "Swatch2", "Swatch3", "Swatch4", "Swatch5", "FootName", "FootTitle", "FootDetail" },
 	Medium = { "ArtA", "ArtB", "Name", "Dot", "Status", "Spinner", "HeaderIcon", "Headline", "Pct", "Layers", "Bar",
 		"StateLine", "Finish", "TempIcon1", "Temp1", "TempIcon2", "Temp2", "TempIcon3", "Temp3", "Line2",
 		"Swatch1", "Swatch2", "Swatch3", "Swatch4", "Swatch5", "Swatch6", "Swatch7", "Swatch8" },

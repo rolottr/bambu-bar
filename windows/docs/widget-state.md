@@ -53,7 +53,7 @@ camelCase JSON. `null` means "don't show".
 | `lastJob` | `{name, outcome, ago, took}`? | `ago` is at `savedAt` ("1h 05m ago"). |
 | `art`, `artUnlit` | file name? | Art for this state; `artUnlit` the same with the chamber light off (null when already off). |
 | `motion` | bool | False when Windows' animation effects are off: no tweens, no pulses, no spinner (a static glyph). |
-| `strings` | object | Patterns with `{0}`/`{1}`: `lessThanMinute`, `minutes`, `hoursMinutes`, `daysHours`, `left`, `done`, `last`, and `leftWord` (the word under the Small countdown; empty where the language has none). |
+| `strings` | object | Patterns with `{0}`/`{1}`: `lessThanMinute`, `minutes`, `hoursMinutes`, `daysHours`, `left`, `done`, `last`, and `leftWord` (the word under the Small countdown; empty where the language has none). Plain words: `doneWord` and `stoppedWord` (the Small dial's figure for a finished or stopped print with no `lastJob`). |
 
 `spools[]`: `{label, color, colors[], name, amount, fraction, active, empty, tooltip}`. `colors` has more than one
 entry for multicolour spools (draw a multi-stop gradient); `fraction` is 0–1 or null when not measured; `tooltip` is

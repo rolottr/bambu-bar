@@ -25,7 +25,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "2.2.1"
+    MARKETING_VERSION: "2.3.1"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: PCZ6F8Q9DZ
     APP_GROUP: "$(DEVELOPMENT_TEAM).dev.rolottr.BambuBar"
@@ -134,6 +134,8 @@ targets:
       - path: Sources/Shared
       - path: Sources/BambuBar/Printer/ReportParser.swift
       - path: Sources/BambuBar/Printer/HMSCatalog.swift
+      - path: shared/HMS
+        buildPhase: resources
       - path: Sources/BambuBar/Printer/FilamentCatalog.swift
       - path: Sources/BambuBar/Services/AppLanguage.swift
       - path: Sources/BambuBar/Services/Website.swift

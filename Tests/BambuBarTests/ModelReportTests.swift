@@ -54,6 +54,37 @@ final class ModelReportTests: XCTestCase {
         }
     }
 
+    /// Each model's `lights_report`, from the real reports: two chamber bars on the H2 series, one chamber bar
+    /// plus the toolhead light on X1, P2S, X2D and H3C, and a single `chamber_light` on P1 and the A series.
+    /// Each bar is its own switch. The toolhead (`work_light`) is not one of them.
+    func testChamberLightsMatchThePrinter() throws {
+        let twoBars = ["chamber_light", "work_light", "chamber_light2"]
+        let withToolhead = ["chamber_light", "work_light"]
+        let chamberOnly = ["chamber_light"]
+        let expected = [
+            "O1C": twoBars, "O1D": twoBars, "O1E": twoBars, "O1S": twoBars,
+            "BL-P001": withToolhead, "BL-P002": withToolhead, "C13": withToolhead,
+            "N6": withToolhead, "N7": withToolhead, "N10": withToolhead,
+            "C11": chamberOnly, "C12": chamberOnly, "N1": chamberOnly, "N2S": chamberOnly, "N9": chamberOnly,
+        ]
+        XCTAssertEqual(Set(expected.keys), Set(PrinterModel.all.map(\.code)))
+        let twoBar: Set<String> = ["O1C", "O1D", "O1E", "O1S"]
+        for (model, status, print) in try reports() {
+            let nodes = (print["lights_report"] as? [[String: Any]])?.compactMap { $0["node"] as? String } ?? []
+            XCTAssertEqual(nodes, expected[model.code], model.name)
+            XCTAssertEqual(status.chamberLight2On != nil, twoBar.contains(model.code), model.name)
+        }
+        var doc = ReportDocument()
+        doc.apply(["print": ["lights_report": [
+            ["node": "chamber_light", "mode": "off"],
+            ["node": "work_light", "mode": "flashing"],
+            ["node": "chamber_light2", "mode": "on"],
+        ]]])
+        let parsed = ReportParser.status(from: doc, hms: .shared)
+        XCTAssertEqual(parsed.chamberLightOn, false)
+        XCTAssertEqual(parsed.chamberLight2On, true)
+    }
+
     /// The door shows only for printers that say they have a sensor (`fun` bit 12), as Bambu Studio checks.
     func testDoorFollowsTheSensorFlag() throws {
         for (model, s, print) in try reports() {

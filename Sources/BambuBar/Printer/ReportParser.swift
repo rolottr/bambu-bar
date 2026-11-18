@@ -142,9 +142,17 @@ enum ReportParser {
         s.heatbreakFan = fan(p["heatbreak_fan_speed"])
 
         s.speed = SpeedLevel(rawValue: int(p["spd_lvl"]) ?? 2) ?? .standard
-        if let lights = p["lights_report"] as? [[String: Any]],
-           let chamber = lights.first(where: { string($0["node"]) == "chamber_light" }) {
-            s.chamberLightOn = string(chamber["mode"]) != "off"
+        // chamber_light is the chamber bar (the left one, where there are two). chamber_light2 is the right bar
+        // on the H2 series. work_light is the toolhead and isn't switched here.
+        if let lights = p["lights_report"] as? [[String: Any]] {
+            for light in lights {
+                let on = string(light["mode"]) != "off"
+                switch string(light["node"]) {
+                case "chamber_light": s.chamberLightOn = on
+                case "chamber_light2": s.chamberLight2On = on
+                default: break
+                }
+            }
         }
         // The door, only from printers that say they have a door sensor (`fun` bit 12, as Bambu Studio checks):
         // others leave the bit at 0, which would read as a door that's always closed.
@@ -367,28 +375,35 @@ enum ReportParser {
 
     private static func issues(_ p: [String: Any], hms catalog: HMSCatalog, state: JobState, serial: String?) -> [PrinterIssue] {
         var out: [PrinterIssue] = []
+        let model = serial.flatMap { $0.count >= 3 ? String($0.prefix(3)) : nil }
         for entry in (p["hms"] as? [[String: Any]]) ?? [] {
             guard let attr = int(entry["attr"]), let code = int(entry["code"]) else { continue }
             let a = UInt32(truncatingIfNeeded: attr), c = UInt32(truncatingIfNeeded: code)
             if c & 0xFFFF < 0x4000 && c >> 16 == 0 { continue }
             let key = String(format: "%08X%08X", a, c)
+            let text = catalog.hmsText(key, model: model)
+            // Bambu lists some codes with no text on some models (the X2D's 0503_0000_0003_0027, sent while it runs);
+            // its apps don't show them.
+            if text?.isEmpty == true { continue }
             let pretty = String(format: "HMS_%04X_%04X_%04X_%04X", a >> 16, a & 0xFFFF, c >> 16, c & 0xFFFF)
             let severity = IssueSeverity(rawValue: Int(c >> 16)) ?? .common
             out.append(PrinterIssue(id: pretty, severity: severity,
-                                    message: catalog.hmsText(key) ?? String(localized: "The printer reported \(pretty).", comment: "An HMS code"),
+                                    message: text ?? String(localized: "The printer reported \(pretty).", comment: "An HMS code"),
                                     wikiURL: HMSCatalog.wikiURL(code: key, serial: serial)))
         }
         if let error = int(p["print_error"]), error != 0 {
             let e = UInt32(truncatingIfNeeded: error)
             let key = String(format: "%08X", e)
-            // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault.
-            if key != "0300400C" && key != "0500400E" {
+            let text = catalog.errorText(key, model: model)
+            // 0300_400C and 0500_400E are the printer's echo of a user cancel, not a fault. Errors Bambu lists with no
+            // text are internal ones its apps don't show.
+            if key != "0300400C" && key != "0500400E" && text?.isEmpty != true {
                 let pretty = String(format: "%04X_%04X", e >> 16, e & 0xFFFF)
                 let level = (e & 0xF000) >> 12
                 let severity: IssueSeverity = level == 0x4 ? .fatal : level == 0x8 ? .serious : .common
                 if !out.contains(where: { $0.id.hasSuffix(pretty) }) {
                     out.append(PrinterIssue(id: pretty, severity: severity,
-                                            message: catalog.errorText(key) ?? String(localized: "The printer reported error \(pretty).", comment: "An error code"),
+                                            message: text ?? String(localized: "The printer reported error \(pretty).", comment: "An error code"),
                                             wikiURL: HMSCatalog.wikiURL(code: key, serial: serial)))
                 }
             }

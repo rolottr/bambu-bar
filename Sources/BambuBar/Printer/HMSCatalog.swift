@@ -1,23 +1,48 @@
 import Foundation
 
-/// Bambu Lab's texts for HMS codes and print errors in the app's language, P2S wording where it differs; English
-/// for languages Bambu's HMS service doesn't offer and for codes a translation lacks.
-/// Generated from ha-bambulab's catalogues (MIT) by shared/scripts/make-hms.py.
+/// Bambu Lab's texts for HMS codes and print errors in the app's language, in each printer model's own wording;
+/// English for languages Bambu's HMS service doesn't offer. Generated from Bambu's catalogues by
+/// shared/scripts/make-hms.py before a release; nothing is downloaded at run time. A code Bambu lists with no text
+/// maps to "": its apps don't show those, so `ReportParser` skips them.
 final class HMSCatalog {
     static let shared = HMSCatalog()
 
-    private typealias Tables = (hms: [String: String], errors: [String: String])
-    private lazy var localized: Tables = Self.load(Self.language)
-    private lazy var english: Tables = Self.language == "en" ? localized : Self.load("en")
+    private struct Table {
+        var hms: [String: String] = [:]
+        var errors: [String: String] = [:]
+    }
+    /// The text most models share, and per serial prefix the texts where a model differs.
+    private struct Tables {
+        var common = Table()
+        var models: [String: Table] = [:]
+    }
+    private let bundle: Bundle
+    private lazy var language = Self.language(in: bundle)
+    private lazy var localized: Tables = Self.load(language, from: bundle)
+    private lazy var english: Tables = language == "en" ? localized : Self.load("en", from: bundle)
 
-    func hmsText(_ key: String) -> String? {
-        let key = key.uppercased()
-        return localized.hms[key] ?? english.hms[key]
+    /// `bundle` holds the hms_<lang>.json.deflate files; the tests pass theirs.
+    init(bundle: Bundle = .main) { self.bundle = bundle }
+
+    /// `model` is the serial's three-character prefix; nil gives the text most models share.
+    func hmsText(_ key: String, model: String? = nil) -> String? { text(key.uppercased(), model, \.hms) }
+
+    func errorText(_ key: String, model: String? = nil) -> String? { text(key.uppercased(), model, \.errors) }
+
+    /// The text for an issue's code as `PrinterIssue.id` shows it: an HMS code (`HMS_…`) or a print error.
+    func issueText(_ id: String, model: String? = nil) -> String? {
+        let hex = id.uppercased().replacingOccurrences(of: "HMS_", with: "").replacingOccurrences(of: "_", with: "")
+        return id.uppercased().hasPrefix("HMS_") ? hmsText(hex, model: model) : errorText(hex, model: model)
     }
 
-    func errorText(_ key: String) -> String? {
-        let key = key.uppercased()
-        return localized.errors[key] ?? english.errors[key]
+    private func text(_ key: String, _ model: String?, _ table: KeyPath<Table, [String: String]>) -> String? {
+        let model = model?.uppercased()
+        func find(in tables: Tables) -> String? {
+            if let model, let text = tables.models[model]?[keyPath: table][key] { return text }
+            return tables.common[keyPath: table][key]
+        }
+        // English only when the translation lacks the code, so it's loaded only then.
+        return find(in: localized) ?? (language == "en" ? nil : find(in: english))
     }
 
     /// Bambu Lab's wiki page for a code on this printer model, through the redirect Bambu Studio uses: it picks the
@@ -64,17 +89,21 @@ final class HMSCatalog {
         return String(c)
     }
 
-    /// The app's language if there's a catalogue for it. Traditional Chinese readers get the Simplified one,
-    /// which Bambu Lab does publish, rather than English.
-    private static var language: String {
-        let lang = AppLanguage.current == "zh-Hant" ? "zh-Hans" : AppLanguage.current
-        return Bundle.main.url(forResource: "hms_\(lang)", withExtension: "json.deflate") == nil ? "en" : lang
+    /// The app's language if there's a catalogue for it, else English.
+    private static func language(in bundle: Bundle) -> String {
+        let lang = AppLanguage.current
+        return bundle.url(forResource: "hms_\(lang)", withExtension: "json.deflate") == nil ? "en" : lang
     }
 
-    private static func load(_ language: String) -> Tables {
-        guard let url = Bundle.main.url(forResource: "hms_\(language)", withExtension: "json.deflate"),
+    private static func load(_ language: String, from bundle: Bundle) -> Tables {
+        guard let url = bundle.url(forResource: "hms_\(language)", withExtension: "json.deflate"),
               let data = try? (Data(contentsOf: url) as NSData).decompressed(using: .zlib) as Data,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: [String: String]] else { return ([:], [:]) }
-        return (json["hms"] ?? [:], json["error"] ?? [:])
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return Tables() }
+        func table(_ object: Any?) -> Table {
+            let object = object as? [String: Any]
+            return Table(hms: object?["hms"] as? [String: String] ?? [:], errors: object?["error"] as? [String: String] ?? [:])
+        }
+        let models = (json["models"] as? [String: Any] ?? [:]).mapValues(table)
+        return Tables(common: table(json), models: models)
     }
 }

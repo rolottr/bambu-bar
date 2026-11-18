@@ -15,7 +15,10 @@ struct MenuPanelHost: View {
                 Color.clear.frame(width: size?.width, height: size?.height)
             }
         }
-        .onAppear { isOpen = true }
+        .onAppear {
+            isOpen = true
+            PrinterStore.shared.appOpened()
+        }
         .onDisappear { isOpen = false }
     }
 }
@@ -223,8 +226,20 @@ struct JobHero: View {
         }
         .panel(radius: compact ? 20 : 26, padding: compact ? 12 : 22)
         .overlay(alignment: .topTrailing) {
-            if status.chamberLightOn != nil {
-                LightToggle(compact: compact)
+            if status.chamberLight2On != nil {
+                HStack(spacing: compact ? 4 : 6) {
+                    LightToggle(title: "Left", on: store.chamberLightOn, compact: compact,
+                                turnOff: "Turn the left light off", turnOn: "Turn the left light on",
+                                accessibility: "Left light") { store.toggleLight(.left) }
+                    LightToggle(title: "Right", on: store.chamberLight2On ?? false, compact: compact,
+                                turnOff: "Turn the right light off", turnOn: "Turn the right light on",
+                                accessibility: "Right light") { store.toggleLight(.right) }
+                }
+                .padding(compact ? 10 : 16)
+            } else if status.chamberLightOn != nil {
+                LightToggle(title: "Light", on: store.chamberLightOn, compact: compact,
+                            turnOff: "Turn the chamber light off", turnOn: "Turn the chamber light on",
+                            accessibility: "Chamber light") { store.toggleLight() }
                     .padding(compact ? 10 : 16)
             }
         }
@@ -232,7 +247,10 @@ struct JobHero: View {
 
     /// After a print the part stays on the plate in the colour it was printed in.
     private var art: PrinterArt {
-        var art = PrinterArt(status: status, model: model ?? store.config?.modelName, lightOverride: store.chamberLightOn)
+        var shown = status
+        if shown.chamberLightOn != nil { shown.chamberLightOn = store.chamberLightOn }
+        if shown.chamberLight2On != nil { shown.chamberLight2On = store.chamberLight2On ?? false }
+        var art = PrinterArt(status: shown, model: model ?? store.config?.modelName)
         if art.filament == nil, !status.state.isActive, let color = store.lastJob?.filamentColor {
             art.filament = Color(bambuHex: color)
         }
@@ -389,15 +407,19 @@ struct JobHero: View {
     }
 }
 
-/// The chamber light, as a small switch in the corner of the printer card.
+/// One chamber bar, as a small switch on the printer card.
 struct LightToggle: View {
+    var title: LocalizedStringKey
+    var on: Bool
     var compact = false
-    @Environment(PrinterStore.self) private var store
+    var turnOff: LocalizedStringKey
+    var turnOn: LocalizedStringKey
+    var accessibility: LocalizedStringKey
+    var action: () -> Void
     @State private var hovering = false
 
     var body: some View {
-        let on = store.chamberLightOn
-        Button { store.toggleLight() } label: {
+        Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: on ? "lightbulb.max.fill" : "lightbulb")
                     .font(.system(size: compact ? 11 : 12.5, weight: .semibold))
@@ -405,7 +427,7 @@ struct LightToggle: View {
                     .shadow(color: on ? Color.yellow.opacity(0.8) : .clear, radius: 5)
                     .contentTransition(.symbolEffect(.replace.downUp))
                     .frame(width: compact ? 14 : 16)
-                Text("Light")
+                Text(title)
                     .font(.system(size: compact ? 11 : 12, weight: .semibold))
                     .foregroundStyle(on ? Color.primary : Color.secondary)
             }
@@ -420,8 +442,8 @@ struct LightToggle: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(.smooth(duration: 0.25), value: on)
-        .help(on ? "Turn the chamber light off" : "Turn the chamber light on")
-        .accessibilityLabel("Chamber light")
+        .help(on ? turnOff : turnOn)
+        .accessibilityLabel(accessibility)
         .accessibilityValue(on ? "On" : "Off")
     }
 }
@@ -676,6 +698,8 @@ struct IssueBanner: View {
     var issue: PrinterIssue
     /// Hides the issue until the printer stops reporting it; nil shows no dismiss button.
     var onDismiss: (() -> Void)? = nil
+    /// Hides the code on this printer for good (listed on the Printers page); nil shows no Ignore button.
+    var onIgnore: (() -> Void)? = nil
     @State private var copied = false
 
     var body: some View {
@@ -709,6 +733,12 @@ struct IssueBanner: View {
                         Button("Wiki") { HMSWiki.open(url) }
                             .buttonStyle(.link)
                             .font(.system(size: 10.5, weight: .semibold))
+                    }
+                    if let onIgnore {
+                        Button(String(localized: "Ignore", comment: "Never show this issue's code for this printer"), action: onIgnore)
+                            .buttonStyle(.link)
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .help("Never show this code for this printer. You can show it again on the Printers page.")
                     }
                 }
             }

@@ -142,7 +142,6 @@ public sealed class PrinterSession : Observable, IDisposable
     public SpeedLevel Speed => _pendingSpeed ?? Status?.Speed ?? SpeedLevel.Standard;
     public string? AccessCode => _store.Secrets.AccessCode(Config.Serial);
     public bool IsDemo => _demo is not null;
-    public bool AllowsInsecureTls => _insecure;
     public string? CameraAccessCode => _activeCode ?? AccessCode;
     /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printers page.</summary>
     public bool ShowsCamera => !IsDemo && _store.CameraEnabled && Config.CameraEnabled == true;
@@ -155,7 +154,7 @@ public sealed class PrinterSession : Observable, IDisposable
         IsDemo = IsDemo, ShowsCamera = ShowsCamera, IsMockFleet = _store.IsMockFleet, IsOnline = IsOnline,
         Transport = CameraTransport, LiveViewEnabled = Status?.LiveViewEnabled, IsPrinting = Status?.State.IsActive() == true,
         StaysOnWhilePrinting = _store.CameraStaysOnWhilePrinting, Host = Config.Endpoint.Host, Serial = Config.Serial,
-        AccessCode = CameraAccessCode, Insecure = _insecure,
+        AccessCode = CameraAccessCode,
     };
 
     public string LinkSummary => Phase switch
@@ -280,9 +279,42 @@ public sealed class PrinterSession : Observable, IDisposable
         }
     }
 
-    /// <summary>Drops dismissed issues from a report and notes that the printer still has them.</summary>
+    /// <summary>Whether this printer's issues never show this code (Ignore next to an issue).</summary>
+    public bool IsIgnored(string id) => Config.IgnoredIssues?.Contains(id) == true;
+
+    /// <summary>Hides an issue's code on this printer for good, also after it clears and comes back; the Printers page
+    /// lists the codes and can show them again. <see cref="PrinterStore.Ignore"/> saves it.</summary>
+    internal void Ignore(PrinterIssue issue)
+    {
+        if (IsIgnored(issue.Id)) return;
+        Config = Config with { IgnoredIssues = [.. Config.IgnoredIssues ?? [], issue.Id] };
+        if (Status is { } status)
+        {
+            var copy = status.Clone();
+            copy.Issues.RemoveAll(i => i.Id == issue.Id);
+            Status = copy;
+        }
+    }
+
+    /// <summary>Shows a code again, right away if the last report has it: the printer only resends its issues when
+    /// they change, so an idle one may not report it again for a long time.</summary>
+    internal void Unignore(string id)
+    {
+        if (!IsIgnored(id)) return;
+        var left = Config.IgnoredIssues!.Where(i => i != id).ToList();
+        Config = Config with { IgnoredIssues = left.Count == 0 ? null : left };
+        if (Status is not { } status || _lastReported?.Issues.Find(i => i.Id == id) is not { } issue || Dismissed.ContainsKey(id)) return;
+        var copy = status.Clone();
+        copy.Issues.Add(issue);
+        copy.Issues = copy.Issues.OrderBy(i => i.Severity).ToList();
+        Status = copy;
+    }
+
+    /// <summary>Drops ignored and dismissed issues from a report, and notes that the printer still has the dismissed
+    /// ones.</summary>
     private void HideDismissed(PrinterStatus status)
     {
+        if (Config.IgnoredIssues is not null) status.Issues.RemoveAll(i => IsIgnored(i.Id));
         if (Dismissed.Count == 0) return;
         var now = DateTimeOffset.Now;
         foreach (var issue in status.Issues.Where(i => Dismissed.ContainsKey(i.Id))) Dismissed[issue.Id] = now;
@@ -299,8 +331,12 @@ public sealed class PrinterSession : Observable, IDisposable
     /// <summary>Shows a scripted status, as if the printer had reported it (snapshots, tests).</summary>
     public void ShowStatus(PrinterStatus status, bool canceled = false) => Received(status, canceled);
 
+    /// <summary>The last report as parsed, before ignored and dismissed issues are dropped.</summary>
+    private PrinterStatus? _lastReported;
+
     private void Received(PrinterStatus reported, bool canceled)
     {
+        _lastReported = reported;
         var fresh = reported.Clone();
         fresh.FitTo(Config.Model);
         HideDismissed(fresh);

@@ -59,13 +59,16 @@ allow_anonymous true
 
 
 def merge(base, delta):
-    """Applies a delta the way clients do: nested objects merge, arrays of objects merge by id."""
+    """Applies a delta the way clients do: nested objects merge, arrays of objects merge by id
+    (lights_report by node)."""
     for k, v in delta.items():
+        id_key = "node" if k == "lights_report" else "id"
         if isinstance(v, dict) and isinstance(base.get(k), dict):
             merge(base[k], v)
-        elif isinstance(v, list) and isinstance(base.get(k), list) and v and all(isinstance(i, dict) and "id" in i for i in v):
+        elif (isinstance(v, list) and isinstance(base.get(k), list) and v
+              and all(isinstance(i, dict) and id_key in i for i in v)):
             for item in v:
-                match = next((b for b in base[k] if isinstance(b, dict) and b.get("id") == item["id"]), None)
+                match = next((b for b in base[k] if isinstance(b, dict) and b.get(id_key) == item[id_key]), None)
                 if match is None:
                     base[k].append(item)
                 else:
@@ -123,9 +126,16 @@ class Printer:
                 self.delta({"spd_lvl": int(data["print"].get("param", "2"))})
             self.publish({"print": {"command": cmd, "sequence_id": seq, "result": "success", "reason": ""}})
         elif data.get("system", {}).get("command") == "ledctrl":
+            node = data["system"].get("led_node", "")
             mode = data["system"].get("led_mode", "on")
-            self.delta({"lights_report": [{"node": "chamber_light", "mode": mode}, {"node": "work_light", "mode": "flashing"}]})
-            self.publish({"system": {**data["system"], "result": "success"}})
+            # A P2S has chamber_light and the toolhead's work_light. One command moves that node only.
+            known = {entry.get("node") for entry in self.report.get("lights_report", [])}
+            if node not in known:
+                self.publish({"system": {**data["system"], "result": "fail",
+                                          "reason": f"did not find the valid led: {node}"}})
+            else:
+                self.delta({"lights_report": [{"node": node, "mode": mode}]})
+                self.publish({"system": {**data["system"], "result": "success"}})
 
     def tick(self):
         """One second of printing."""

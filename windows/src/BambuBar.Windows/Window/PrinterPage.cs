@@ -119,7 +119,11 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
             {
                 if (issues.Count == 0) return null;
                 var list = new Stack { Spacing = 10 };
-                foreach (var issue in issues) list.Children.Add(new IssueBanner(Ctx, issue, () => Store.Current?.Dismiss(issue)));
+                foreach (var issue in issues)
+                {
+                    var serial = session!.Id;
+                    list.Children.Add(new IssueBanner(Ctx, issue, () => Store.Current?.Dismiss(issue), () => Store.Ignore(issue, serial)));
+                }
                 return list;
             });
             var camera = session.ShowsCamera;
@@ -175,7 +179,8 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
             left.Children.Add(W.DetailRow(Loc.T("Light"), session.ChamberLightOn ? Loc.T("On") : Loc.T("Off"), W.Vector(Icons.Vector.Bulb, Ctx)));
         var right = new Stack { Spacing = 10 };
         right.Children.Add(W.DetailRow(Loc.T("Network"), s.WifiSignal is { } dbm ? $"{PanelText.WiFi(dbm)} ({dbm} dBm)" : dash, W.Glyph("")));
-        right.Children.Add(W.DetailRow(Loc.T("Storage"), s.HasSdCard switch { true => Loc.T("SD card inserted"), false => Loc.T("No SD card"), _ => dash }, W.Glyph("")));
+        var storage = session.Config.Model?.Storage;
+        right.Children.Add(W.DetailRow(Loc.T("Storage"), storage.Describe(s.HasSdCard), W.Glyph(storage switch { StorageMedia.UsbDrive => "\ue88e", StorageMedia.SdCard => "\ue7f1", _ => "\ueda2" })));
         right.Children.Add(W.DetailRow(Loc.T("Live View"), s.LiveViewEnabled switch { true => Loc.T("On"), false => Loc.T("Off"), _ => dash }, W.Glyph(Icons.Camera)));
         right.Children.Add(W.DetailRow(Loc.T("Firmware"), (s.Firmware ?? dash) + (s.UpdateAvailable ? " · " + Loc.T("Update available") : ""), W.Glyph("")));
         var block = new Stack { Spacing = 8, Children = { Ui.SectionLabel(Loc.T("Printer"), null), Pair(left, right) } };

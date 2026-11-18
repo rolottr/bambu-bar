@@ -124,9 +124,19 @@ public sealed class PrinterConnection : IDisposable
     public void StopPrint() => SendPrint(new() { ["command"] = "stop" });
     public void SetSpeed(SpeedLevel level) => SendPrint(new() { ["command"] = "print_speed", ["param"] = $"{(int)level}" });
 
-    public void SetChamberLight(bool on) => Send("system", new()
+    public void SetChamberLight(bool on)
     {
-        ["command"] = "ledctrl", ["led_node"] = "chamber_light", ["led_mode"] = on ? "on" : "off",
+        // Bambu Studio's lamp button sends both, on every printer. chamber_light is the bar every enclosed
+        // printer has; chamber_light2 is the second bar where the printer has one. A printer without that
+        // node refuses it and the first command still stands.
+        var mode = on ? "on" : "off";
+        SendLight("chamber_light", mode);
+        SendLight("chamber_light2", mode);
+    }
+
+    private void SendLight(string node, string mode) => Send("system", new()
+    {
+        ["command"] = "ledctrl", ["led_node"] = node, ["led_mode"] = mode,
         ["led_on_time"] = 500, ["led_off_time"] = 500, ["loop_times"] = 0, ["interval_time"] = 0,
     });
 

@@ -157,6 +157,7 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
         private readonly ChromeButton _reconnect;
         private readonly ToggleSwitch _camera;
         private readonly Region _cameraWarning = new();
+        private readonly Region _ignored = new();
         private string _savedName = "";
 
         public FrameworkElement Root { get; }
@@ -201,6 +202,8 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
                 ? Loc.T("Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen).")
                 : Loc.T("Shows the printer's live view.")));
             _body.Children.Add(_cameraWarning.Host);
+            _body.Children.Add(W.Divider());
+            _body.Children.Add(_ignored.Host);
             _body.Children.Add(W.Divider());
             var forgetRow = Ui.Columns("*", "Auto");
             var follows = W.Note(Loc.T("Bambu Bar follows the printer if its IP address changes."));
@@ -247,6 +250,7 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
             _status.Text = session.LinkSummary;
             _host.Text = config.Host;
             if (_camera.IsChecked != (config.CameraEnabled == true)) _camera.IsChecked = config.CameraEnabled == true;
+            ShowIgnored(config);
             var warn = config.CameraEnabled == true && !_ctx.Store.CameraEnabled;
             _cameraWarning.Show(warn.ToString(), () =>
             {
@@ -260,6 +264,40 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
                 open.Margin = new Thickness(12, 0, 0, 0);
                 row.Children.Add(Ui.At(open, 1));
                 return row;
+            });
+        }
+
+        /// <summary>The codes hidden with Ignore next to an issue, each with Bambu's text for this model and a way to
+        /// show it again. Codes are only added from an issue the printer reported, never typed in.</summary>
+        private void ShowIgnored(PrinterConfig config)
+        {
+            var ids = config.IgnoredIssues ?? [];
+            _ignored.Show(string.Join("|", ids), () =>
+            {
+                var list = new Stack { Spacing = 10 };
+                list.Children.Add(W.Row(Loc.T("Ignored codes"), ids.Count == 0
+                    ? Ui.Text(Loc.T("None"), WRamp.Body, null, ThemeKeys.TextSecondary)
+                    : new Border()));
+                if (ids.Count == 0)
+                    list.Children.Add(W.Note(Loc.T("To stop showing a code for this printer, click **Ignore** next to the issue on the Printer page.")));
+                var model = config.Serial.Length >= 3 ? config.Serial[..3] : null;
+                foreach (var id in ids)
+                {
+                    var row = Ui.Columns("*", "Auto");
+                    var code = Ui.Text(id, WRamp.Detail);
+                    code.SetResourceReference(TextBlock.FontFamilyProperty, ThemeKeys.FontMono);
+                    var text = new Stack { Spacing = 2, Children = { code } };
+                    if (HmsCatalog.Shared.IssueText(id, model) is { Length: > 0 } message) text.Children.Add(W.Note(message));
+                    row.Children.Add(Ui.At(text, 0));
+                    var show = W.Button(Loc.T("Show Again"), () => _ctx.Store.Unignore(id, _serial), small: true);
+                    show.Margin = new Thickness(12, 0, 0, 0);
+                    show.VerticalAlignment = VerticalAlignment.Top;
+                    Ui.Tip(show, Loc.T("Remove this code from the ignored codes"));
+                    AutomationProperties.SetName(show, $"{Loc.T("Show Again")} {id}");
+                    row.Children.Add(Ui.At(show, 1));
+                    list.Children.Add(row);
+                }
+                return list;
             });
         }
 

@@ -1,18 +1,31 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BambuBar.Core.Model;
 
 /// <summary>
-/// Bambu Lab's texts for HMS codes and print errors in the app's language, P2S wording where it differs; English for
-/// languages Bambu's HMS service doesn't offer and for codes a translation lacks. Generated from ha-bambulab's
-/// catalogues (MIT) by shared/scripts/make-hms.py, stored as raw DEFLATE (not zlib or gzip).
+/// Bambu Lab's texts for HMS codes and print errors in the app's language, in each printer model's own wording;
+/// English for languages Bambu's HMS service doesn't offer. Generated from Bambu's catalogues by
+/// shared/scripts/make-hms.py before a release (nothing is downloaded at run time), stored as raw DEFLATE (not zlib
+/// or gzip). A code Bambu lists with no text maps to "": its apps don't show those, so
+/// <see cref="Protocol.ReportParser"/> skips them.
 /// </summary>
 public sealed class HmsCatalog
 {
-    private sealed record Tables(Dictionary<string, string> Hms, Dictionary<string, string> Errors)
+    private sealed class Table
     {
-        public static readonly Tables Empty = new([], []);
+        [JsonPropertyName("hms")] public Dictionary<string, string> Hms { get; set; } = [];
+        [JsonPropertyName("error")] public Dictionary<string, string> Errors { get; set; } = [];
+    }
+
+    /// <summary>The text most models share, and per serial prefix the texts where a model differs.</summary>
+    private sealed class Tables
+    {
+        [JsonPropertyName("hms")] public Dictionary<string, string> Hms { get; set; } = [];
+        [JsonPropertyName("error")] public Dictionary<string, string> Errors { get; set; } = [];
+        [JsonPropertyName("models")] public Dictionary<string, Table> Models { get; set; } = [];
+        public static readonly Tables Empty = new();
     }
 
     private readonly Lazy<Tables> _localized;
@@ -32,27 +45,39 @@ public sealed class HmsCatalog
         _english = new(() => Language == "en" ? _localized.Value : Load("en"));
     }
 
-    public string? HmsText(string key)
+    /// <summary><paramref name="model"/> is the serial's three-character prefix; null gives the text most models
+    /// share.</summary>
+    public string? HmsText(string key, string? model = null) => Text(key, model, hms: true);
+
+    public string? ErrorText(string key, string? model = null) => Text(key, model, hms: false);
+
+    /// <summary>The text for an issue's code as <see cref="PrinterIssue.Id"/> shows it: an HMS code (<c>HMS_…</c>) or
+    /// a print error.</summary>
+    public string? IssueText(string id, string? model = null)
     {
-        key = key.ToUpperInvariant();
-        return _localized.Value.Hms.GetValueOrDefault(key) ?? _english.Value.Hms.GetValueOrDefault(key);
+        var upper = id.ToUpperInvariant();
+        var hex = upper.Replace("HMS_", "", StringComparison.Ordinal).Replace("_", "", StringComparison.Ordinal);
+        return upper.StartsWith("HMS_", StringComparison.Ordinal) ? HmsText(hex, model) : ErrorText(hex, model);
     }
 
-    public string? ErrorText(string key)
+    private string? Text(string key, string? model, bool hms)
     {
         key = key.ToUpperInvariant();
-        return _localized.Value.Errors.GetValueOrDefault(key) ?? _english.Value.Errors.GetValueOrDefault(key);
+        model = model?.ToUpperInvariant();
+        string? Find(Tables tables)
+        {
+            if (model is not null && tables.Models.TryGetValue(model, out var own)
+                && (hms ? own.Hms : own.Errors).TryGetValue(key, out var modelText)) return modelText;
+            return (hms ? tables.Hms : tables.Errors).GetValueOrDefault(key);
+        }
+        // English only when the translation lacks the code, so it's loaded only then.
+        return Find(_localized.Value) ?? (Language == "en" ? null : Find(_english.Value));
     }
 
     private static string FilePath(string language) => Assets.PathOf("HMS", $"hms_{language}.json.deflate");
 
-    /// <summary>The app's language if there's a catalogue for it. Traditional Chinese readers get the Simplified one,
-    /// which Bambu Lab does publish, rather than English.</summary>
-    private static string FileLanguage(string appLanguage)
-    {
-        var lang = appLanguage == "zh-Hant" ? "zh-Hans" : appLanguage;
-        return File.Exists(FilePath(lang)) ? lang : "en";
-    }
+    /// <summary>The app's language if there's a catalogue for it, else English.</summary>
+    private static string FileLanguage(string appLanguage) => File.Exists(FilePath(appLanguage)) ? appLanguage : "en";
 
     private static Tables Load(string language)
     {
@@ -60,9 +85,7 @@ public sealed class HmsCatalog
         {
             using var file = File.OpenRead(FilePath(language));
             using var inflate = new DeflateStream(file, CompressionMode.Decompress);
-            var json = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(inflate);
-            if (json is null) return Tables.Empty;
-            return new(json.GetValueOrDefault("hms") ?? [], json.GetValueOrDefault("error") ?? []);
+            return JsonSerializer.Deserialize<Tables>(inflate) ?? Tables.Empty;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
         {

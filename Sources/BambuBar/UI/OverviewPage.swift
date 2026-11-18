@@ -24,7 +24,10 @@ struct OverviewPage: View {
                         lockedNote
                     }
                 }
-                ForEach(status.issues) { issue in IssueBanner(issue: issue) { store.current?.dismiss(issue) } }
+                ForEach(status.issues) { issue in
+                    IssueBanner(issue: issue, onDismiss: { store.current?.dismiss(issue) },
+                                onIgnore: { if let serial = store.config?.serial { store.ignore(issue, for: serial) } })
+                }
                 // Only with the camera on, in Settings and for this printer (never for the demo printers).
                 if let session = store.current, session.showsCamera {
                     CameraCard(session: session)
@@ -85,14 +88,17 @@ struct OverviewPage: View {
                     if let open = s.doorOpen {
                         DetailRow(title: "Door", value: open ? String(localized: "Open", comment: "Door") : String(localized: "Closed", comment: "Door"), symbol: "door.left.hand.closed")
                     }
-                    if s.chamberLightOn != nil {
+                    if s.chamberLight2On != nil {
+                        DetailRow(title: "Left", value: store.chamberLightOn ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
+                        DetailRow(title: "Right", value: (store.chamberLight2On ?? false) ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
+                    } else if s.chamberLightOn != nil {
                         DetailRow(title: "Light", value: store.chamberLightOn ? String(localized: "On") : String(localized: "Off"), symbol: "lightbulb")
                     }
                 }
                 .panel(radius: 16, padding: 13)
                 VStack(spacing: 9) {
                     DetailRow(title: "Network", value: s.wifiSignal.map { "\(WiFi.describe($0)) (\($0) dBm)" } ?? "—", symbol: "wifi")
-                    DetailRow(title: "Storage", value: s.hasSDCard == true ? String(localized: "SD card inserted") : s.hasSDCard == false ? String(localized: "No SD card") : "—", symbol: "sdcard")
+                    DetailRow(title: "Storage", value: (store.config?.model?.storage).describe(inserted: s.hasSDCard), symbol: (store.config?.model?.storage).symbol)
                     DetailRow(title: "Live View", value: s.liveViewEnabled == true ? String(localized: "On") : s.liveViewEnabled == false ? String(localized: "Off") : "—", symbol: "video")
                     DetailRow(title: "Firmware", value: (s.firmware ?? "—") + (s.updateAvailable ? " · " + String(localized: "Update available") : ""), symbol: "cpu")
                 }
