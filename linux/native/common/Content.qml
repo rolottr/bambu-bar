@@ -141,7 +141,7 @@ Control {
                                     Label { text: modelData.name; font.bold: true; color: root.kit.foreground; textFormat: Text.PlainText }
                                     Label { Layout.fillWidth: true; text: modelData.caption + " · " + modelData.headline; color: root.kit.foreground; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                                     Progress { kit: root.kit; Layout.fillWidth: true; value: modelData.progress }
-                                    Label { text: modelData.stateLine; color: root.kit.muted; textFormat: Text.PlainText }
+                                    Label { Layout.fillWidth: true; text: modelData.stateLine; color: root.kit.muted; wrapMode: Text.Wrap; textFormat: Text.PlainText }
                                     Field { kit: root.kit; controller: ({activate: function() { root.send("select", modelData.serial); root.send("navigate:Printer") }}); field: ({kind:"button",key:"select",label:root.t("Printer")}) }
                                 }
                             }
