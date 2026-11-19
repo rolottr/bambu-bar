@@ -187,7 +187,10 @@ struct PrintersPage: View {
 
     @ViewBuilder private func cameraEditor(_ config: PrinterConfig) -> some View {
         SettingsRow("Stream URL") {
-            TextField("rtsp://192.168.1.40:554/stream1", text: $cameraURL)
+            // The sample address is not text to translate, so it goes in verbatim.
+            TextField("Stream URL", text: $cameraURL,
+                      prompt: Text(verbatim: "rtsp://192.168.1.40:554/stream1"))
+                .labelsHidden()
                 .textFieldStyle(.roundedBorder).frame(width: 260)
                 .onChange(of: cameraURL) { cameraURLProblem = nil; testState = .idle }
         }
@@ -207,7 +210,7 @@ struct PrintersPage: View {
             case .idle: EmptyView()
             case .testing: Text("Testing…").font(.system(size: 11.5)).foregroundStyle(.secondary)
             case .worked(let detail):
-                Text("\u{2713} \(detail)").font(.system(size: 11.5)).foregroundStyle(Palette.accent)
+                Text(verbatim: "\u{2713} \(detail)").font(.system(size: 11.5)).foregroundStyle(Palette.accent)
             case .failed(let reason):
                 Text(reason).font(.system(size: 11.5)).foregroundStyle(Palette.paused)
                     .fixedSize(horizontal: false, vertical: true)
