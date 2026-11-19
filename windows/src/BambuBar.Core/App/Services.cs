@@ -8,15 +8,23 @@ public interface ISecretStore
     string? AccessCode(string serial);
     void SetAccessCode(string code, string serial);
     void RemoveAccessCode(string serial);
+    /// <summary>The password of an external camera entered for this printer, kept apart from its access code.</summary>
+    string? CameraPassword(string serial);
+    void SetCameraPassword(string password, string serial);
+    void RemoveCameraPassword(string serial);
 }
 
 /// <summary>Codes held for this run only: demo, emulator and developer sessions, and tests.</summary>
 public sealed class MemorySecretStore : ISecretStore
 {
     private readonly ConcurrentDictionary<string, string> _codes = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, string> _cameraPasswords = new(StringComparer.Ordinal);
     public string? AccessCode(string serial) => _codes.GetValueOrDefault(serial);
     public void SetAccessCode(string code, string serial) => _codes[serial] = code;
     public void RemoveAccessCode(string serial) => _codes.TryRemove(serial, out _);
+    public string? CameraPassword(string serial) => _cameraPasswords.GetValueOrDefault(serial);
+    public void SetCameraPassword(string password, string serial) => _cameraPasswords[serial] = password;
+    public void RemoveCameraPassword(string serial) => _cameraPasswords.TryRemove(serial, out _);
 }
 
 /// <summary>System notifications (toasts on Windows). <paramref name="id"/> replaces an earlier one with the same id.</summary>

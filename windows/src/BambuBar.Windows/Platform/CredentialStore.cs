@@ -16,6 +16,7 @@ namespace BambuBar.Platform;
 public sealed partial class CredentialStore : ISecretStore
 {
     private const string Prefix = "Bambu Bar/";
+    private const string CameraPrefix = "Bambu Bar camera/";
     private const int CredTypeGeneric = 1;
     private const int CredPersistLocalMachine = 2;
     private const int ErrorNotFound = 1168;
@@ -26,21 +27,41 @@ public sealed partial class CredentialStore : ISecretStore
     public string FallbackPath { get; init; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "access-codes.json");
 
+    /// <summary>Camera passwords' own fallback file, beside the access codes' (tests move both at once).</summary>
+    public string CameraFallbackPath =>
+        Path.Combine(Path.GetDirectoryName(FallbackPath)!, "camera-passwords.json");
+
     private static string Target(string serial) => Prefix + serial.ToUpperInvariant();
 
-    public string? AccessCode(string serial) => Read(Target(serial)) ?? FallbackCode(serial.ToUpperInvariant());
+    private static string CameraTarget(string serial) => CameraPrefix + serial.ToUpperInvariant();
 
-    public void SetAccessCode(string code, string serial)
+    public string? AccessCode(string serial) => Get(Target(serial), serial, FallbackPath);
+
+    public void SetAccessCode(string code, string serial) => Set(Target(serial), serial, code, FallbackPath);
+
+    public void RemoveAccessCode(string serial) => Remove(Target(serial), serial, FallbackPath);
+
+    public string? CameraPassword(string serial) => Get(CameraTarget(serial), serial, CameraFallbackPath);
+
+    public void SetCameraPassword(string password, string serial) =>
+        Set(CameraTarget(serial), serial, password, CameraFallbackPath);
+
+    public void RemoveCameraPassword(string serial) => Remove(CameraTarget(serial), serial, CameraFallbackPath);
+
+    private string? Get(string target, string serial, string fallback) =>
+        Read(target) ?? FallbackCode(serial.ToUpperInvariant(), fallback);
+
+    private void Set(string target, string serial, string secret, string fallback)
     {
         var key = serial.ToUpperInvariant();
         try
         {
-            Write(Target(serial), key, code);
+            Write(target, key, secret);
         }
         catch (System.ComponentModel.Win32Exception refused)
         {
-            // Credential Manager is full or refuses: keep the code ourselves. Only when that fails too is it reported.
-            try { UpdateFallback(key, code); }
+            // Credential Manager is full or refuses: keep it ourselves. Only when that fails too is it reported.
+            try { UpdateFallback(key, secret, fallback); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
             {
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(refused);
@@ -48,39 +69,39 @@ public sealed partial class CredentialStore : ISecretStore
             return;
         }
         // Saved where it belongs: drop a copy kept while Credential Manager was full.
-        if (FallbackCode(key) is not null) TryUpdateFallback(key, null);
+        if (FallbackCode(key, fallback) is not null) TryUpdateFallback(key, null, fallback);
     }
 
-    public void RemoveAccessCode(string serial)
+    private void Remove(string target, string serial, string fallback)
     {
-        TryUpdateFallback(serial.ToUpperInvariant(), null);
-        if (!CredDelete(Target(serial), CredTypeGeneric, 0) && Marshal.GetLastPInvokeError() != ErrorNotFound)
+        TryUpdateFallback(serial.ToUpperInvariant(), null, fallback);
+        if (!CredDelete(target, CredTypeGeneric, 0) && Marshal.GetLastPInvokeError() != ErrorNotFound)
             throw new System.ComponentModel.Win32Exception(Marshal.GetLastPInvokeError());
     }
 
     // MARK: The fallback file: { "SERIAL": "<base64 of the DPAPI-protected UTF-16 code>" }
 
-    private string? FallbackCode(string key)
+    private string? FallbackCode(string key, string fallback)
     {
         lock (FallbackLock)
         {
-            if (!LoadFallback().TryGetValue(key, out var sealed_)) return null;
+            if (!LoadFallback(fallback).TryGetValue(key, out var sealed_)) return null;
             try { return Encoding.Unicode.GetString(Unprotect(Convert.FromBase64String(sealed_))); }
             catch (Exception e) when (e is FormatException or System.ComponentModel.Win32Exception) { return null; }
         }
     }
 
-    private void TryUpdateFallback(string key, string? code)
+    private void TryUpdateFallback(string key, string? code, string fallback)
     {
-        try { UpdateFallback(key, code); }
+        try { UpdateFallback(key, code, fallback); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception) { }
     }
 
-    private void UpdateFallback(string key, string? code)
+    private void UpdateFallback(string key, string? code, string fallback)
     {
         lock (FallbackLock)
         {
-            var codes = LoadFallback();
+            var codes = LoadFallback(fallback);
             if (code is null)
             {
                 if (!codes.Remove(key)) return;
@@ -91,19 +112,19 @@ public sealed partial class CredentialStore : ISecretStore
             }
             if (codes.Count == 0)
             {
-                File.Delete(FallbackPath);
+                File.Delete(fallback);
                 return;
             }
-            Directory.CreateDirectory(Path.GetDirectoryName(FallbackPath)!);
-            FileWrite.Atomic(FallbackPath, System.Text.Json.JsonSerializer.Serialize(codes));
+            Directory.CreateDirectory(Path.GetDirectoryName(fallback)!);
+            FileWrite.Atomic(fallback, System.Text.Json.JsonSerializer.Serialize(codes));
         }
     }
 
-    private Dictionary<string, string> LoadFallback()
+    private static Dictionary<string, string> LoadFallback(string fallback)
     {
         try
         {
-            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(FallbackPath))
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(fallback))
                 ?? new(StringComparer.Ordinal);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)

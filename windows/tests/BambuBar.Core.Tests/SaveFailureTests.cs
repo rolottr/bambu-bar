@@ -15,6 +15,9 @@ public sealed class SaveFailureTests : IDisposable
         public string? AccessCode(string serial) => null;
         public void SetAccessCode(string code, string serial) => throw new Win32Exception(1312);
         public void RemoveAccessCode(string serial) => throw new Win32Exception(1312);
+        public string? CameraPassword(string serial) => null;
+        public void SetCameraPassword(string password, string serial) => throw new Win32Exception(1312);
+        public void RemoveCameraPassword(string serial) => throw new Win32Exception(1312);
     }
 
     private readonly SerialContext _context = new("SaveFailureTests");
