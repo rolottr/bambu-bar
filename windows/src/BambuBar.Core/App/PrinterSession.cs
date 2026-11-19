@@ -146,13 +146,17 @@ public sealed class PrinterSession : Observable, IDisposable
     /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printers page.</summary>
     public bool ShowsCamera => !IsDemo && _store.CameraEnabled && Config.CameraEnabled == true;
     /// <summary>RTSPS or the JPEG stream, by model.</summary>
+    /// <summary>What this printer's model serves, whatever the camera is pointed at: the Printers page note
+    /// reads it.</summary>
     public CameraTransport CameraTransport => CameraTransports.ForModel(Config.ModelName);
+    /// <summary>Where this printer's camera stream comes from.</summary>
+    public CameraSource CameraSource => CameraTransport.Source();
 
     /// <summary>What the camera feed needs to know, as of now.</summary>
     private CameraSituation CameraSituation() => new()
     {
         IsDemo = IsDemo, ShowsCamera = ShowsCamera, IsMockFleet = _store.IsMockFleet, IsOnline = IsOnline,
-        Transport = CameraTransport, LiveViewEnabled = Status?.LiveViewEnabled, IsPrinting = Status?.State.IsActive() == true,
+        Source = CameraSource, LiveViewEnabled = Status?.LiveViewEnabled, IsPrinting = Status?.State.IsActive() == true,
         StaysOnWhilePrinting = _store.CameraStaysOnWhilePrinting, Host = Config.Endpoint.Host, Serial = Config.Serial,
         AccessCode = CameraAccessCode,
     };

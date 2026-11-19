@@ -34,7 +34,8 @@ public class CameraTests
         var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = code, Transport = transport,
+            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = code,
+            Source = new CameraSource.Printer(transport),
             OnCertificate = onCertificate is null ? null : leaf => onCertificate(BambuTrust.CommonName(leaf)),
         });
         client.OnEvent = e =>

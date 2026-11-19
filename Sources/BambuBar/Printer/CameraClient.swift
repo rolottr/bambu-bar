@@ -3,56 +3,16 @@ import CoreMedia
 import Foundation
 import Network
 
-/// How a printer serves its camera on the LAN.
-enum CameraTransport: Equatable {
-    /// RTSP over TLS on port 322 with H.264/H.265 video (X1, H2, P2S, X2D). Needs "LAN Only Liveview" on.
-    case rtsps
-    /// A proprietary TLS stream of JPEG frames on port 6000 (P1, A1).
-    case jpeg
-
-    static func forModel(_ modelName: String) -> CameraTransport {
-        switch modelName {
-        case "P1P", "P1S", "A1", "A1 mini", "A2L": return .jpeg
-        default: return .rtsps
-        }
-    }
-
-    var port: UInt16 { self == .rtsps ? 322 : 6000 }
-}
+// `CameraTransport`, `CameraSource`, `ExternalCamera` and `CameraFailure` live in CameraProtocol.swift,
+// which carries no network code, so the unit tests can reach them without the app.
 
 struct CameraConfig {
+    /// The printer's address, which the printer's own camera is served from.
     var host: String
     var serial: String
     var accessCode: String
-    var transport: CameraTransport
-}
-
-enum CameraFailure: Error, Equatable {
-    case unauthorized
-    case unreachable(String)
-    case timedOut
-    case closed
-    case unsupported(String)
-    case malformed(String)
-
-    /// Retrying won't help until something changes (the access code, the printer, the app).
-    var isPermanent: Bool {
-        switch self {
-        case .unauthorized, .unsupported: return true
-        default: return false
-        }
-    }
-
-    var message: String {
-        switch self {
-        case .unauthorized: return String(localized: "The printer didn't accept the access code for the camera.")
-        case .unreachable(let reason): return reason
-        case .timedOut: return String(localized: "The camera stopped sending video.")
-        case .closed: return String(localized: "The printer closed the camera connection.")
-        case .unsupported(let reason): return reason
-        case .malformed(let reason): return String(localized: "The camera sent something unexpected (\(reason)).", comment: "A technical detail, in English")
-        }
-    }
+    /// The printer's camera, or one entered by hand that replaces it.
+    var source: CameraSource
 }
 
 enum CameraEvent {
@@ -75,9 +35,9 @@ protocol CameraClient: AnyObject {
 }
 
 func makeCameraClient(_ config: CameraConfig) -> CameraClient {
-    switch config.transport {
-    case .rtsps: return RTSPCameraClient(config)
-    case .jpeg: return JPEGCameraClient(config)
+    switch config.source {
+    case .printer(.rtsps), .external: return RTSPCameraClient(config)
+    case .printer(.jpeg): return JPEGCameraClient(config)
     }
 }
 

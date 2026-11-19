@@ -26,7 +26,8 @@ public sealed record CameraSituation
     /// <summary>A run against the mock fleet (<c>--emulator</c>), whose printers have no camera.</summary>
     public bool IsMockFleet { get; init; }
     public bool IsOnline { get; init; }
-    public CameraTransport Transport { get; init; }
+    /// <summary>The printer's camera, or one entered by hand that replaces it.</summary>
+    public CameraSource Source { get; init; } = new CameraSource.Printer(CameraTransport.Rtsps);
     /// <summary>What the printer reports for LAN Only Liveview; null before it says.</summary>
     public bool? LiveViewEnabled { get; init; }
     /// <summary>A print is under way (preparing, printing or paused).</summary>
@@ -139,6 +140,9 @@ public sealed class CameraFeed : Observable, IDisposable
     private bool KeepsWarm => _situation() is { StaysOnWhilePrinting: true, IsPrinting: true } && Availability() is null;
 
     private bool Wanted => HasViewers || KeepsWarm;
+
+    /// <summary>Where the stream comes from, which decides how a failure is worded.</summary>
+    private CameraSource Source => _situation()?.Source ?? new CameraSource.Printer(CameraTransport.Rtsps);
 
     // MARK: Viewers
 
@@ -254,7 +258,7 @@ public sealed class CameraFeed : Observable, IDisposable
         if (!s.ShowsCamera) return Loc.T("The camera is off.");
         if (s.IsMockFleet) return "The mock fleet's printers have no camera.";
         if (!s.IsOnline) return Loc.T("The camera starts when the printer is connected.");
-        if (s.Transport == CameraTransport.Rtsps && s.LiveViewEnabled == false)
+        if (s.Source is CameraSource.Printer { Transport: CameraTransport.Rtsps } && s.LiveViewEnabled == false)
             return Loc.T("Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here.");
         // Windows: the decoder is a library beside the app, which may be missing (the Mac's is the system's).
         return _services.DecoderProblem();
@@ -273,7 +277,7 @@ public sealed class CameraFeed : Observable, IDisposable
             State = new FeedState.Unavailable(Loc.T("The access code isn't available."));
             return;
         }
-        var client = _services.Client(new CameraConfig { Host = s.Host, Serial = s.Serial, AccessCode = code, Transport = s.Transport });
+        var client = _services.Client(new CameraConfig { Host = s.Host, Serial = s.Serial, AccessCode = code, Source = s.Source });
         client.OnEvent = e =>
         {
             if (ReferenceEquals(client, _client)) Handle(e);
@@ -326,13 +330,13 @@ public sealed class CameraFeed : Observable, IDisposable
         _pipeline?.Reset();
         if (failure.IsPermanent)
         {
-            State = new FeedState.Failed(failure.Message, Retrying: false);
+            State = new FeedState.Failed(failure.Message(Source), Retrying: false);
             return;
         }
         var delay = RetryDelays[Math.Min(_attempt, RetryDelays.Length - 1)];
         _attempt++;
         // A stream that was fine and dropped once reconnects quietly.
-        if (!(State is FeedState.Live && _attempt == 1)) State = new FeedState.Failed(failure.Message, Retrying: true);
+        if (!(State is FeedState.Live && _attempt == 1)) State = new FeedState.Failed(failure.Message(Source), Retrying: true);
         _retry = _scheduler.After(delay, Connect);
     }
 

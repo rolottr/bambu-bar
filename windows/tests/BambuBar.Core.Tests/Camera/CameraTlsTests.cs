@@ -16,7 +16,8 @@ public class CameraTlsTests
         var done = new TaskCompletionSource<CameraEvent?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = "127.0.0.1", Port = port, Serial = Serial, AccessCode = "12345678", Transport = transport,
+            Host = "127.0.0.1", Port = port, Serial = Serial, AccessCode = "12345678",
+            Source = new CameraSource.Printer(transport),
             OnCertificate = leaf => onCertificate?.Invoke(BambuTrust.CommonName(leaf)),
         });
         client.OnEvent = e => done.TrySetResult(e);

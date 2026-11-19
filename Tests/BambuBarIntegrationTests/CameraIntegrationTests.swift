@@ -27,7 +27,7 @@ final class CameraIntegrationTests: XCTestCase {
         let finished = expectation(description: "camera \(scenario)")
         var fulfilled = false
         let client = makeCameraClient(CameraConfig(host: Simulators.cameraHost, serial: Simulators.cameraSerial,
-                                                   accessCode: code, transport: transport))
+                                                   accessCode: code, source: .printer(transport)))
         client.onEvent = { event in
             let recorded: Event
             switch event {

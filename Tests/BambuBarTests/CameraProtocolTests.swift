@@ -163,3 +163,27 @@ final class JPEGFrameReaderTests: XCTestCase {
         XCTAssertNil(reader.append(Data([UInt8](repeating: 0, count: 16))))
     }
 }
+
+/// What the app tells someone when a camera fails: the printer's own camera names the printer, an external
+/// one names the camera. Mirrored in windows/tests/BambuBar.Core.Tests/Camera/CameraProtocolTests.cs.
+final class CameraFailureWordingTests: XCTestCase {
+    private let external = CameraSource.external(ExternalCamera(
+        url: try! RTSPURL.parse("rtsp://cam/s").get(), username: "", password: ""))
+
+    func testPrinterWordingIsUnchanged() {
+        XCTAssertEqual(CameraFailure.closed.message(from: .printer(.rtsps)),
+                       "The printer closed the camera connection.")
+        XCTAssertEqual(CameraFailure.unauthorized.message(from: .printer(.jpeg)),
+                       "The printer didn't accept the access code for the camera.")
+    }
+
+    func testExternalWordingNamesTheCamera() {
+        XCTAssertEqual(CameraFailure.closed.message(from: external), "The camera closed the connection.")
+        XCTAssertEqual(CameraFailure.credentialsRejected.message(from: external),
+                       "The camera refused the username and password.")
+    }
+
+    func testCredentialsRejectedIsPermanent() {
+        XCTAssertTrue(CameraFailure.credentialsRejected.isPermanent)
+    }
+}

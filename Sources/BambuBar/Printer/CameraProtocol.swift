@@ -3,6 +3,91 @@ import Foundation
 
 // The camera protocols' parsing, apart from the network code so the unit tests can compile it on its own.
 
+// MARK: - Camera sources
+
+/// How a printer serves its camera on the LAN.
+enum CameraTransport: Equatable {
+    /// RTSP over TLS on port 322 with H.264/H.265 video (X1, H2, P2S, X2D). Needs "LAN Only Liveview" on.
+    case rtsps
+    /// A proprietary TLS stream of JPEG frames on port 6000 (P1, A1).
+    case jpeg
+
+    static func forModel(_ modelName: String) -> CameraTransport {
+        switch modelName {
+        case "P1P", "P1S", "A1", "A1 mini", "A2L": return .jpeg
+        default: return .rtsps
+        }
+    }
+
+    var port: UInt16 { self == .rtsps ? 322 : 6000 }
+}
+
+/// A camera someone entered on the Printers page, with the credentials it needs.
+struct ExternalCamera: Equatable {
+    var url: RTSPURL
+    var username: String
+    var password: String
+}
+
+/// Where a camera stream comes from.
+enum CameraSource: Equatable {
+    /// The printer's own camera, served the way its model serves it.
+    case printer(CameraTransport)
+    /// A camera someone entered themselves, which replaces the printer's own.
+    case external(ExternalCamera)
+
+    var isExternal: Bool {
+        if case .external = self { return true }
+        return false
+    }
+}
+
+enum CameraFailure: Error, Equatable {
+    /// The printer refused the access code.
+    case unauthorized
+    /// An external camera refused the username and password.
+    case credentialsRejected
+    case unreachable(String)
+    case timedOut
+    case closed
+    case unsupported(String)
+    case malformed(String)
+
+    /// Retrying won't help until something changes (the access code, the camera's credentials, the printer,
+    /// the app).
+    var isPermanent: Bool {
+        switch self {
+        case .unauthorized, .credentialsRejected, .unsupported: return true
+        default: return false
+        }
+    }
+
+    /// What to tell the person. Some of these name the printer, which would be wrong for a camera they
+    /// pointed the app at themselves.
+    func message(from source: CameraSource) -> String {
+        switch self {
+        case .unauthorized:
+            return String(localized: "The printer didn't accept the access code for the camera.")
+        case .credentialsRejected:
+            return String(localized: "The camera refused the username and password.")
+        case .unreachable(let reason):
+            return reason
+        case .timedOut:
+            return String(localized: "The camera stopped sending video.")
+        case .closed:
+            return source.isExternal
+                ? String(localized: "The camera closed the connection.")
+                : String(localized: "The printer closed the camera connection.")
+        case .unsupported(let reason):
+            return reason
+        case .malformed(let reason):
+            return String(localized: "The camera sent something unexpected (\(reason)).",
+                          comment: "A technical detail, in English")
+        }
+    }
+}
+
+
 // MARK: - RTSP messages
 
 struct RTSPMessage: Equatable {

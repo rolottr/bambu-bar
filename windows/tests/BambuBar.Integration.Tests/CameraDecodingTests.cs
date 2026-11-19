@@ -31,13 +31,15 @@ public class CameraDecodingTests
         var enough = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = CameraSimulator.Code, Transport = transport,
+            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = CameraSimulator.Code,
+            Source = new CameraSource.Printer(transport),
         });
         client.OnEvent = e =>
         {
             if (e is CameraEvent.Failed f)
             {
-                enough.TrySetException(new InvalidOperationException(f.Failure.Message));
+                enough.TrySetException(new InvalidOperationException(
+                    f.Failure.Message(new CameraSource.Printer(transport))));
                 return;
             }
             var picture = e switch
@@ -98,7 +100,8 @@ public class CameraDecodingTests
         {
             var situation = new CameraSituation
             {
-                ShowsCamera = true, IsOnline = true, Transport = transport, Host = CameraSimulator.Host, Serial = CameraSimulator.Serial,
+                ShowsCamera = true, IsOnline = true, Source = new CameraSource.Printer(transport),
+                Host = CameraSimulator.Host, Serial = CameraSimulator.Serial,
                 AccessCode = CameraSimulator.Code,
             };
             var feed = new CameraFeed(() => situation);

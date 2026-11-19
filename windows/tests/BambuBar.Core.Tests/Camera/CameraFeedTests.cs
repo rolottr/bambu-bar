@@ -88,7 +88,8 @@ public class CameraFeedTests
     private string? _decoderProblem;
     private CameraSituation? _situation = new()
     {
-        ShowsCamera = true, IsOnline = true, Transport = CameraTransport.Rtsps, LiveViewEnabled = true,
+        ShowsCamera = true, IsOnline = true, Source = new CameraSource.Printer(CameraTransport.Rtsps),
+        LiveViewEnabled = true,
         Host = "192.168.1.50", Serial = "22E00A000000123", AccessCode = "12345678",
     };
     private readonly CameraFeed _feed;
@@ -144,7 +145,13 @@ public class CameraFeedTests
         Watch();
         Assert.Single(_clients);
         Assert.True(Current.Started);
-        Assert.Equal(new CameraConfig { Host = "192.168.1.50", Serial = "22E00A000000123", AccessCode = "12345678", Transport = CameraTransport.Rtsps }, Current.Config);
+        Assert.Equal(
+            new CameraConfig
+            {
+                Host = "192.168.1.50", Serial = "22E00A000000123", AccessCode = "12345678",
+                Source = new CameraSource.Printer(CameraTransport.Rtsps),
+            },
+            Current.Config);
         Assert.Equal(new State.Connecting(), _feed.State);
         Current.Send(new CameraEvent.Started("H.264 · 1920×1080", 1920, 1080));
         Assert.Equal("H.264 · 1920×1080", _feed.Detail);
@@ -185,11 +192,11 @@ public class CameraFeedTests
     [Fact]
     public void LiveviewMattersOnlyForRtsps()
     {
-        _situation = _situation! with { Transport = CameraTransport.Jpeg, LiveViewEnabled = false };
+        _situation = _situation! with { Source = new CameraSource.Printer(CameraTransport.Jpeg), LiveViewEnabled = false };
         Watch();
         Assert.Single(_clients);
         _feed.Stop();
-        _situation = _situation with { Transport = CameraTransport.Rtsps, LiveViewEnabled = null };
+        _situation = _situation with { Source = new CameraSource.Printer(CameraTransport.Rtsps), LiveViewEnabled = null };
         _feed.ViewersChanged();
         Assert.Equal(2, _clients.Count);
     }
@@ -344,7 +351,7 @@ public class CameraFeedTests
     [Fact]
     public void JpegStillsDecodeOnlyTheNewest()
     {
-        _situation = _situation! with { Transport = CameraTransport.Jpeg };
+        _situation = _situation! with { Source = new CameraSource.Printer(CameraTransport.Jpeg) };
         var viewer = Watch();
         Current.Send(new CameraEvent.Started("JPEG · 64×48", 64, 48));
         Current.Send(new CameraEvent.Image(new byte[10], 64, 48));

@@ -62,7 +62,8 @@ public static class CameraProbe
         var saved = false;
         string? failure = null;
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var client = CameraClient.Create(new CameraConfig { Host = a.Host, Serial = a.Serial, AccessCode = a.Code, Transport = a.Transport });
+        var source = new CameraSource.Printer(a.Transport);
+        var client = CameraClient.Create(new CameraConfig { Host = a.Host, Serial = a.Serial, AccessCode = a.Code, Source = source });
         client.Log = Log;
         client.OnEvent = e =>
         {
@@ -88,7 +89,7 @@ public static class CameraProbe
                         picture = Decode(() => decoder?.DecodeJpeg(image.Jpeg));
                         break;
                     case CameraEvent.Failed failed:
-                        failure = failed.Failure.Message;
+                        failure = failed.Failure.Message(source);
                         Log($"failed: {failure}");
                         done.TrySetResult();
                         return;

@@ -396,7 +396,7 @@ public static class Snapshot
         var jpeg = PrinterJpeg(width, height);
         CameraFeed Feed(CameraSituation situation, ICameraClient client) =>
             new(() => situation, new CameraServices { Client = _ => client });
-        var online = new CameraSituation { ShowsCamera = true, IsOnline = true, Transport = CameraTransport.Jpeg, AccessCode = "12345678", Host = "192.0.2.1", Serial = "01P00A000000001" };
+        var online = new CameraSituation { ShowsCamera = true, IsOnline = true, Transport = new CameraSource.Printer(CameraTransport.Jpeg), AccessCode = "12345678", Host = "192.0.2.1", Serial = "01P00A000000001" };
         var live = Feed(online, new StillCamera(jpeg, (width, height), null));
         var feeds = new (string Name, CameraFeed Feed)[]
         {
