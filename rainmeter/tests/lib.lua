@@ -156,8 +156,8 @@ function T.fakeSelf(size)
 end
 
 -- Loads a skin of `size` reading `file`, at unix time `now` and animation clock `clock`.
-function T.boot(size, file, now)
-	SKIN = T.fakeSkin({ StateFile = file })
+function T.boot(size, file, now, transparency)
+	SKIN = T.fakeSkin({ StateFile = file, WidgetBackgroundTransparency = transparency })
 	SELF = T.fakeSelf(size)
 	BB.now = function() return T.unix end
 	BB.clock = function() return T.clock end

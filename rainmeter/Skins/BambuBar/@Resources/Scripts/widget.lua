@@ -454,17 +454,18 @@ function BB.pulseOptions(cx, cy, r, k, color, width, grow)
 end
 
 -- The card at hover amount h (0–1).
-function BB.cardOptions(w, h, hover)
+function BB.cardOptions(w, h, hover, opacity)
+	local alpha = max(1, floor(255 * opacity + 0.5)) -- alpha 1 keeps a transparent card clickable
 	local function mix(a, b)
-		return fmt("%02X%02X%02X", floor(a[1] + (b[1] - a[1]) * hover + 0.5), floor(a[2] + (b[2] - a[2]) * hover + 0.5),
-			floor(a[3] + (b[3] - a[3]) * hover + 0.5))
+		return fmt("%02X%02X%02X%02X", floor(a[1] + (b[1] - a[1]) * hover + 0.5), floor(a[2] + (b[2] - a[2]) * hover + 0.5),
+			floor(a[3] + (b[3] - a[3]) * hover + 0.5), alpha)
 	end
 	local C = BB.CARD
 	local border = C.border + (C.hoverBorder - C.border) * hover
 	return {
 		Shape = fmt("Rectangle 0,0,%d,%d,14 | Fill LinearGradient CardGradient | StrokeWidth 0", w, h),
 		Shape2 = fmt("Rectangle 0.5,0.5,%d,%d,13.5 | Fill Color 00000000 | StrokeWidth 1 | Stroke Color FFFFFF%02X",
-			w - 1, h - 1, floor(border * 255 + 0.5)),
+			w - 1, h - 1, floor(border * opacity * 255 + 0.5)),
 		CardGradient = fmt("90 | %s ; 0 | %s ; 1", mix(C.top, C.hoverTop), mix(C.bottom, C.hoverBottom)),
 	}
 end
@@ -1062,6 +1063,22 @@ local function flush()
 	SKIN:Bang("!Redraw")
 end
 
+local function backgroundOpacity(percent)
+	return 1 - min(100, max(0, tonumber(percent) or 0)) / 100
+end
+
+local function updateBackground()
+	apply("Card", BB.cardOptions(G.w, G.h, G.hover, G.backgroundOpacity))
+	apply("Shadow", { ImageAlpha = tostring(floor(255 * G.backgroundOpacity + 0.5)) })
+end
+
+-- Called by WidgetHost on slider changes, independently of the state and animation timers.
+function SetBackgroundTransparency(percent)
+	G.backgroundOpacity = backgroundOpacity(percent)
+	updateBackground()
+	flush()
+end
+
 -- Text measurement with the two invisible probe meters (see the note at the top). Results are cached: the
 -- layout runs every second, but its texts rarely change.
 local function measure(fo, text, w)
@@ -1260,11 +1277,12 @@ function Initialize()
 	G.lineCache, G.measured, G.measuredCount = {}, {}, 0
 	G.applied, G.touched, G.anims, G.model, G.view, G.raw, G.state = {}, {}, {}, nil, nil, nil, nil
 	G.pending, G.artHold, G.hover, G.frameRunning, G.spinRunning = nil, nil, 0, false, false
+	G.backgroundOpacity = backgroundOpacity(SKIN:GetVariable("WidgetBackgroundTransparency", "0"))
 	-- Segoe UI Variable ships with Windows 11 only; Windows 10 has Segoe UI (mockup O7).
 	local windir = os.getenv("WINDIR") or "C:\\Windows"
 	local f = io.open(windir .. "\\Fonts\\SegUIVar.ttf", "rb")
 	if f then f:close(); BB.faces.text = "Segoe UI Variable Text" else BB.faces.text = "Segoe UI" end
-	apply("Card", BB.cardOptions(G.w, G.h, 0))
+	updateBackground()
 	setContentAlpha(1)
 end
 
@@ -1297,7 +1315,7 @@ function Frame()
 			apply("ArtB", { ImageAlpha = tostring(floor(v + 0.5)) })
 		elseif name == "hover" then
 			G.hover = v
-			apply("Card", BB.cardOptions(G.w, G.h, v))
+			apply("Card", BB.cardOptions(G.w, G.h, v, G.backgroundOpacity))
 		elseif name == "pulse" then
 			local g = G.view and G.view.geo.pulse
 			if g then
@@ -1346,7 +1364,7 @@ function Hover(on)
 	local to = on == 1 and 1 or 0
 	if G.model and not G.model.motion then
 		G.hover = to
-		apply("Card", BB.cardOptions(G.w, G.h, to))
+		apply("Card", BB.cardOptions(G.w, G.h, to, G.backgroundOpacity))
 		flush()
 		return
 	end

@@ -151,6 +151,39 @@ T.test("hover tweens the card over 140 ms", function()
 	T.ok(skin.options.Card.Shape2:find("FFFFFF14", 1, true), "border 8 %")
 end)
 
+T.test("background transparency redraws immediately and survives hover", function()
+	local skin = boot("Small", state("printing"))
+	local content = skin.options.Content.Shape
+	local art = skin.options.ArtA.ImageAlpha
+	SetBackgroundTransparency(50)
+	T.ok(skin.options.Card.CardGradient:find("292B2E80", 1, true))
+	T.eq(skin.options.Shadow.ImageAlpha, "128")
+	T.eq(skin.bangs[#skin.bangs], "!Redraw")
+	Hover(1)
+	T.runFrames()
+	T.ok(skin.options.Card.CardGradient:find("31333780", 1, true))
+	SetBackgroundTransparency(100)
+	T.ok(skin.options.Card.CardGradient:find("31333701", 1, true), "transparent card still has a hit area")
+	T.ok(skin.options.Card.Shape2:find("FFFFFF00", 1, true))
+	T.eq(skin.options.Shadow.ImageAlpha, "0")
+	T.eq(skin.options.Content.Shape, content)
+	T.eq(skin.options.ArtA.ImageAlpha, art)
+	SetBackgroundTransparency(0)
+	T.ok(skin.options.Card.CardGradient:find("313337FF", 1, true))
+	T.eq(skin.options.Shadow.ImageAlpha, "255")
+end)
+
+T.test("a newly loaded widget uses the saved transparency", function()
+	local s = state("printing")
+	T.write(s)
+	for _, size in ipairs({ "Small", "Medium", "Large" }) do
+		local skin = T.boot(size, T.TMP, s.savedAt, "20")
+		Update()
+		T.ok(skin.options.Card.CardGradient:find("292B2ECC", 1, true))
+		T.eq(skin.options.Shadow.ImageAlpha, "204")
+	end
+end)
+
 T.test("motion off: no fades, tweens, pulses, crossfades or spinner", function()
 	local off = function(s) s.motion = false end
 	local skin = boot("Small", state("printing", off))
