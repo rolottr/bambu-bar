@@ -493,11 +493,42 @@ public sealed class PrinterStore : Observable, IDisposable
         CameraSwitchesChanged();
     }
 
+    /// <summary>Points one printer's camera at an entered RTSP stream (Printers page). The URL is stored without
+    /// its credentials: the username goes beside it, the password into the secret store.</summary>
+    public void SetExternalCamera(RtspUrl url, string username, string password, string serial)
+    {
+        if (Session(serial) is not { } session) return;
+        session.Config = session.Config with
+        {
+            CameraUrl = url.Absolute, CameraUsername = username.Length == 0 ? null : username,
+        };
+        try
+        {
+            if (password.Length == 0) Secrets.RemoveCameraPassword(serial); else Secrets.SetCameraPassword(password, serial);
+        }
+        catch (Exception e) when (IsStorageFailure(e)) { SaveFailed?.Invoke(e); }
+        SaveConfigs();
+        session.Camera.Restart();
+        session.Camera.Update();
+    }
+
+    /// <summary>Back to the printer's own camera, keeping no credential for one it no longer uses.</summary>
+    public void ClearExternalCamera(string serial)
+    {
+        if (Session(serial) is not { } session || session.Config.CameraUrl is null) return;
+        session.Config = session.Config with { CameraUrl = null, CameraUsername = null };
+        try { Secrets.RemoveCameraPassword(serial); }
+        catch (Exception e) when (IsStorageFailure(e)) { SaveFailed?.Invoke(e); }
+        SaveConfigs();
+        session.Camera.Restart();
+        session.Camera.Update();
+    }
+
     public void Forget(string serial)
     {
         if (Session(serial) is not { } session) return;
         session.Dispose();
-        try { Secrets.RemoveAccessCode(serial); }
+        try { Secrets.RemoveAccessCode(serial); Secrets.RemoveCameraPassword(serial); }
         catch (Exception e) when (IsStorageFailure(e)) { SaveFailed?.Invoke(e); }
         _sessions.Remove(session);
         if (SelectedSerial == serial) SelectedSerial = _sessions.FirstOrDefault()?.Id;

@@ -28,6 +28,8 @@ public sealed record CameraSituation
     public bool IsOnline { get; init; }
     /// <summary>The printer's camera, or one entered by hand that replaces it.</summary>
     public CameraSource Source { get; init; } = new CameraSource.Printer(CameraTransport.Rtsps);
+    /// <summary>Why an entered camera URL can't be used, if it can't.</summary>
+    public string? SourceProblem { get; init; }
     /// <summary>What the printer reports for LAN Only Liveview; null before it says.</summary>
     public bool? LiveViewEnabled { get; init; }
     /// <summary>A print is under way (preparing, printing or paused).</summary>

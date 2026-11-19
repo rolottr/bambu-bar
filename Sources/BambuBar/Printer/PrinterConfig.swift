@@ -13,9 +13,32 @@ struct PrinterConfig: Codable, Equatable {
     /// Issue codes never to show for this printer (`HMS_0300_0100_0001_0007`, `0700_8006`), added with Ignore next
     /// to an issue and removed on the Printers page. Nil for printers saved by earlier versions.
     var ignoredIssues: [String]? = nil
+    /// An external camera to show instead of the printer's own (Printers page), without its credentials. Nil:
+    /// the printer's own camera.
+    var cameraURL: String? = nil
+    /// The username `cameraURL` needs, if it needs one; its password is in the keychain.
+    var cameraUsername: String? = nil
 
     var modelName: String { PrinterModel.name(for: modelCode, serial: serial) }
     var model: PrinterModel? { PrinterModel.find(code: modelCode, serial: serial) }
+
+    // MARK: - Camera
+
+    /// Where this printer's camera stream comes from: an external camera when one is entered and its URL still
+    /// parses, otherwise whatever this model serves. `password` comes from the keychain.
+    func cameraSource(password: String?) -> CameraSource {
+        guard let cameraURL, case .success(let url) = RTSPURL.parse(cameraURL) else {
+            return .printer(CameraTransport.forModel(modelName))
+        }
+        return .external(ExternalCamera(url: url, username: cameraUsername ?? "", password: password ?? ""))
+    }
+
+    /// Why an entered camera URL can't be used, if it can't. A settings file edited by hand can hold one that no
+    /// longer parses; saying so beats quietly showing the printer's own camera instead.
+    var cameraSourceProblem: String? {
+        guard let cameraURL, case .failure(let problem) = RTSPURL.parse(cameraURL) else { return nil }
+        return problem.message
+    }
 
     /// Printers listen on 8883; `host:port` reaches a mock printer (scripts/fleet).
     var endpoint: (host: String, port: UInt16) {
