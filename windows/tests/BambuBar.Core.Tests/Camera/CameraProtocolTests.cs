@@ -219,3 +219,83 @@ public class JpegFrameReaderTests
         Assert.Null(JpegFrameReader.Size(jpeg[..40]));
     }
 }
+
+/// <summary>
+/// The RTSP URL someone types in for an external camera. Ported from the Mac's
+/// Tests/BambuBarTests/RTSPURLTests.swift.
+/// </summary>
+public class RtspUrlTests
+{
+    private static RtspUrl Parsed(string text)
+    {
+        Assert.True(RtspUrl.TryParse(text, out var url, out var problem), $"did not parse: {text} ({problem})");
+        return url;
+    }
+
+    private static RtspUrlProblem Rejected(string text)
+    {
+        Assert.False(RtspUrl.TryParse(text, out _, out var problem), $"parsed but should not: {text}");
+        return problem;
+    }
+
+    [Fact]
+    public void PlainDefaultPort()
+    {
+        var url = Parsed("rtsp://192.168.1.40/stream1");
+        Assert.False(url.IsTls);
+        Assert.Equal(554, url.Port);
+        Assert.Equal("/stream1", url.Path);
+        Assert.Equal("rtsp://192.168.1.40:554/stream1", url.Absolute);
+    }
+
+    [Fact]
+    public void TlsDefaultPort()
+    {
+        Assert.Equal(322, Parsed("rtsps://cam.local/live").Port);
+        Assert.True(Parsed("rtsps://cam.local/live").IsTls);
+    }
+
+    [Fact]
+    public void ExplicitPortAndQuery()
+    {
+        var url = Parsed("rtsp://cam:8554/h264?channel=1&subtype=0");
+        Assert.Equal(8554, url.Port);
+        Assert.Equal("/h264?channel=1&subtype=0", url.Path);
+    }
+
+    [Fact]
+    public void CredentialsArePercentDecodedAndKeptOutOfAbsolute()
+    {
+        var url = Parsed("rtsp://admin:p%40ss%3Aword@cam:554/s");
+        Assert.Equal("admin", url.Username);
+        Assert.Equal("p@ss:word", url.Password);
+        Assert.Equal("rtsp://cam:554/s", url.Absolute);
+    }
+
+    [Fact]
+    public void EmptyPathBecomesSlash()
+    {
+        Assert.Equal("/", Parsed("rtsp://cam").Path);
+        Assert.Equal("/", Parsed("  rtsp://cam/  ").Path);
+    }
+
+    [Fact]
+    public void IPv6HostInBrackets()
+    {
+        var url = Parsed("rtsp://[fd00::1]:8554/s");
+        Assert.Equal("fd00::1", url.Host);
+        Assert.Equal(8554, url.Port);
+        Assert.Equal("rtsp://[fd00::1]:8554/s", url.Absolute);
+    }
+
+    [Fact]
+    public void Rejections()
+    {
+        Assert.Equal(new RtspUrlProblem.Scheme("http"), Rejected("http://cam/s"));
+        Assert.Equal(new RtspUrlProblem.NoHost(), Rejected("rtsp:///s"));
+        Assert.Equal(new RtspUrlProblem.Port("0"), Rejected("rtsp://cam:0/s"));
+        Assert.Equal(new RtspUrlProblem.Port("70000"), Rejected("rtsp://cam:70000/s"));
+        Assert.Equal(new RtspUrlProblem.Port("abc"), Rejected("rtsp://cam:abc/s"));
+        Assert.Equal(new RtspUrlProblem.Malformed(), Rejected(""));
+    }
+}

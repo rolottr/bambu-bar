@@ -193,6 +193,116 @@ final class RTSPAuth {
     }
 }
 
+// MARK: - RTSP URLs
+
+/// An RTSP address someone typed in for an external camera: `rtsp://` or `rtsps://`, with the credentials
+/// held apart from the URL the requests carry, so a password never reaches a request line or a log.
+struct RTSPURL: Equatable {
+    var isTLS: Bool
+    /// Without the brackets of an IPv6 literal.
+    var host: String
+    var port: UInt16
+    /// Always starts with "/", and keeps any query string.
+    var path: String
+    /// "" when the URL carried none.
+    var username: String
+    var password: String
+
+    /// The URL to put on the request line: scheme, host, port and path, never the credentials.
+    var absolute: String {
+        let authority = host.contains(":") ? "[\(host)]" : host
+        return "\(isTLS ? "rtsps" : "rtsp")://\(authority):\(port)\(path)"
+    }
+
+    enum Problem: Error, Equatable {
+        case scheme(String)
+        case noHost
+        case port(String)
+        case malformed
+
+        /// What to show beside the field.
+        var message: String {
+            switch self {
+            case .scheme(let found):
+                return String(localized: "Only rtsp:// and rtsps:// addresses work here (\(found)).",
+                              comment: "The scheme the person typed")
+            case .noHost:
+                return String(localized: "The address has no host.")
+            case .port(let found):
+                return String(localized: "\(found) isn't a port number.",
+                              comment: "What the person typed where a port belongs")
+            case .malformed:
+                return String(localized: "That isn't an RTSP address.")
+            }
+        }
+    }
+
+    /// Hand-written rather than left to `URLComponents`, which reads userinfo differently from the C#
+    /// `System.Uri` the Windows port would otherwise use: the two platforms have to agree.
+    static func parse(_ text: String) -> Result<RTSPURL, Problem> {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let separator = trimmed.range(of: "://") else { return .failure(.malformed) }
+        let isTLS: Bool
+        switch trimmed[..<separator.lowerBound].lowercased() {
+        case "rtsp": isTLS = false
+        case "rtsps": isTLS = true
+        default: return .failure(.scheme(String(trimmed[..<separator.lowerBound])))
+        }
+        // The path starts at the first "/" after the authority; with none, the whole stream is at "/".
+        let rest = trimmed[separator.upperBound...]
+        let pathStart = rest.firstIndex(of: "/") ?? rest.endIndex
+        var authority = rest[..<pathStart]
+        let path = pathStart == rest.endIndex ? "/" : String(rest[pathStart...])
+
+        // A password may hold "@" only percent-encoded, so the last "@" is what separates the credentials.
+        var username = "", password = ""
+        if let at = authority.lastIndex(of: "@") {
+            let credentials = authority[..<at]
+            authority = authority[authority.index(after: at)...]
+            if let colon = credentials.firstIndex(of: ":") {
+                username = decoded(credentials[..<colon])
+                password = decoded(credentials[credentials.index(after: colon)...])
+            } else {
+                username = decoded(credentials)
+            }
+        }
+
+        // An IPv6 literal is bracketed, and its colons are not the port's.
+        let host: String
+        var portText: Substring = ""
+        if authority.hasPrefix("[") {
+            guard let close = authority.firstIndex(of: "]") else { return .failure(.malformed) }
+            host = String(authority[authority.index(after: authority.startIndex)..<close])
+            let after = authority[authority.index(after: close)...]
+            if after.hasPrefix(":") {
+                portText = after.dropFirst()
+            } else if !after.isEmpty {
+                return .failure(.malformed)
+            }
+        } else if let colon = authority.lastIndex(of: ":") {
+            host = String(authority[..<colon])
+            portText = authority[authority.index(after: colon)...]
+        } else {
+            host = String(authority)
+        }
+        guard !host.isEmpty else { return .failure(.noHost) }
+
+        var port: UInt16 = isTLS ? 322 : 554
+        if !portText.isEmpty {
+            guard let value = UInt16(portText), value > 0 else { return .failure(.port(String(portText))) }
+            port = value
+        }
+        return .success(RTSPURL(isTLS: isTLS, host: host, port: port, path: path,
+                                username: username, password: password))
+    }
+
+    /// Percent-decoded, or the text as typed when it isn't valid percent-encoding.
+    private static func decoded(_ text: Substring) -> String {
+        String(text).removingPercentEncoding ?? String(text)
+    }
+}
+
+
 // MARK: - SDP
 
 enum SDP {
