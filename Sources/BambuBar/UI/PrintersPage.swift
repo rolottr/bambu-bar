@@ -254,9 +254,17 @@ struct PrintersPage: View {
         editingCamera = true
     }
 
-    private func endEditingCamera() {
+    /// Ends the attempt in flight, leaving the editor and the result it just produced alone.
+    private func stopTester() {
+        tester?.onEvent = nil
         tester?.stop()
         tester = nil
+    }
+
+    /// Closes the editor: for Cancel, for Save, and when another printer is selected. A test never calls this,
+    /// or testing before saving would drop back to the printer's own camera and wipe its own result.
+    private func endEditingCamera() {
+        stopTester()
         testState = .idle
         cameraURLProblem = nil
         editingCamera = false
@@ -283,7 +291,7 @@ struct PrintersPage: View {
     /// One attempt against what was typed: it saves nothing and leaves the live feed alone.
     private func testCamera() {
         guard let url = parsedCameraURL else { return }
-        tester?.stop()
+        stopTester()
         // The same rule Save uses, so a camera that tests clean is the camera that gets saved.
         let entered = PrinterConfig.enteredCamera(url: url, username: cameraUser, password: cameraPassword)
         let source = CameraSource.external(ExternalCamera(url: entered.url, username: entered.username,
@@ -298,14 +306,13 @@ struct PrintersPage: View {
                 switch event {
                 case .started(let detail, _):
                     testState = .worked(detail)
-                    endEditingCamera()
+                    stopTester()
                 case .image:
                     testState = .worked(String(localized: "The camera is streaming."))
-                    endEditingCamera()
+                    stopTester()
                 case .failed(let failure):
                     testState = .failed(failure.message(from: source))
-                    tester?.stop()
-                    tester = nil
+                    stopTester()
                 case .video:
                     break
                 }
@@ -316,8 +323,7 @@ struct PrintersPage: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
             if testState == .testing {
                 testState = .failed(CameraFailure.timedOut.message(from: source))
-                tester?.stop()
-                tester = nil
+                stopTester()
             }
         }
     }
