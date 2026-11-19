@@ -1,18 +1,26 @@
 import CoreMedia
 import Foundation
 
-/// Plays the RTSPS live view of X1, H2, P2S and X2D printers (port 322, `bblp` and the access code).
+/// Plays an RTSP stream: the RTSPS live view of X1, H2, P2S and X2D printers (port 322, `bblp` and the access
+/// code), or a camera someone entered themselves, at its own URL, port and credentials, with TLS only when the
+/// URL says `rtsps://`.
 ///
-/// RTSP runs over the TLS connection and so does the video: RTP is interleaved on the same connection
-/// (`$`, channel, 16-bit length, packet), which avoids UDP ports and firewalls. DESCRIBE → SETUP → PLAY,
-/// then a keepalive request every 20 seconds and TEARDOWN when done.
+/// The video shares the RTSP connection: RTP is interleaved on it (`$`, channel, 16-bit length, packet), which
+/// avoids UDP ports and firewalls. DESCRIBE → SETUP → PLAY, then a keepalive request every 20 seconds and
+/// TEARDOWN when done.
 final class RTSPCameraClient: CameraClient {
     var onEvent: ((CameraEvent) -> Void)?
     var log: ((String) -> Void)?
 
     private let config: CameraConfig
     private let queue = DispatchQueue(label: "dev.rolottr.BambuBar.camera.rtsp")
+    /// The stream's address, with no credentials in it: it goes on every request line.
     private let url: String
+    private let host: String
+    private let port: UInt16
+    private let tls: Bool
+    private let username: String
+    private let password: String
     private var socket: CameraSocket?
     private var reader = RTSPStreamReader()
     private var sequence = 0
@@ -35,7 +43,22 @@ final class RTSPCameraClient: CameraClient {
 
     init(_ config: CameraConfig) {
         self.config = config
-        url = "rtsps://\(config.host):\(CameraTransport.rtsps.port)/streaming/live/1"
+        switch config.source {
+        case .printer:
+            host = config.host
+            port = CameraTransport.rtsps.port
+            tls = true
+            url = "rtsps://\(config.host):\(CameraTransport.rtsps.port)/streaming/live/1"
+            username = "bblp"
+            password = config.accessCode
+        case .external(let camera):
+            host = camera.url.host
+            port = camera.url.port
+            tls = camera.url.isTLS
+            url = camera.url.absolute
+            username = camera.username
+            password = camera.password
+        }
     }
 
     func start() {
@@ -46,10 +69,15 @@ final class RTSPCameraClient: CameraClient {
         queue.async { self.finish(nil) }
     }
 
+    /// How a refused login is reported: the printer's access code, or the camera's own credentials.
+    private var refused: CameraFailure {
+        config.source.isExternal ? .credentialsRejected : .unauthorized
+    }
+
     // MARK: - Connection
 
     private func open() {
-        let socket = CameraSocket(host: config.host, port: CameraTransport.rtsps.port, serial: config.serial, queue: queue)
+        let socket = CameraSocket(host: host, port: port, serial: config.serial, queue: queue, tls: tls)
         socket.log = log
         socket.onReady = { [weak self] in
             guard let self else { return }
@@ -123,10 +151,10 @@ final class RTSPCameraClient: CameraClient {
             return
         }
         if response.status == 401 {
-            guard auth?.hasFailed != true else { return finish(.unauthorized) }
+            guard auth?.hasFailed != true else { return finish(refused) }
             let challenges = response.headers("WWW-Authenticate")
-            guard let next = RTSPAuth(challenges: challenges, username: "bblp", password: config.accessCode) else {
-                return finish(.unauthorized)
+            guard let next = RTSPAuth(challenges: challenges, username: username, password: password) else {
+                return finish(refused)
             }
             // Credentials sent once and refused again mean the code is wrong.
             if auth != nil { next.hasFailed = true }
@@ -136,7 +164,10 @@ final class RTSPCameraClient: CameraClient {
         }
         guard response.status == 200 else {
             if response.status == 404 || response.status == 454 || response.status == 503 {
-                return finish(.unreachable(String(localized: "The camera isn't streaming (\(response.statusLine)). Is LAN Only Liveview on?", comment: "The camera's RTSP status line, such as 454 Session Not Found")))
+                // LAN Only Liveview is a printer's setting; asking about it for an entered camera misleads.
+                return finish(.unreachable(config.source.isExternal
+                    ? String(localized: "The camera isn't streaming (\(response.statusLine)).", comment: "The camera's RTSP status line, such as 404 Not Found")
+                    : String(localized: "The camera isn't streaming (\(response.statusLine)). Is LAN Only Liveview on?", comment: "The camera's RTSP status line, such as 454 Session Not Found")))
             }
             return finish(.malformed("\(request.method) answered \(response.statusLine)"))
         }

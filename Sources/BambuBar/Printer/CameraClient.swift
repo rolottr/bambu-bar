@@ -41,9 +41,10 @@ func makeCameraClient(_ config: CameraConfig) -> CameraClient {
     }
 }
 
-/// A TLS connection to one of the printer's camera ports. Unlike MQTT, any certificate is accepted, as Bambu Studio
-/// does: some models (the H3C) present one on the camera port that can't be chained to a bundled Bambu root. The
-/// verdict is only logged. Every callback runs on the queue passed in.
+/// A connection to a camera port. For a printer it is TLS, and unlike MQTT any certificate is accepted, as Bambu
+/// Studio does: some models (the H3C) present one on the camera port that can't be chained to a bundled Bambu
+/// root. The verdict is only logged. An entered camera on an `rtsp://` URL gets plain TCP instead, which is what
+/// cameras serve. Every callback runs on the queue passed in.
 final class CameraSocket {
     var onReady: (() -> Void)?
     var onData: ((Data) -> Void)?
@@ -55,30 +56,32 @@ final class CameraSocket {
     private let port: UInt16
     private let serial: String
     private let queue: DispatchQueue
+    private let tls: Bool
     private var connection: NWConnection?
     private var closed = false
 
-    init(host: String, port: UInt16, serial: String, queue: DispatchQueue) {
+    init(host: String, port: UInt16, serial: String, queue: DispatchQueue, tls: Bool = true) {
         self.host = host
         self.port = port
         self.serial = serial
         self.queue = queue
+        self.tls = tls
     }
 
     /// Call on `queue`.
     func open(timeout: TimeInterval = 10) {
-        let tls = MQTTClient.tlsOptions(queue: queue) { [weak self] trust in
+        let options = tls ? MQTTClient.tlsOptions(queue: queue) { [weak self] trust in
             guard let self else { return false }
             self.log?("certificate on port \(self.port): \(BambuTrust.evaluate(trust, serial: self.serial))")
             return true
-        }
+        } : nil
         let tcp = NWProtocolTCP.Options()
         tcp.connectionTimeout = Int(timeout)
         tcp.noDelay = true
         tcp.enableKeepalive = true
         tcp.keepaliveIdle = 10
         let conn = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!,
-                                using: NWParameters(tls: tls, tcp: tcp))
+                                using: NWParameters(tls: options, tcp: tcp))
         connection = conn
         conn.stateUpdateHandler = { [weak self] state in self?.handle(state) }
         log?("connecting to \(host):\(port)")

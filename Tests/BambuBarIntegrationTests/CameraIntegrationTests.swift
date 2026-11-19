@@ -22,12 +22,20 @@ final class CameraIntegrationTests: XCTestCase {
     private func record(_ scenario: String, transport: CameraTransport, code: String = Simulators.cameraCode,
                         timeout: TimeInterval = 10,
                         until done: @escaping ([Event]) -> Bool) async throws -> [Event] {
+        try await record(scenario,
+                         config: CameraConfig(host: Simulators.cameraHost, serial: Simulators.cameraSerial,
+                                              accessCode: code, source: .printer(transport)),
+                         timeout: timeout, until: done)
+    }
+
+    /// The same, for a camera reached the way an entered one is: its own URL, port and credentials.
+    private func record(_ scenario: String, config: CameraConfig, timeout: TimeInterval = 10,
+                        until done: @escaping ([Event]) -> Bool) async throws -> [Event] {
         try await Simulators.setCameraScenario(scenario)
         let events = MainQueueBox<[Event]>([])
         let finished = expectation(description: "camera \(scenario)")
         var fulfilled = false
-        let client = makeCameraClient(CameraConfig(host: Simulators.cameraHost, serial: Simulators.cameraSerial,
-                                                   accessCode: code, source: .printer(transport)))
+        let client = makeCameraClient(config)
         client.onEvent = { event in
             let recorded: Event
             switch event {
@@ -179,5 +187,74 @@ final class CameraIntegrationTests: XCTestCase {
     func testJPEGFrameOfNoBytesIsMalformed() async throws {
         let events = try await record("jpeg-zero", transport: .jpeg) { _ in false }
         XCTAssertEqual(failure(in: events), .malformed("frame header"))
+    }
+
+    // MARK: - An external camera over plain TCP
+
+    /// The mock camera's plain RTSP port, with Digest auth: what an entered camera looks like.
+    func testExternalPlainTCPDigestPlays() async throws {
+        let events = try await record("h264-digest", config: try Simulators.externalCamera()) {
+            $0.filter(\.isVideo).count >= 12
+        }
+        XCTAssertEqual(events.first, .started("H.264 · 32×32"), "\(events)")
+        XCTAssertNil(failure(in: events), "\(events)")
+        XCTAssertEqual(events.filter(\.isVideo).first, .video(keyframe: true), "a keyframe first")
+    }
+
+    func testExternalPlainTCPBasicPlays() async throws {
+        let events = try await record("h264-basic", config: try Simulators.externalCamera()) {
+            $0.filter(\.isVideo).count >= 12
+        }
+        XCTAssertEqual(events.first, .started("H.264 · 32×32"), "\(events)")
+        XCTAssertNil(failure(in: events), "\(events)")
+    }
+
+    /// A wrong password is permanent: the app says so once and doesn't hammer the camera.
+    func testExternalWrongPasswordIsRejected() async throws {
+        let config = try Simulators.externalCamera(password: "nope")
+        let events = try await record("h264-digest", config: config) { _ in false }
+        XCTAssertEqual(failure(in: events), .credentialsRejected, "\(events)")
+        XCTAssertEqual(events.filter(\.isFailure).count, 1, "\(events)")
+        XCTAssertTrue(try XCTUnwrap(failure(in: events)).isPermanent)
+    }
+
+    /// Nothing entered where the camera wants credentials: the same permanent refusal, not a retry loop.
+    func testExternalWithoutCredentialsIsRejected() async throws {
+        let config = try Simulators.externalCamera(username: "", password: "")
+        let events = try await record("h264-digest", config: config) { _ in false }
+        XCTAssertEqual(failure(in: events), .credentialsRejected, "\(events)")
+        XCTAssertTrue(try XCTUnwrap(failure(in: events)).isPermanent)
+    }
+
+    /// A path the camera doesn't serve. The reason names the status and never asks about LAN Only Liveview,
+    /// which is a printer's setting and means nothing here.
+    func testExternalUnknownPathReports404() async throws {
+        let config = try Simulators.externalCamera(path: "/nope")
+        let events = try await record("no-such-path", config: config) { _ in false }
+        let reason = try XCTUnwrap(failure(in: events))
+        guard case .unreachable(let text) = reason else { return XCTFail("\(reason)") }
+        XCTAssertTrue(text.contains("404"), text)
+        XCTAssertFalse(text.contains("Liveview"), text)
+    }
+
+    /// An address that never answers fails inside the client's own watchdog, so the feed doesn't hang.
+    func testExternalUnreachableHostFailsWithinTheWatchdog() async throws {
+        // TEST-NET-3 (RFC 5737): routable nowhere, so the connection neither completes nor is refused.
+        let config = try Simulators.externalCamera(host: "203.0.113.1", port: 554)
+        let events = try await record("h264-digest", config: config, timeout: 30) { _ in false }
+        XCTAssertNotNil(failure(in: events), "no failure inside 30 s: \(events)")
+    }
+
+    /// The same client over TLS when the entered URL says rtsps://, against the printer's own camera port.
+    func testExternalOverTLSPlays() async throws {
+        let url = try RTSPURL.parse(
+            "rtsps://\(Simulators.cameraHost):\(Simulators.cameraTLSPort)/streaming/live/1").get()
+        let config = CameraConfig(host: Simulators.cameraHost, serial: Simulators.cameraSerial,
+                                  accessCode: Simulators.cameraCode,
+                                  source: .external(ExternalCamera(url: url, username: "bblp",
+                                                                   password: Simulators.cameraCode)))
+        let events = try await record("h264-digest", config: config) { $0.filter(\.isVideo).count >= 4 }
+        XCTAssertEqual(events.first, .started("H.264 · 32×32"), "\(events)")
+        XCTAssertNil(failure(in: events), "\(events)")
     }
 }

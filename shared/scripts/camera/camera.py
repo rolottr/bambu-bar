@@ -5,6 +5,9 @@ Serves both of the printers' LAN camera protocols over TLS, with a self-signed c
 CAMERA_SERIAL (Bambu Bar accepts it only with --insecure-tls, or `insecure` in a test):
   322   RTSPS (X1, H2, P2S, X2D): DESCRIBE → SETUP → PLAY with Basic or Digest auth (user `bblp`), then RTP
         interleaved on the same connection, H.264 or H.265.
+  554   the same RTSP, without TLS and with EXTERNAL_USER/EXTERNAL_PASSWORD instead of `bblp` and the access
+        code: an external camera someone enters by hand (PLAIN_PORT, published high so a rootless container
+        and an unprivileged host can both bind it).
   6000  the JPEG stream (P1, A1): an 80-byte login, then JPEG frames behind 16-byte headers.
 
 What the camera does is the current scenario, set over plain HTTP on CONTROL_PORT (8080 in the container):
@@ -23,6 +26,7 @@ RTSP scenarios (a good one unless it says otherwise):
   split-fragment    a keyframe, then a unit whose first fragment and last fragment carry different RTP
                     timestamps, then a delta frame; nothing more (glued into a bogus keyframe, review P2).
   not-streaming     DESCRIBE answers 503, as with LAN Only Liveview off.
+  no-such-path      DESCRIBE answers 404, as a camera does for a path that isn't one of its streams.
   stall             accepts the connection and never answers.
 JPEG scenarios:
   jpeg              a frame every 200 ms.
@@ -35,7 +39,10 @@ import base64, collections, hashlib, http.server, json, os, re, secrets, socket,
 ACCESS_CODE = os.environ.get("ACCESS_CODE", "12345678")
 CAMERA_SERIAL = os.environ.get("CAMERA_SERIAL", "01P00C000000001")
 RTSP_PORT = int(os.environ.get("RTSP_PORT", "322"))
+PLAIN_PORT = int(os.environ.get("PLAIN_PORT", "554"))
 JPEG_PORT = int(os.environ.get("JPEG_PORT", "6000"))
+EXTERNAL_USER = os.environ.get("EXTERNAL_USER", "admin")
+EXTERNAL_PASSWORD = os.environ.get("EXTERNAL_PASSWORD", "cam-secret")
 CONTROL_PORT = int(os.environ.get("CONTROL_PORT", "8080"))
 CERTS = "/tmp/camera-certs"
 REALM = "Bambu Camera Simulator"
@@ -71,9 +78,12 @@ def md5(text):
 # MARK: - RTSP
 
 class RTSPSession:
-    def __init__(self, conn, scenario):
+    def __init__(self, conn, scenario, username="bblp", password=ACCESS_CODE, port="rtsp"):
         self.conn = conn
         self.scenario = scenario
+        self.username = username
+        self.password = password
+        self.port_name = port
         self.codec = "h265" if scenario == "h265" else "h264"
         self.digest = scenario not in ("h264-basic",)
         self.qop = scenario in ("h264-digest", "trickle", "negative-length", "huge-length", "vp8", "split-fragment")
@@ -99,13 +109,13 @@ class RTSPSession:
     def authorized(self, method, fields):
         header = fields.get("authorization", "")
         if not self.digest:
-            return header == "Basic " + base64.b64encode(f"bblp:{ACCESS_CODE}".encode()).decode()
+            return header == "Basic " + base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
         if not header.lower().startswith("digest "):
             return False
         p = {k: a or b for k, a, b in re.findall(r'(\w+)=(?:"([^"]*)"|([^\s,]*))', header[7:])}
-        if p.get("username") != "bblp" or p.get("nonce") != self.nonce or p.get("realm") != REALM:
+        if p.get("username") != self.username or p.get("nonce") != self.nonce or p.get("realm") != REALM:
             return False
-        ha1, ha2 = md5(f"bblp:{REALM}:{ACCESS_CODE}"), md5(f"{method}:{p.get('uri', '')}")
+        ha1, ha2 = md5(f"{self.username}:{REALM}:{self.password}"), md5(f"{method}:{p.get('uri', '')}")
         if self.qop:
             expected = md5(f"{ha1}:{self.nonce}:{p.get('nc', '')}:{p.get('cnonce', '')}:auth:{ha2}")
         else:
@@ -141,7 +151,7 @@ class RTSPSession:
                 fields[k.strip().lower()] = v.strip()
         cseq = fields.get("cseq", "0")
         ok = self.authorized(method, fields)
-        log(port="rtsp", scenario=self.scenario, method=method, authorization="authorization" in fields, accepted=ok)
+        log(port=self.port_name, scenario=self.scenario, method=method, authorization="authorization" in fields, accepted=ok)
         if method == "TEARDOWN":
             self.respond(cseq)
             return False
@@ -155,6 +165,8 @@ class RTSPSession:
                 self.respond(cseq, headers=["Content-Type: application/sdp"], body=self.sdp(), length=9223372036854775807)
             elif self.scenario == "not-streaming":
                 self.respond(cseq, "503 Service Unavailable")
+            elif self.scenario == "no-such-path":
+                self.respond(cseq, "404 Not Found")
             else:
                 self.respond(cseq, headers=["Content-Type: application/sdp", f"Content-Base: {uri}/"], body=self.sdp())
         elif method == "SETUP":
@@ -202,7 +214,7 @@ class RTSPSession:
             elif self.frame == 2:
                 self.rtp(bytes.fromhex(nals["p"]), self.timestamp, True)
                 self.script_done = True
-                log(port="rtsp", scenario=self.scenario, sent="script")
+                log(port=self.port_name, scenario=self.scenario, sent="script")
             self.frame += 1
             return
         if self.frame % 10 == 0:
@@ -228,7 +240,7 @@ class RTSPSession:
             while b"\r\n\r\n" in buf:
                 request, buf = buf.split(b"\r\n\r\n", 1)
                 if not self.handle(request):
-                    log(port="rtsp", scenario=self.scenario, closed="teardown")
+                    log(port=self.port_name, scenario=self.scenario, closed="teardown")
                     return
             if self.playing and not self.script_done and time.monotonic() >= next_frame:
                 self.next_frame()
@@ -241,6 +253,15 @@ def serve_rtsp(conn, scenario):
         time.sleep(60)
         return
     RTSPSession(conn, scenario).run()
+
+
+def serve_plain_rtsp(conn, scenario):
+    """The same RTSP without TLS, for an external camera: its own credentials, any path."""
+    if scenario == "stall":
+        log(port="plain", scenario=scenario, stalled=True)
+        time.sleep(60)
+        return
+    RTSPSession(conn, scenario, username=EXTERNAL_USER, password=EXTERNAL_PASSWORD, port="plain").run()
 
 
 # MARK: - JPEG
@@ -295,8 +316,12 @@ def listen(port, handler, context):
     def handle(raw):
         scenario = state["scenario"]
         try:
-            with context.wrap_socket(raw, server_side=True) as conn:
-                handler(conn, scenario)
+            if context is None:  # the plain RTSP port: no TLS at all
+                with raw:
+                    handler(raw, scenario)
+            else:
+                with context.wrap_socket(raw, server_side=True) as conn:
+                    handler(conn, scenario)
         except (OSError, ValueError) as e:
             log(port=port, scenario=scenario, closed=type(e).__name__)
 
@@ -345,9 +370,11 @@ class Control(http.server.BaseHTTPRequestHandler):
 def main():
     context = make_tls()
     threading.Thread(target=listen, args=(RTSP_PORT, serve_rtsp, context), daemon=True).start()
+    threading.Thread(target=listen, args=(PLAIN_PORT, serve_plain_rtsp, None), daemon=True).start()
     threading.Thread(target=listen, args=(JPEG_PORT, serve_jpeg, context), daemon=True).start()
-    print(f"Mock camera {CAMERA_SERIAL}: RTSPS on {RTSP_PORT}, JPEG on {JPEG_PORT}, control on {CONTROL_PORT}, "
-          f"access code {ACCESS_CODE}", flush=True)
+    print(f"Mock camera {CAMERA_SERIAL}: RTSPS on {RTSP_PORT}, plain RTSP on {PLAIN_PORT}, JPEG on {JPEG_PORT}, "
+          f"control on {CONTROL_PORT}, access code {ACCESS_CODE}, external {EXTERNAL_USER}:{EXTERNAL_PASSWORD}",
+          flush=True)
     http.server.ThreadingHTTPServer(("0.0.0.0", CONTROL_PORT), Control).serve_forever()
 
 

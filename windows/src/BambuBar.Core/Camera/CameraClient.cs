@@ -187,18 +187,24 @@ internal sealed class CameraSocket
     private readonly Channel<byte[]> _outbound = Channel.CreateUnbounded<byte[]>(new() { SingleReader = true });
     private readonly object _gate = new();
     private Socket? _socket;
-    private SslStream? _stream;
+    /// <summary>An <see cref="SslStream"/> for a printer, a bare <see cref="NetworkStream"/> for an entered
+    /// camera on an rtsp:// URL.</summary>
+    private Stream? _stream;
     private Task? _writer;
     // Read and written on the queue only.
     private bool _closed;
 
-    public CameraSocket(string host, int port, string serial, CameraQueue queue, Action<X509Certificate2>? onCertificate = null)
+    private readonly bool _tls;
+
+    public CameraSocket(string host, int port, string serial, CameraQueue queue,
+        Action<X509Certificate2>? onCertificate = null, bool tls = true)
     {
         _host = host;
         _port = port;
         _serial = serial;
         _queue = queue;
         _onCertificate = onCertificate;
+        _tls = tls;
     }
 
     /// <summary>Call on the queue.</summary>
@@ -239,7 +245,7 @@ internal sealed class CameraSocket
     private void Teardown()
     {
         Socket? socket;
-        SslStream? stream;
+        Stream? stream;
         lock (_gate)
         {
             socket = _socket;
@@ -276,13 +282,18 @@ internal sealed class CameraSocket
                     return;
                 }
             }
-            var stream = new SslStream(new NetworkStream(socket, ownsSocket: true), leaveInnerStreamOpen: false);
+            Stream stream = new NetworkStream(socket, ownsSocket: true);
+            if (_tls) stream = new SslStream(stream, leaveInnerStreamOpen: false);
             lock (_gate)
             {
                 if (token.IsCancellationRequested) { stream.Dispose(); return; }
                 _stream = stream;
             }
-            await stream.AuthenticateAsClientAsync(MqttClient.TlsOptions(_host, Verify), token).ConfigureAwait(false);
+            if (stream is SslStream tlsStream)
+            {
+                await tlsStream.AuthenticateAsClientAsync(MqttClient.TlsOptions(_host, Verify), token)
+                    .ConfigureAwait(false);
+            }
             var writer = Task.Run(() => WriteLoopAsync(stream, token), CancellationToken.None);
             lock (_gate) _writer = writer;
             _queue.Run(() =>
@@ -330,7 +341,7 @@ internal sealed class CameraSocket
         return true;
     }
 
-    private async Task ReadLoopAsync(SslStream stream, CancellationToken token)
+    private async Task ReadLoopAsync(Stream stream, CancellationToken token)
     {
         var chunk = new byte[512 * 1024];
         while (!token.IsCancellationRequested)
@@ -349,7 +360,7 @@ internal sealed class CameraSocket
         }
     }
 
-    private async Task WriteLoopAsync(SslStream stream, CancellationToken token)
+    private async Task WriteLoopAsync(Stream stream, CancellationToken token)
     {
         try
         {
