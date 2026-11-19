@@ -143,6 +143,8 @@ public sealed class PrinterSession : Observable, IDisposable
     public string? AccessCode => _store.Secrets.AccessCode(Config.Serial);
     public bool IsDemo => _demo is not null;
     public string? CameraAccessCode => _activeCode ?? AccessCode;
+    /// <summary>The password of an external camera entered for this printer, if one was.</summary>
+    public string? CameraPassword => _store.Secrets.CameraPassword(Config.Serial);
     /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printers page.</summary>
     public bool ShowsCamera => !IsDemo && _store.CameraEnabled && Config.CameraEnabled == true;
     /// <summary>RTSPS or the JPEG stream, by model.</summary>
