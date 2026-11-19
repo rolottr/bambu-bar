@@ -18,14 +18,36 @@ namespace BambuBar.Core.App;
 /// </summary>
 public static class CameraProbe
 {
-    public sealed record Arguments(string Host, string Serial, string Code, double Seconds, CameraTransport Transport, string Output);
+    public sealed record Arguments(string Host, string Serial, string Code, double Seconds, CameraSource Source, string Output)
+    {
+        /// <summary>Set instead of the others when the URL given could not be parsed; its message is the reason.</summary>
+        public RtspUrlProblem? Problem { get; init; }
+    }
 
     /// <param name="codeFor">Looks up a saved code when the code given is "keychain" (as on the Mac).</param>
     public static Arguments? Parse(IReadOnlyList<string> args, Func<string, string?>? codeFor = null)
     {
         var list = args.ToList();
         var i = list.IndexOf("--probe-camera");
-        if (i < 0 || i + 3 >= args.Count) return null;
+        if (i < 0 || i + 1 >= args.Count) return null;
+        var output2 = list.IndexOf("--out") is var oi && oi >= 0 && oi + 1 < args.Count
+            ? args[oi + 1]
+            : Path.Combine(Path.GetTempPath(), "bambubar-camera.png");
+        // A URL says everything: no serial, no access code, and --jpeg/--rtsp/--model mean nothing.
+        var first = args[i + 1];
+        if (first.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase)
+            || first.StartsWith("rtsps://", StringComparison.OrdinalIgnoreCase))
+        {
+            var urlSeconds = i + 2 < args.Count
+                && double.TryParse(args[i + 2], NumberStyles.Float, CultureInfo.InvariantCulture, out var us) ? us : 15;
+            if (!RtspUrl.TryParse(first, out var url, out var problem))
+            {
+                return new Arguments("", "", "", urlSeconds, CameraTransport.Rtsps.Source(), output2) { Problem = problem };
+            }
+            var camera = new ExternalCamera { Url = url, Username = url.Username, Password = url.Password };
+            return new Arguments(url.Host, "", "", urlSeconds, new CameraSource.External(camera), output2);
+        }
+        if (i + 3 >= args.Count) return null;
         var seconds = i + 4 < args.Count && double.TryParse(args[i + 4], NumberStyles.Float, CultureInfo.InvariantCulture, out var s) ? s : 15;
         var m = list.IndexOf("--model");
         var name = m >= 0 && m + 1 < args.Count ? args[m + 1] : null;
@@ -36,12 +58,17 @@ public static class CameraProbe
         var code = args[i + 3] == "keychain" ? codeFor?.Invoke(args[i + 2]) ?? "" : args[i + 3];
         var o = list.IndexOf("--out");
         var output = o >= 0 && o + 1 < args.Count ? args[o + 1] : Path.Combine(Path.GetTempPath(), "bambubar-camera.png");
-        return new(args[i + 1], args[i + 2], code, seconds, transport, output);
+        return new(args[i + 1], args[i + 2], code, seconds, transport.Source(), output);
     }
 
     /// <summary>Runs the probe; returns the exit code (0 when a picture was decoded and saved).</summary>
     public static async Task<int> RunAsync(Arguments a, TextWriter output)
     {
+        if (a.Problem is { } badUrl)
+        {
+            output.WriteLine(badUrl.Message);
+            return 2;
+        }
         var clock = Stopwatch.StartNew();
         void Log(string text)
         {
@@ -62,7 +89,7 @@ public static class CameraProbe
         var saved = false;
         string? failure = null;
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var source = new CameraSource.Printer(a.Transport);
+        var source = a.Source;
         var client = CameraClient.Create(new CameraConfig { Host = a.Host, Serial = a.Serial, AccessCode = a.Code, Source = source });
         client.Log = Log;
         client.OnEvent = e =>
@@ -128,12 +155,14 @@ public static class CameraProbe
             }
         }
 
-        Log($"opening {(a.Transport == CameraTransport.Rtsps ? "RTSPS on port 322" : "the JPEG stream on port 6000")} at {a.Host}");
+        Log(a.Source is CameraSource.External { Camera: { } entered }
+            ? $"opening {entered.Url.Absolute}{(entered.Username.Length == 0 ? "" : $" as {entered.Username}")}"
+            : $"opening {(a.Source is CameraSource.Printer { Transport: CameraTransport.Rtsps } ? "RTSPS on port 322" : "the JPEG stream on port 6000")} at {a.Host}");
         client.Start();
         using var progress = new Timer(_ =>
         {
             lock (gate)
-                Log(a.Transport == CameraTransport.Jpeg ? $"{frames} frames so far" : $"{frames} frames, {keyframes} keyframes, {bytes / 1024} KB so far");
+                Log(a.Source is CameraSource.Printer { Transport: CameraTransport.Jpeg } ? $"{frames} frames so far" : $"{frames} frames, {keyframes} keyframes, {bytes / 1024} KB so far");
         }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
         await Task.WhenAny(done.Task, Task.Delay(TimeSpan.FromSeconds(a.Seconds))).ConfigureAwait(false);
         client.Stop();
