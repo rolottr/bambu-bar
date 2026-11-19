@@ -38,6 +38,14 @@ public sealed record PrinterConfig
         });
     }
 
+    /// <summary>What to use for a camera someone entered, for both Test and Save so the two can't disagree.
+    /// Each credential typed into the URL wins over the field beside it, so what was pasted is what connects,
+    /// while a URL carrying only a username keeps the password that was typed.</summary>
+    public static (RtspUrl Url, string Username, string Password) EnteredCamera(RtspUrl url, string username,
+        string password) =>
+        (url, url.Username.Length == 0 ? username : url.Username,
+            url.Password.Length == 0 ? password : url.Password);
+
     /// <summary>Why an entered camera URL can't be used, if it can't. A settings file edited by hand can hold one
     /// that no longer parses; saying so beats quietly showing the printer's own camera instead.</summary>
     public string? CameraSourceProblem =>

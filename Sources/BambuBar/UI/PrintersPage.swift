@@ -136,6 +136,11 @@ struct PrintersPage: View {
         }
         .onAppear { name = store.config?.name ?? "" }
         .onChange(of: store.config) { name = store.config?.name ?? "" }
+        .onChange(of: store.config?.serial) {
+            // Another printer is selected: close the editor and show that printer's own camera, never this one's.
+            endEditingCamera()
+            if let config = store.config { loadCameraFields(config) }
+        }
         .alert("Forget \(store.printerName)?", isPresented: $confirmForget) {
             Button("Forget", role: .destructive) { if let serial = store.config?.serial { store.forget(serial) } }
             Button("Cancel", role: .cancel) {}
@@ -232,14 +237,20 @@ struct PrintersPage: View {
         return url
     }
 
-    /// Opens the editor on whatever the printer already has, or empty for a camera being added. Nothing is
-    /// saved until Save: picking the option must not point a printer at a camera nobody has typed in.
-    private func beginEditingCamera(_ config: PrinterConfig) {
+    /// Fills the fields from what a printer has saved. Also run when the selected printer changes, so the
+    /// editor never shows (or saves) another printer's address and credentials.
+    private func loadCameraFields(_ config: PrinterConfig) {
         cameraURL = config.cameraURL ?? ""
         cameraUser = config.cameraUsername ?? ""
         cameraPassword = Keychain.cameraPassword(for: config.serial) ?? ""
         cameraURLProblem = nil
         testState = .idle
+    }
+
+    /// Opens the editor on whatever the printer already has, or empty for a camera being added. Nothing is
+    /// saved until Save: picking the option must not point a printer at a camera nobody has typed in.
+    private func beginEditingCamera(_ config: PrinterConfig) {
+        loadCameraFields(config)
         editingCamera = true
     }
 
@@ -273,9 +284,10 @@ struct PrintersPage: View {
     private func testCamera() {
         guard let url = parsedCameraURL else { return }
         tester?.stop()
-        let username = url.username.isEmpty ? cameraUser : url.username
-        let password = url.password.isEmpty ? cameraPassword : url.password
-        let source = CameraSource.external(ExternalCamera(url: url, username: username, password: password))
+        // The same rule Save uses, so a camera that tests clean is the camera that gets saved.
+        let entered = PrinterConfig.enteredCamera(url: url, username: cameraUser, password: cameraPassword)
+        let source = CameraSource.external(ExternalCamera(url: entered.url, username: entered.username,
+                                                          password: entered.password))
         let client = makeCameraClient(CameraConfig(host: url.host, serial: store.config?.serial ?? "",
                                                    accessCode: "", source: source))
         tester = client

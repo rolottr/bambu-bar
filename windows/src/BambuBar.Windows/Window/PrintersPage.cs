@@ -487,8 +487,9 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
                 _cameraProblem.Visibility = Visibility.Visible;
                 return;
             }
-            var username = url.Username.Length == 0 && url.Password.Length == 0 ? _cameraUser.Text : url.Username;
-            var password = url.Username.Length == 0 && url.Password.Length == 0 ? _cameraPassword.Text : url.Password;
+            var entered = PrinterConfig.EnteredCamera(url, _cameraUser.Text, _cameraPassword.Text);
+            var username = entered.Username;
+            var password = entered.Password;
             _cameraUser.Text = username;
             _cameraPassword.Text = password;
             _cameraUrl.Text = url.Absolute;
@@ -503,11 +504,11 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
         {
             if (!RtspUrl.TryParse(_cameraUrl.Text, out var url, out _)) return;
             StopTester();
-            var username = url.Username.Length == 0 ? _cameraUser.Text : url.Username;
-            var password = url.Password.Length == 0 ? _cameraPassword.Text : url.Password;
+            // The same rule Save uses, so a camera that tests clean is the camera that gets saved.
+            var entered = PrinterConfig.EnteredCamera(url, _cameraUser.Text, _cameraPassword.Text);
             var source = new CameraSource.External(new ExternalCamera
             {
-                Url = url, Username = username, Password = password,
+                Url = entered.Url, Username = entered.Username, Password = entered.Password,
             });
             var client = CameraClient.Create(new CameraConfig
             {

@@ -203,6 +203,28 @@ public class PrinterIdentityTests
         Assert.Equal("", external.Camera.Password);
     }
 
+    /// <summary>A URL carrying only a username keeps the password that was typed beside it: Test and Save have
+    /// to agree on the credentials.</summary>
+    [Fact]
+    public void UrlWithOnlyAUsernameKeepsTheTypedPassword()
+    {
+        Assert.True(RtspUrl.TryParse("rtsp://admin@cam:554/s", out var url, out _));
+        var entered = PrinterConfig.EnteredCamera(url, "ignored", "cam-secret");
+        Assert.Equal("admin", entered.Username);
+        Assert.Equal("cam-secret", entered.Password);
+    }
+
+    /// <summary>Credentials typed into the URL win over the fields.</summary>
+    [Fact]
+    public void CredentialsInTheUrlOverwriteTheFields()
+    {
+        Assert.True(RtspUrl.TryParse("rtsp://other:pw@cam:554/s", out var url, out _));
+        var entered = PrinterConfig.EnteredCamera(url, "admin", "cam-secret");
+        Assert.Equal("other", entered.Username);
+        Assert.Equal("pw", entered.Password);
+        Assert.Equal("rtsp://cam:554/s", entered.Url.Absolute);
+    }
+
     /// <summary>A hand-edited settings file: say why there is no picture instead of quietly showing the printer's
     /// camera.</summary>
     [Fact]

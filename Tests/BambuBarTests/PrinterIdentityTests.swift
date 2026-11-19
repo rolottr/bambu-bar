@@ -138,6 +138,15 @@ final class PrinterIdentityTests: XCTestCase {
         XCTAssertEqual(entered.url.absolute, "rtsp://cam:554/s", "never stored with its credentials")
     }
 
+    /// A URL carrying only a username keeps the password that was typed beside it: Test and Save have to agree
+    /// on the credentials, and anything else saves a camera that the test said worked.
+    func testURLWithOnlyAUsernameKeepsTheTypedPassword() throws {
+        let url = try RTSPURL.parse("rtsp://admin@cam:554/s").get()
+        let entered = PrinterConfig.enteredCamera(url: url, username: "ignored", password: "cam-secret")
+        XCTAssertEqual(entered.username, "admin")
+        XCTAssertEqual(entered.password, "cam-secret")
+    }
+
     /// A URL with none leaves what was typed in the fields alone.
     func testURLWithoutCredentialsKeepsTheFields() throws {
         let url = try RTSPURL.parse("rtsp://cam:554/s").get()

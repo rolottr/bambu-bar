@@ -33,14 +33,14 @@ struct PrinterConfig: Codable, Equatable {
         return .external(ExternalCamera(url: url, username: cameraUsername ?? "", password: password ?? ""))
     }
 
-    /// What to save for a camera someone entered. Credentials typed into the URL win over the fields beside it,
-    /// so what was pasted is what connects, and the URL itself is kept without them.
+    /// What to use for a camera someone entered, for both Test and Save so the two can't disagree. Each
+    /// credential typed into the URL wins over the field beside it, so what was pasted is what connects, while
+    /// a URL carrying only a username keeps the password that was typed. The URL itself is kept without them.
     static func enteredCamera(url: RTSPURL, username: String,
                               password: String) -> (url: RTSPURL, username: String, password: String) {
-        guard url.username.isEmpty && url.password.isEmpty else {
-            return (url, url.username, url.password)
-        }
-        return (url, username, password)
+        (url,
+         url.username.isEmpty ? username : url.username,
+         url.password.isEmpty ? password : url.password)
     }
 
     /// Why an entered camera URL can't be used, if it can't. A settings file edited by hand can hold one that no
