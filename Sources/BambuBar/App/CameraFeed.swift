@@ -146,6 +146,11 @@ final class CameraFeed {
         if session.isDemo { return String(localized: "The demo printer has no camera.") }
         guard session.showsCamera else { return String(localized: "The camera is off.") }
         if PrinterStore.emulatorSettings != nil { return "The mock fleet's printers have no camera." }
+        // An entered URL that no longer parses: say so rather than quietly show the printer's own camera.
+        if let problem = session.cameraSourceProblem { return problem }
+        // An entered camera answers whether or not the printer does, and LAN Only Liveview is the printer's
+        // own setting, so neither gate applies to one.
+        if session.cameraSource.isExternal { return nil }
         guard session.isOnline else { return String(localized: "The camera starts when the printer is connected.") }
         if session.cameraTransport == .rtsps && session.status?.liveViewEnabled == false {
             return String(localized: "Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here.")
@@ -159,12 +164,19 @@ final class CameraFeed {
             state = .unavailable(reason)
             return
         }
-        guard let session, let code = session.cameraAccessCode else {
+        guard let session else {
+            state = .unavailable(String(localized: "No printer."))
+            return
+        }
+        let source = session.cameraSource
+        // An entered camera carries its own credentials; only the printer's own needs the access code.
+        let code = session.cameraAccessCode
+        if !source.isExternal && code == nil {
             state = .unavailable(String(localized: "The access code isn't available."))
             return
         }
-        let client = makeCameraClient(CameraConfig(host: session.config.host, serial: session.config.serial, accessCode: code,
-                                                   source: session.cameraSource))
+        let client = makeCameraClient(CameraConfig(host: session.config.host, serial: session.config.serial,
+                                                   accessCode: code ?? "", source: source))
         client.onEvent = { [weak self, weak client] event in
             MainActor.assumeIsolated {
                 guard let self, let client, client === self.client else { return }

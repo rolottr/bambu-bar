@@ -562,4 +562,86 @@ public sealed class CameraStoreTests : IDisposable
         });
         Assert.Equal(["The camera is off.", "The camera starts when the printer is connected.", "The camera is off."], states);
     }
+
+    // MARK: An entered camera
+
+    /// <summary>The point of the feature: the camera answers whether or not the printer does.</summary>
+    [Fact]
+    public void ExternalCameraStreamsWhileThePrinterIsOffline()
+    {
+        _situation = _situation! with { Source = External(), IsOnline = false };
+        Watch();
+        Assert.Single(_clients);
+        Assert.IsType<CameraSource.External>(_clients[0].Config.Source);
+    }
+
+    /// <summary>LAN Only Liveview is the printer's own setting and says nothing about an entered camera.</summary>
+    [Fact]
+    public void ExternalCameraIgnoresLiveViewDisabled()
+    {
+        _situation = _situation! with { Source = External(), LiveViewEnabled = false };
+        Watch();
+        Assert.Single(_clients);
+    }
+
+    /// <summary>An entered camera carries its own credentials, so no access code is needed.</summary>
+    [Fact]
+    public void ExternalCameraNeedsNoAccessCode()
+    {
+        _situation = _situation! with { Source = External(), AccessCode = null };
+        Watch();
+        Assert.Single(_clients);
+    }
+
+    [Fact]
+    public void ExternalCameraIsStillBlockedForTheDemo()
+    {
+        _situation = _situation! with { Source = External(), IsDemo = true };
+        Watch();
+        Assert.Empty(_clients);
+        Assert.Equal(new State.Unavailable("The demo printer has no camera."), _feed.State);
+    }
+
+    [Fact]
+    public void ExternalCameraIsStillBlockedForTheMockFleet()
+    {
+        _situation = _situation! with { Source = External(), IsMockFleet = true };
+        Watch();
+        Assert.Empty(_clients);
+    }
+
+    /// <summary>A hand-edited settings file: the reason reaches the person instead of a blank preview.</summary>
+    [Fact]
+    public void ExternalCameraReportsAStoredUrlThatDoesNotParse()
+    {
+        _situation = _situation! with { Source = External(), SourceProblem = "That isn't an RTSP address." };
+        Watch();
+        Assert.Empty(_clients);
+        Assert.Equal(new State.Unavailable("That isn't an RTSP address."), _feed.State);
+    }
+
+    /// <summary>The printer's own camera keeps both gates.</summary>
+    [Fact]
+    public void PrinterCameraStillNeedsOnlineAndLiveView()
+    {
+        _situation = _situation! with { IsOnline = false };
+        Watch();
+        Assert.Empty(_clients);
+        Assert.Equal(new State.Unavailable("The camera starts when the printer is connected."), _feed.State);
+
+        _feed.Stop();
+        _situation = _situation with { IsOnline = true, LiveViewEnabled = false };
+        _feed.Update();
+        _feed.ViewersChanged();
+        Assert.Empty(_clients);
+    }
+
+    private static CameraSource External(string url = "rtsp://192.168.1.40:554/stream1")
+    {
+        Assert.True(RtspUrl.TryParse(url, out var parsed, out var problem), $"{problem}");
+        return new CameraSource.External(new ExternalCamera
+        {
+            Url = parsed, Username = "admin", Password = "cam-secret",
+        });
+    }
 }

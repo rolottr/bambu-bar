@@ -259,6 +259,11 @@ public sealed class CameraFeed : Observable, IDisposable
         if (s.IsDemo) return Loc.T("The demo printer has no camera.");
         if (!s.ShowsCamera) return Loc.T("The camera is off.");
         if (s.IsMockFleet) return "The mock fleet's printers have no camera.";
+        // An entered URL that no longer parses: say so rather than quietly show the printer's own camera.
+        if (s.SourceProblem is { } problem) return problem;
+        // An entered camera answers whether or not the printer does, and LAN Only Liveview is the printer's own
+        // setting, so neither gate applies to one.
+        if (s.Source.IsExternal) return _services.DecoderProblem();
         if (!s.IsOnline) return Loc.T("The camera starts when the printer is connected.");
         if (s.Source is CameraSource.Printer { Transport: CameraTransport.Rtsps } && s.LiveViewEnabled == false)
             return Loc.T("Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here.");
@@ -274,12 +279,21 @@ public sealed class CameraFeed : Observable, IDisposable
             State = new FeedState.Unavailable(reason);
             return;
         }
-        if (_situation() is not { AccessCode: { } code } s)
+        if (_situation() is not { } s)
+        {
+            State = new FeedState.Unavailable(Loc.T("No printer."));
+            return;
+        }
+        // An entered camera carries its own credentials; only the printer's own needs the access code.
+        if (!s.Source.IsExternal && s.AccessCode is null)
         {
             State = new FeedState.Unavailable(Loc.T("The access code isn't available."));
             return;
         }
-        var client = _services.Client(new CameraConfig { Host = s.Host, Serial = s.Serial, AccessCode = code, Source = s.Source });
+        var client = _services.Client(new CameraConfig
+        {
+            Host = s.Host, Serial = s.Serial, AccessCode = s.AccessCode ?? "", Source = s.Source,
+        });
         client.OnEvent = e =>
         {
             if (ReferenceEquals(client, _client)) Handle(e);
