@@ -1,14 +1,17 @@
 import Foundation
 import Security
 
-/// The printer's LAN access code, kept in the keychain per serial number.
+/// The secrets a printer needs, in the keychain per serial number: its LAN access code, and the password of an
+/// external camera entered for it. Two services, so neither write can disturb the other and printers saved by
+/// earlier versions keep their codes where they are.
 enum Keychain {
-    private static let service = "dev.rolottr.BambuBar.access-code"
+    private static let accessCodeService = "dev.rolottr.BambuBar.access-code"
+    private static let cameraPasswordService = "dev.rolottr.BambuBar.camera-password"
 
-    /// The item for a printer. The App Store build keeps its codes in the data protection keychain, under its App
+    /// The item for a printer. The App Store build keeps its secrets in the data protection keychain, under its App
     /// Store identity: the login keychain would ask for permission (and block launch until answered) whenever it
-    /// met a code saved by the differently signed GitHub build. Its sandbox starts with settings of its own anyway.
-    private static func item(_ serial: String) -> [String: Any] {
+    /// met one saved by the differently signed GitHub build. Its sandbox starts with settings of its own anyway.
+    private static func item(_ serial: String, service: String) -> [String: Any] {
         var item: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -20,8 +23,38 @@ enum Keychain {
         return item
     }
 
+    // MARK: - Access codes
+
     static func accessCode(for serial: String) -> String? {
-        var query = item(serial)
+        value(serial, service: accessCodeService)
+    }
+
+    static func setAccessCode(_ code: String, for serial: String) {
+        store(code, serial, service: accessCodeService, label: "Bambu Bar printer access code")
+    }
+
+    static func removeAccessCode(for serial: String) {
+        SecItemDelete(item(serial, service: accessCodeService) as CFDictionary)
+    }
+
+    // MARK: - External camera passwords
+
+    static func cameraPassword(for serial: String) -> String? {
+        value(serial, service: cameraPasswordService)
+    }
+
+    static func setCameraPassword(_ password: String, for serial: String) {
+        store(password, serial, service: cameraPasswordService, label: "Bambu Bar camera password")
+    }
+
+    static func removeCameraPassword(for serial: String) {
+        SecItemDelete(item(serial, service: cameraPasswordService) as CFDictionary)
+    }
+
+    // MARK: - Items
+
+    private static func value(_ serial: String, service: String) -> String? {
+        var query = item(serial, service: service)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
@@ -29,17 +62,14 @@ enum Keychain {
         return String(data: data, encoding: .utf8)
     }
 
-    static func setAccessCode(_ code: String, for serial: String) {
-        let data = Data(code.utf8)
-        if SecItemUpdate(item(serial) as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecItemNotFound {
-            var add = item(serial)
+    private static func store(_ secret: String, _ serial: String, service: String, label: String) {
+        let data = Data(secret.utf8)
+        let query = item(serial, service: service)
+        if SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecItemNotFound {
+            var add = query
             add[kSecValueData as String] = data
-            add[kSecAttrLabel as String] = "Bambu Bar printer access code"
+            add[kSecAttrLabel as String] = label
             SecItemAdd(add as CFDictionary, nil)
         }
-    }
-
-    static func removeAccessCode(for serial: String) {
-        SecItemDelete(item(serial) as CFDictionary)
     }
 }

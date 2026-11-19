@@ -25,6 +25,29 @@ public static class CameraTransports
     };
 
     public static int Port(this CameraTransport transport) => transport == CameraTransport.Rtsps ? 322 : 6000;
+
+    /// <summary>The printer's own camera, served this way. Here rather than on PrinterSession so the nested
+    /// record stays reachable: a property named after its own type hides the type name.</summary>
+    public static CameraSource Source(this CameraTransport transport) => new CameraSource.Printer(transport);
+}
+
+/// <summary>A camera someone entered on the Printers page, with the credentials it needs.</summary>
+public sealed record ExternalCamera
+{
+    public required RtspUrl Url { get; init; }
+    public string Username { get; init; } = "";
+    public string Password { get; init; } = "";
+}
+
+/// <summary>Where a camera stream comes from.</summary>
+public abstract record CameraSource
+{
+    /// <summary>The printer's own camera, served the way its model serves it.</summary>
+    public sealed record Printer(CameraTransport Transport) : CameraSource;
+    /// <summary>A camera someone entered themselves, which replaces the printer's own.</summary>
+    public sealed record External(ExternalCamera Camera) : CameraSource;
+
+    public bool IsExternal => this is External;
 }
 
 public sealed record CameraConfig
@@ -33,7 +56,8 @@ public sealed record CameraConfig
     /// <summary>The printer serial, which its certificate is named after.</summary>
     public required string Serial { get; init; }
     public required string AccessCode { get; init; }
-    public required CameraTransport Transport { get; init; }
+    /// <summary>The printer's camera, or one entered by hand that replaces it.</summary>
+    public required CameraSource Source { get; init; }
     /// <summary>Another port than the transport's (tests).</summary>
     public int? Port { get; init; }
     /// <summary>Called with the camera's certificate on every handshake (tests, probe).</summary>
@@ -42,23 +66,31 @@ public sealed record CameraConfig
 
 public abstract record CameraFailure
 {
+    /// <summary>The printer refused the access code.</summary>
     public sealed record Unauthorized : CameraFailure;
+    /// <summary>An external camera refused the username and password.</summary>
+    public sealed record CredentialsRejected : CameraFailure;
     public sealed record Unreachable(string Reason) : CameraFailure;
     public sealed record TimedOut : CameraFailure;
     public sealed record Closed : CameraFailure;
     public sealed record Unsupported(string Reason) : CameraFailure;
     public sealed record Malformed(string Reason) : CameraFailure;
 
-    /// <summary>Retrying won't help until something changes (the access code, the printer, the app).</summary>
-    public bool IsPermanent => this is Unauthorized or Unsupported;
+    /// <summary>Retrying won't help until something changes (the access code, the camera's credentials, the
+    /// printer, the app).</summary>
+    public bool IsPermanent => this is Unauthorized or CredentialsRejected or Unsupported;
 
-    /// <summary>What to tell the person.</summary>
-    public string Message => this switch
+    /// <summary>What to tell the person. Some of these name the printer, which would be wrong for a camera they
+    /// pointed the app at themselves.</summary>
+    public string Message(CameraSource source) => this switch
     {
         Unauthorized => Loc.T("The printer didn't accept the access code for the camera."),
+        CredentialsRejected => Loc.T("The camera refused the username and password."),
         Unreachable u => u.Reason,
         TimedOut => Loc.T("The camera stopped sending video."),
-        Closed => Loc.T("The printer closed the camera connection."),
+        Closed => source.IsExternal
+            ? Loc.T("The camera closed the connection.")
+            : Loc.T("The printer closed the camera connection."),
         Unsupported u => u.Reason,
         Malformed m => Loc.F("The camera sent something unexpected (%@).", m.Reason),
         _ => GetType().Name,
@@ -96,10 +128,10 @@ public interface ICameraClient
 
 public static class CameraClient
 {
-    public static ICameraClient Create(CameraConfig config) => config.Transport switch
+    public static ICameraClient Create(CameraConfig config) => config.Source switch
     {
-        CameraTransport.Rtsps => new RtspCameraClient(config),
-        _ => new JpegCameraClient(config),
+        CameraSource.Printer { Transport: CameraTransport.Jpeg } => new JpegCameraClient(config),
+        _ => new RtspCameraClient(config),
     };
 }
 
@@ -155,18 +187,24 @@ internal sealed class CameraSocket
     private readonly Channel<byte[]> _outbound = Channel.CreateUnbounded<byte[]>(new() { SingleReader = true });
     private readonly object _gate = new();
     private Socket? _socket;
-    private SslStream? _stream;
+    /// <summary>An <see cref="SslStream"/> for a printer, a bare <see cref="NetworkStream"/> for an entered
+    /// camera on an rtsp:// URL.</summary>
+    private Stream? _stream;
     private Task? _writer;
     // Read and written on the queue only.
     private bool _closed;
 
-    public CameraSocket(string host, int port, string serial, CameraQueue queue, Action<X509Certificate2>? onCertificate = null)
+    private readonly bool _tls;
+
+    public CameraSocket(string host, int port, string serial, CameraQueue queue,
+        Action<X509Certificate2>? onCertificate = null, bool tls = true)
     {
         _host = host;
         _port = port;
         _serial = serial;
         _queue = queue;
         _onCertificate = onCertificate;
+        _tls = tls;
     }
 
     /// <summary>Call on the queue.</summary>
@@ -207,7 +245,7 @@ internal sealed class CameraSocket
     private void Teardown()
     {
         Socket? socket;
-        SslStream? stream;
+        Stream? stream;
         lock (_gate)
         {
             socket = _socket;
@@ -244,13 +282,18 @@ internal sealed class CameraSocket
                     return;
                 }
             }
-            var stream = new SslStream(new NetworkStream(socket, ownsSocket: true), leaveInnerStreamOpen: false);
+            Stream stream = new NetworkStream(socket, ownsSocket: true);
+            if (_tls) stream = new SslStream(stream, leaveInnerStreamOpen: false);
             lock (_gate)
             {
                 if (token.IsCancellationRequested) { stream.Dispose(); return; }
                 _stream = stream;
             }
-            await stream.AuthenticateAsClientAsync(MqttClient.TlsOptions(_host, Verify), token).ConfigureAwait(false);
+            if (stream is SslStream tlsStream)
+            {
+                await tlsStream.AuthenticateAsClientAsync(MqttClient.TlsOptions(_host, Verify), token)
+                    .ConfigureAwait(false);
+            }
             var writer = Task.Run(() => WriteLoopAsync(stream, token), CancellationToken.None);
             lock (_gate) _writer = writer;
             _queue.Run(() =>
@@ -298,7 +341,7 @@ internal sealed class CameraSocket
         return true;
     }
 
-    private async Task ReadLoopAsync(SslStream stream, CancellationToken token)
+    private async Task ReadLoopAsync(Stream stream, CancellationToken token)
     {
         var chunk = new byte[512 * 1024];
         while (!token.IsCancellationRequested)
@@ -317,7 +360,7 @@ internal sealed class CameraSocket
         }
     }
 
-    private async Task WriteLoopAsync(SslStream stream, CancellationToken token)
+    private async Task WriteLoopAsync(Stream stream, CancellationToken token)
     {
         try
         {

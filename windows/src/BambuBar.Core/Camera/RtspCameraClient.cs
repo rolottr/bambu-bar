@@ -4,11 +4,13 @@ using System.Text;
 namespace BambuBar.Core.Camera;
 
 /// <summary>
-/// Plays the RTSPS live view of X1, H2, P2S and X2D printers (port 322, <c>bblp</c> and the access code).
+/// Plays an RTSP stream: the RTSPS live view of X1, H2, P2S and X2D printers (port 322, <c>bblp</c> and the access
+/// code), or a camera someone entered themselves, at its own URL, port and credentials, with TLS only when the URL
+/// says <c>rtsps://</c>.
 ///
-/// RTSP runs over the TLS connection and so does the video: RTP is interleaved on the same connection (<c>$</c>,
-/// channel, 16-bit length, packet), which avoids UDP ports and firewalls. DESCRIBE → SETUP → PLAY, then a keepalive
-/// request every 20 seconds and TEARDOWN when done. A port of the Mac's RTSPCameraClient.swift.
+/// The video shares the RTSP connection: RTP is interleaved on it (<c>$</c>, channel, 16-bit length, packet), which
+/// avoids UDP ports and firewalls. DESCRIBE → SETUP → PLAY, then a keepalive request every 20 seconds and TEARDOWN
+/// when done. A port of the Mac's RTSPCameraClient.swift.
 /// </summary>
 internal sealed class RtspCameraClient : ICameraClient
 {
@@ -39,14 +41,39 @@ internal sealed class RtspCameraClient : ICameraClient
     private long _openedAt = Environment.TickCount64;
     private bool _finished;
 
+    private readonly string _streamHost;
+    private readonly bool _tls;
+    private readonly string _username;
+    private readonly string _password;
+
     public RtspCameraClient(CameraConfig config)
     {
         _config = config;
-        _port = config.Port ?? CameraTransport.Rtsps.Port();
-        _url = $"rtsps://{config.Host}:{CameraTransport.Rtsps.Port()}/streaming/live/1";
+        if (config.Source is CameraSource.External { Camera: { } camera })
+        {
+            _streamHost = camera.Url.Host;
+            _port = config.Port ?? camera.Url.Port;
+            _tls = camera.Url.IsTls;
+            _url = camera.Url.Absolute;
+            _username = camera.Username;
+            _password = camera.Password;
+        }
+        else
+        {
+            _streamHost = config.Host;
+            _port = config.Port ?? CameraTransport.Rtsps.Port();
+            _tls = true;
+            _url = $"rtsps://{config.Host}:{CameraTransport.Rtsps.Port()}/streaming/live/1";
+            _username = "bblp";
+            _password = config.AccessCode;
+        }
         _events = new EventPump<CameraEvent>(e => OnEvent?.Invoke(e));
         _queue = new CameraQueue(e => Finish(new CameraFailure.Malformed(e.Message)));
     }
+
+    /// <summary>How a refused login is reported: the printer's access code, or the camera's own credentials.</summary>
+    private CameraFailure Refused =>
+        _config.Source.IsExternal ? new CameraFailure.CredentialsRejected() : new CameraFailure.Unauthorized();
 
     public void Start() => _queue.Run(Open);
 
@@ -57,7 +84,7 @@ internal sealed class RtspCameraClient : ICameraClient
     private void Open()
     {
         if (_finished || _socket is not null) return;
-        var socket = new CameraSocket(_config.Host, _port, _config.Serial, _queue, _config.OnCertificate)
+        var socket = new CameraSocket(_streamHost, _port, _config.Serial, _queue, _config.OnCertificate, _tls)
         {
             Log = Log,
         };
@@ -150,12 +177,12 @@ internal sealed class RtspCameraClient : ICameraClient
         {
             if (_auth?.HasFailed == true)
             {
-                Finish(new CameraFailure.Unauthorized());
+                Finish(Refused);
                 return;
             }
-            if (RtspAuth.Create(response.Headers("WWW-Authenticate"), "bblp", _config.AccessCode) is not { } next)
+            if (RtspAuth.Create(response.Headers("WWW-Authenticate"), _username, _password) is not { } next)
             {
-                Finish(new CameraFailure.Unauthorized());
+                Finish(Refused);
                 return;
             }
             // Credentials sent once and refused again mean the code is wrong.
@@ -168,8 +195,10 @@ internal sealed class RtspCameraClient : ICameraClient
         {
             if (response.Status is 404 or 454 or 503)
             {
-                Finish(new CameraFailure.Unreachable(
-                    Loc.F("The camera isn't streaming (%@). Is LAN Only Liveview on?", response.StatusLine)));
+                // LAN Only Liveview is a printer's setting; asking about it for an entered camera misleads.
+                Finish(new CameraFailure.Unreachable(_config.Source.IsExternal
+                    ? Loc.F("The camera isn't streaming (%@).", response.StatusLine)
+                    : Loc.F("The camera isn't streaming (%@). Is LAN Only Liveview on?", response.StatusLine)));
                 return;
             }
             Finish(new CameraFailure.Malformed($"{request.Method} answered {response.StatusLine}"));

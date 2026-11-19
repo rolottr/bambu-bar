@@ -1,3 +1,5 @@
+using System.Text.Json;
+using BambuBar.Core.Camera;
 using BambuBar.Core.Model;
 using BambuBar.Core.Protocol;
 
@@ -146,4 +148,90 @@ public class PrinterIdentityTests
 
     [Fact]
     public void BundledRootsLoad() => Assert.Equal(8, BambuTrust.BundledCount);
+
+    // MARK: External camera
+
+    [Fact]
+    public void ExternalCameraRoundTripsThroughTheSavedConfig()
+    {
+        var config = Config("22EF00000000001") with
+        {
+            CameraUrl = "rtsp://192.168.1.40:554/stream1", CameraUsername = "admin",
+        };
+        var loaded = JsonSerializer.Deserialize<PrinterConfig>(JsonSerializer.Serialize(config))!;
+        Assert.Equal("rtsp://192.168.1.40:554/stream1", loaded.CameraUrl);
+        Assert.Equal("admin", loaded.CameraUsername);
+    }
+
+    [Fact]
+    public void PrinterSavedByAnEarlierVersionHasNoExternalCamera()
+    {
+        const string json = """[{"host":"10.0.0.1","serial":"22EF00000000001","name":"Workshop","modelCode":"N7"}]""";
+        var configs = JsonSerializer.Deserialize<List<PrinterConfig>>(json)!;
+        Assert.Null(configs[0].CameraUrl);
+        Assert.Null(configs[0].CameraUsername);
+    }
+
+    /// <summary>Without a URL the printer's own camera is the source, chosen by its model.</summary>
+    [Fact]
+    public void NoUrlMeansThePrintersOwnCamera()
+    {
+        var config = Config("22EF00000000001");
+        Assert.Equal(new CameraSource.Printer(CameraTransport.Rtsps), config.CameraSourceFor(null));
+        Assert.Null(config.CameraSourceProblem);
+    }
+
+    /// <summary>The URL and username come from the config, the password from the secret store.</summary>
+    [Fact]
+    public void UrlMeansAnExternalCameraWithTheStoredPassword()
+    {
+        var config = Config("22EF00000000001") with { CameraUrl = "rtsp://cam:8554/s", CameraUsername = "admin" };
+        var external = Assert.IsType<CameraSource.External>(config.CameraSourceFor("cam-secret"));
+        Assert.Equal("rtsp://cam:8554/s", external.Camera.Url.Absolute);
+        Assert.Equal("admin", external.Camera.Username);
+        Assert.Equal("cam-secret", external.Camera.Password);
+        Assert.Null(config.CameraSourceProblem);
+    }
+
+    /// <summary>A camera with no credentials: empty, not null, so the client offers none.</summary>
+    [Fact]
+    public void ExternalCameraWithoutCredentials()
+    {
+        var config = Config("22EF00000000001") with { CameraUrl = "rtsp://cam/s" };
+        var external = Assert.IsType<CameraSource.External>(config.CameraSourceFor(null));
+        Assert.Equal("", external.Camera.Username);
+        Assert.Equal("", external.Camera.Password);
+    }
+
+    /// <summary>A URL carrying only a username keeps the password that was typed beside it: Test and Save have
+    /// to agree on the credentials.</summary>
+    [Fact]
+    public void UrlWithOnlyAUsernameKeepsTheTypedPassword()
+    {
+        Assert.True(RtspUrl.TryParse("rtsp://admin@cam:554/s", out var url, out _));
+        var entered = PrinterConfig.EnteredCamera(url, "ignored", "cam-secret");
+        Assert.Equal("admin", entered.Username);
+        Assert.Equal("cam-secret", entered.Password);
+    }
+
+    /// <summary>Credentials typed into the URL win over the fields.</summary>
+    [Fact]
+    public void CredentialsInTheUrlOverwriteTheFields()
+    {
+        Assert.True(RtspUrl.TryParse("rtsp://other:pw@cam:554/s", out var url, out _));
+        var entered = PrinterConfig.EnteredCamera(url, "admin", "cam-secret");
+        Assert.Equal("other", entered.Username);
+        Assert.Equal("pw", entered.Password);
+        Assert.Equal("rtsp://cam:554/s", entered.Url.Absolute);
+    }
+
+    /// <summary>A hand-edited settings file: say why there is no picture instead of quietly showing the printer's
+    /// camera.</summary>
+    [Fact]
+    public void AStoredUrlThatNoLongerParsesIsReported()
+    {
+        var config = Config("22EF00000000001") with { CameraUrl = "nonsense" };
+        Assert.Equal(new CameraSource.Printer(CameraTransport.Rtsps), config.CameraSourceFor(null));
+        Assert.NotNull(config.CameraSourceProblem);
+    }
 }

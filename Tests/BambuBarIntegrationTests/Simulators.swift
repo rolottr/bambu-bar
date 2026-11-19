@@ -32,7 +32,23 @@ enum Simulators {
     static let cameraHost = "127.0.0.1"
     static let cameraCode = "12345678"
     static let cameraSerial = "01P00C000000001"
+    /// The same RTSP without TLS, as an external camera serves it (compose.yaml publishes 554 as 1554).
+    static let cameraPlainPort: UInt16 = UInt16(environment["BAMBUBAR_CAMERA_PLAIN_PORT"] ?? "") ?? 1554
+    /// Where the camera serves RTSPS. 322 is the printers' port, which the clients hardcode; an entered URL
+    /// may name any port, so a run without the privilege to bind 322 can point the external cases elsewhere.
+    static let cameraTLSPort: UInt16 = UInt16(environment["BAMBUBAR_CAMERA_TLS_PORT"] ?? "") ?? 322
+    static let cameraUser = "admin"
+    static let cameraPassword = "cam-secret"
     private static let control = URL(string: "http://127.0.0.1:18080")!
+
+    /// A config for the mock camera's plain RTSP port, reached the way an entered camera is.
+    static func externalCamera(path: String = "/stream1", username: String = cameraUser,
+                               password: String = cameraPassword, host: String = cameraHost,
+                               port: UInt16? = nil) throws -> CameraConfig {
+        let url = try RTSPURL.parse("rtsp://\(host):\(port ?? cameraPlainPort)\(path)").get()
+        return CameraConfig(host: host, serial: cameraSerial, accessCode: cameraCode,
+                            source: .external(ExternalCamera(url: url, username: username, password: password)))
+    }
 
     /// What the camera does for the next connections (the list is in shared/scripts/camera/camera.py).
     static func setCameraScenario(_ name: String) async throws {

@@ -46,6 +46,9 @@ final class CameraFeed {
 
     private var hasViewers: Bool { surfaces.allObjects.contains { $0.isOnScreen } }
 
+    /// Where the stream comes from, which decides how a failure is worded.
+    private var source: CameraSource { session?.cameraSource ?? .printer(.rtsps) }
+
     /// A print is under way and the setting is on: keep the stream warm even with nothing on screen.
     private var keepsWarm: Bool {
         PrinterStore.shared.cameraStaysOnWhilePrinting && session?.status?.state.isActive == true && availability() == nil
@@ -143,6 +146,11 @@ final class CameraFeed {
         if session.isDemo { return String(localized: "The demo printer has no camera.") }
         guard session.showsCamera else { return String(localized: "The camera is off.") }
         if PrinterStore.emulatorSettings != nil { return "The mock fleet's printers have no camera." }
+        // An entered URL that no longer parses: say so rather than quietly show the printer's own camera.
+        if let problem = session.cameraSourceProblem { return problem }
+        // An entered camera answers whether or not the printer does, and LAN Only Liveview is the printer's
+        // own setting, so neither gate applies to one.
+        if session.cameraSource.isExternal { return nil }
         guard session.isOnline else { return String(localized: "The camera starts when the printer is connected.") }
         if session.cameraTransport == .rtsps && session.status?.liveViewEnabled == false {
             return String(localized: "Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here.")
@@ -156,12 +164,19 @@ final class CameraFeed {
             state = .unavailable(reason)
             return
         }
-        guard let session, let code = session.cameraAccessCode else {
+        guard let session else {
+            state = .unavailable(String(localized: "No printer."))
+            return
+        }
+        let source = session.cameraSource
+        // An entered camera carries its own credentials; only the printer's own needs the access code.
+        let code = session.cameraAccessCode
+        if !source.isExternal && code == nil {
             state = .unavailable(String(localized: "The access code isn't available."))
             return
         }
-        let client = makeCameraClient(CameraConfig(host: session.config.host, serial: session.config.serial, accessCode: code,
-                                                   transport: session.cameraTransport))
+        let client = makeCameraClient(CameraConfig(host: session.config.host, serial: session.config.serial,
+                                                   accessCode: code ?? "", source: source))
         client.onEvent = { [weak self, weak client] event in
             MainActor.assumeIsolated {
                 guard let self, let client, client === self.client else { return }
@@ -194,14 +209,14 @@ final class CameraFeed {
             client = nil
             sinceKeyframe = []
             if failure.isPermanent {
-                state = .failed(failure.message, retrying: false)
+                state = .failed(failure.message(from: source), retrying: false)
                 return
             }
             let delays: [TimeInterval] = [1, 3, 6, 12, 30]
             let delay = delays[min(attempt, delays.count - 1)]
             attempt += 1
             // A stream that was fine and dropped once reconnects quietly.
-            if !(state == .live && attempt == 1) { state = .failed(failure.message, retrying: true) }
+            if !(state == .live && attempt == 1) { state = .failed(failure.message(from: source), retrying: true) }
             retry = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
                 MainActor.assumeIsolated { self?.connect() }
             }

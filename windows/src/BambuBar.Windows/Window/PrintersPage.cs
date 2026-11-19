@@ -1,11 +1,13 @@
 using System.Windows;
 using System.Windows.Automation.Peers;
+using System.Windows.Threading;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Shapes;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Camera;
+using BambuBar.Core.Camera.Decoding;
 using BambuBar.Core.Model;
 using BambuBar.Theme;
 
@@ -156,6 +158,22 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
         private readonly TextField _codeField = new(Loc.T("Access code"), secret: true, width: 220);
         private readonly ChromeButton _reconnect;
         private readonly ToggleSwitch _camera;
+        private readonly RadioOption _ownCamera;
+        private readonly RadioOption _enteredCamera;
+        private readonly Stack _cameraSource;
+        private readonly Stack _cameraEditor;
+        private readonly TextField _cameraUrl = new(Loc.T("Stream URL"), width: 260);
+        private readonly TextField _cameraUser = new(Loc.T("Username"), width: 260);
+        private readonly TextField _cameraPassword = new(Loc.T("Password"), secret: true, width: 260);
+        private readonly TextBlock _cameraProblem;
+        private readonly TextBlock _cameraTestResult;
+        private readonly ChromeButton _cameraTest;
+        private readonly ChromeButton _cameraSave;
+        /// <summary>The editor is open for a camera not entered yet: shown without anything being saved.</summary>
+        private bool _editingCamera;
+        private ICameraClient? _tester;
+        private DispatcherTimer? _testTimeout;
+        private readonly TextBlock _cameraNote = W.Note("");
         private readonly Region _cameraWarning = new();
         private readonly Region _ignored = new();
         private string _savedName = "";
@@ -198,9 +216,40 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
             _body.Children.Add(_connectionEditor);
 
             _body.Children.Add(W.Switch(Loc.T("Camera"), config.CameraEnabled == true, on => _ctx.Store.SetCameraEnabled(on, _serial), out _camera));
-            _body.Children.Add(W.Note(CameraTransports.ForModel(config.ModelName) == CameraTransport.Rtsps
-                ? Loc.T("Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen).")
-                : Loc.T("Shows the printer's live view.")));
+
+            _ownCamera = new RadioOption(Loc.T("Printer's built-in camera"), "camera-source-" + _serial);
+            _enteredCamera = new RadioOption(Loc.T("External RTSP stream"), "camera-source-" + _serial);
+            _ownCamera.Checked += (_, _) => ChooseOwnCamera();
+            _enteredCamera.Checked += (_, _) => ChooseEnteredCamera();
+            _cameraSource = new Stack { Spacing = 2, Children = { _ownCamera, _enteredCamera } };
+            _body.Children.Add(_cameraSource);
+
+            _cameraProblem = W.Note("");
+            _cameraProblem.Foreground = _ctx.Ink(Palette.Paused);
+            _cameraProblem.Visibility = Visibility.Collapsed;
+            _cameraTestResult = W.Note("");
+            _cameraTestResult.VerticalAlignment = VerticalAlignment.Center;
+            _cameraUrl.OnChange(CameraUrlChanged).OnKeys(ApplyCamera, CancelCamera);
+            _cameraUser.OnChange(UpdateCameraButtons);
+            _cameraPassword.OnChange(UpdateCameraButtons).OnKeys(ApplyCamera, CancelCamera);
+            _cameraTest = W.Button(Loc.T("Test"), TestCamera, small: true);
+            _cameraSave = W.Button(Loc.T("Save"), ApplyCamera, accent: true, small: true);
+            var cameraButtons = Ui.Columns("*", "Auto");
+            cameraButtons.Children.Add(Ui.At(_cameraTestResult, 0));
+            var testHolder = new Stack { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _cameraTest, _cameraSave } };
+            cameraButtons.Children.Add(Ui.At(testHolder, 1));
+            _cameraEditor = new Stack
+            {
+                Spacing = 14, Visibility = Visibility.Collapsed,
+                Children =
+                {
+                    W.Row(Loc.T("Stream URL"), _cameraUrl), W.Row(Loc.T("Username"), _cameraUser),
+                    W.Row(Loc.T("Password"), _cameraPassword), _cameraProblem, cameraButtons,
+                },
+            };
+            _body.Children.Add(_cameraEditor);
+
+            _body.Children.Add(_cameraNote);
             _body.Children.Add(_cameraWarning.Host);
             _body.Children.Add(W.Divider());
             _body.Children.Add(_ignored.Host);
@@ -250,6 +299,7 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
             _status.Text = session.LinkSummary;
             _host.Text = config.Host;
             if (_camera.IsChecked != (config.CameraEnabled == true)) _camera.IsChecked = config.CameraEnabled == true;
+            ShowCamera(config);
             ShowIgnored(config);
             var warn = config.CameraEnabled == true && !_ctx.Store.CameraEnabled;
             _cameraWarning.Show(warn.ToString(), () =>
@@ -353,6 +403,160 @@ internal sealed class PrintersPage(WindowContext ctx) : Page(ctx)
             if (host.Length == 0 || code.Length < 4 || _ctx.Store.Session(_serial) is null) return;
             _ctx.Store.Connect(Config with { Host = host }, code);
             CancelConnection();
+        }
+
+        private void ShowCamera(PrinterConfig config)
+        {
+            var on = config.CameraEnabled == true;
+            _cameraSource.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            var entered = config.CameraUrl is not null || _editingCamera;
+            if (on && entered && _enteredCamera.IsChecked != true) _enteredCamera.IsChecked = true;
+            if (on && !entered && _ownCamera.IsChecked != true) _ownCamera.IsChecked = true;
+            _cameraEditor.Visibility = on && entered ? Visibility.Visible : Visibility.Collapsed;
+            W.Rich(_cameraNote, config.CameraUrl is not null
+                ? Loc.T("Shows a camera you enter yourself, over RTSP. It works while the printer is off.")
+                : CameraTransports.ForModel(config.ModelName) == CameraTransport.Rtsps
+                    ? Loc.T("Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen).")
+                    : Loc.T("Shows the printer's live view."));
+        }
+
+        /// <summary>Back to the printer's own camera, keeping no credential for one it no longer uses.</summary>
+        private void ChooseOwnCamera()
+        {
+            if (Config.CameraUrl is null && !_editingCamera) return;
+            CancelCamera();
+            _ctx.Store.ClearExternalCamera(_serial);
+        }
+
+        /// <summary>Opens the editor on whatever the printer already has. Nothing is saved until Save: picking
+        /// the option must not point a printer at a camera nobody has typed in.</summary>
+        private void ChooseEnteredCamera()
+        {
+            if (_editingCamera) return;
+            _editingCamera = true;
+            _cameraUrl.Text = Config.CameraUrl ?? "";
+            _cameraUser.Text = Config.CameraUsername ?? "";
+            _cameraPassword.Text = _ctx.Store.Session(_serial)?.CameraPassword ?? "";
+            _cameraProblem.Visibility = Visibility.Collapsed;
+            _cameraTestResult.Text = "";
+            UpdateCameraButtons();
+            _cameraEditor.Visibility = Visibility.Visible;
+        }
+
+        private void CancelCamera()
+        {
+            StopTester();
+            _editingCamera = false;
+            _cameraProblem.Visibility = Visibility.Collapsed;
+            _cameraTestResult.Text = "";
+        }
+
+        private void StopTester()
+        {
+            _testTimeout?.Stop();
+            _testTimeout = null;
+            if (_tester is { } tester)
+            {
+                tester.OnEvent = null;
+                tester.Stop();
+                _tester = null;
+            }
+        }
+
+        private void CameraUrlChanged()
+        {
+            _cameraProblem.Visibility = Visibility.Collapsed;
+            _cameraTestResult.Text = "";
+            UpdateCameraButtons();
+        }
+
+        private void UpdateCameraButtons()
+        {
+            var parses = RtspUrl.TryParse(_cameraUrl.Text, out _, out _);
+            _cameraSave.IsEnabled = parses;
+            _cameraTest.IsEnabled = parses && _tester is null;
+        }
+
+        /// <summary>Saves what was typed. Credentials inside the URL win and move into the fields, so what was
+        /// pasted is what connects.</summary>
+        private void ApplyCamera()
+        {
+            if (!RtspUrl.TryParse(_cameraUrl.Text, out var url, out var problem))
+            {
+                _cameraProblem.Text = problem.Message;
+                _cameraProblem.Visibility = Visibility.Visible;
+                return;
+            }
+            var entered = PrinterConfig.EnteredCamera(url, _cameraUser.Text, _cameraPassword.Text);
+            var username = entered.Username;
+            var password = entered.Password;
+            _cameraUser.Text = username;
+            _cameraPassword.Text = password;
+            _cameraUrl.Text = url.Absolute;
+            _cameraProblem.Visibility = Visibility.Collapsed;
+            StopTester();
+            _editingCamera = false;
+            _ctx.Store.SetExternalCamera(url, username, password, _serial);
+        }
+
+        /// <summary>One attempt against what was typed: it saves nothing and leaves the live feed alone.</summary>
+        private void TestCamera()
+        {
+            if (!RtspUrl.TryParse(_cameraUrl.Text, out var url, out _)) return;
+            StopTester();
+            // The same rule Save uses, so a camera that tests clean is the camera that gets saved.
+            var entered = PrinterConfig.EnteredCamera(url, _cameraUser.Text, _cameraPassword.Text);
+            var source = new CameraSource.External(new ExternalCamera
+            {
+                Url = entered.Url, Username = entered.Username, Password = entered.Password,
+            });
+            var client = CameraClient.Create(new CameraConfig
+            {
+                Host = url.Host, Serial = _serial, AccessCode = "", Source = source,
+            });
+            _tester = client;
+            _cameraTestResult.Foreground = _ctx.Brush(ThemeKeys.TextSecondary);
+            _cameraTestResult.Text = Loc.T("Testing…");
+            UpdateCameraButtons();
+            client.OnEvent = e =>
+            {
+                if (!ReferenceEquals(client, _tester)) return;
+                switch (e)
+                {
+                    case CameraEvent.Started started:
+                        TestSucceeded(started.Description);
+                        break;
+                    case CameraEvent.Image:
+                        TestSucceeded(Loc.T("The camera is streaming."));
+                        break;
+                    case CameraEvent.Failed failed:
+                        TestFailed(failed.Failure.Message(source));
+                        break;
+                }
+            };
+            client.Start();
+            // Nothing in 15 seconds is a failure too, so Test always answers.
+            _testTimeout = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+            _testTimeout.Tick += (_, _) => TestFailed(new CameraFailure.TimedOut().Message(source));
+            _testTimeout.Start();
+        }
+
+        private void TestSucceeded(string detail)
+        {
+            // A reachable stream still needs a decoder: saying "it works" without one would mislead.
+            var decoder = FFmpeg.Status.IsAvailable ? null : FFmpegStatus.Message;
+            StopTester();
+            _cameraTestResult.Foreground = _ctx.Ink(decoder is null ? Palette.Accent : Palette.Paused);
+            _cameraTestResult.Text = decoder is null ? $"\u2713 {detail}" : $"\u2713 {detail} \u2014 {decoder}";
+            UpdateCameraButtons();
+        }
+
+        private void TestFailed(string reason)
+        {
+            StopTester();
+            _cameraTestResult.Foreground = _ctx.Ink(Palette.Paused);
+            _cameraTestResult.Text = reason;
+            UpdateCameraButtons();
         }
 
         private void Forget()

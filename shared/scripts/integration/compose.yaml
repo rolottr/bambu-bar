@@ -3,7 +3,8 @@
 #   fleet   shared/scripts/fleet: 17 printers, every Bambu Lab FDM model, over TLS MQTT (one switched off), their Bambu Studio settings in ./out,
 #           SSDP announcements to this Mac on SSDP_PORT. SERIAL_CASE=mixed: lowercase and uppercase serials,
 #           a stale code under one spelling and the working one under the other.
-#   camera  shared/scripts/camera: RTSPS on 322, the JPEG stream on 6000, its scenario chosen on 18080.
+#   camera  shared/scripts/camera: RTSPS on 322, plain RTSP for an external camera on 1554, the JPEG stream
+#           on 6000, its scenario chosen on 18080.
 name: bambubar-integration
 services:
   fleet:
@@ -27,7 +28,12 @@ services:
     environment:
       ACCESS_CODE: "12345678"
       CAMERA_SERIAL: 01P00C000000001
+      EXTERNAL_USER: admin
+      EXTERNAL_PASSWORD: cam-secret
+      PLAIN_PORT: "554"
     ports:
       - "127.0.0.1:322:322"
+      # An external camera's plain RTSP. Published high: binding 554 on the host needs privileges.
+      - "127.0.0.1:1554:554"
       - "127.0.0.1:6000:6000"
       - "127.0.0.1:18080:8080"

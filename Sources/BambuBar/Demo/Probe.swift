@@ -149,9 +149,25 @@ enum Probe {
     /// `--probe-camera <host> <serial> <access-code|keychain> [seconds] [--jpeg|--rtsp] [--model <name>]`: opens the camera
     /// like the app does, logs the handshake (certificate, RTSP replies, SDP) and the frames, decodes the first one
     /// and saves it as a PNG in the temporary folder. Without `--jpeg`/`--rtsp`, the model decides (a P2S if unknown).
-    static var cameraArguments: (host: String, serial: String, code: String, seconds: Double, transport: CameraTransport)? {
+    ///
+    /// `--probe-camera rtsp://user:pass@host:554/path [seconds]` opens an entered camera instead: the URL says
+    /// everything, so no serial or access code is given and `--jpeg`, `--rtsp` and `--model` are ignored.
+    static var cameraArguments: (host: String, serial: String, code: String, seconds: Double, source: CameraSource)? {
         let a = CommandLine.arguments
-        guard let i = a.firstIndex(of: "--probe-camera"), i + 3 < a.count else { return nil }
+        guard let i = a.firstIndex(of: "--probe-camera"), i + 1 < a.count else { return nil }
+        let first = a[i + 1]
+        if first.lowercased().hasPrefix("rtsp://") || first.lowercased().hasPrefix("rtsps://") {
+            switch RTSPURL.parse(first) {
+            case .failure(let problem):
+                print(problem.message)
+                exit(2)
+            case .success(let url):
+                let seconds = i + 2 < a.count ? Double(a[i + 2]) ?? 15 : 15
+                let camera = ExternalCamera(url: url, username: url.username, password: url.password)
+                return (url.host, "", "", seconds, .external(camera))
+            }
+        }
+        guard i + 3 < a.count else { return nil }
         let seconds = i + 4 < a.count ? Double(a[i + 4]) ?? 15 : 15
         // `--model` takes a name ("P1S") or a model code ("C12"); without it the serial says.
         let name = a.firstIndex(of: "--model").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil }
@@ -160,18 +176,18 @@ enum Probe {
         if a.contains("--jpeg") { transport = .jpeg }
         if a.contains("--rtsp") { transport = .rtsps }
         let code = a[i + 3] == "keychain" ? Keychain.accessCode(for: a[i + 2]) ?? "" : a[i + 3]
-        return (a[i + 1], a[i + 2], code, seconds, transport)
+        return (a[i + 1], a[i + 2], code, seconds, .printer(transport))
     }
 
     private static var camera: CameraClient?
 
-    static func runCamera(host: String, serial: String, code: String, seconds: Double, transport: CameraTransport) {
+    static func runCamera(host: String, serial: String, code: String, seconds: Double, source: CameraSource) {
         let started = Date()
         func log(_ text: String) {
             print(String(format: "[%5.1fs] ", Date().timeIntervalSince(started)) + text)
             fflush(stdout)
         }
-        let client = makeCameraClient(CameraConfig(host: host, serial: serial, accessCode: code, transport: transport))
+        let client = makeCameraClient(CameraConfig(host: host, serial: serial, accessCode: code, source: source))
         camera = client
         var frames = 0, keyframes = 0, bytes = 0, saved = false
         client.log = { line in DispatchQueue.main.async { log(line) } }
@@ -194,16 +210,21 @@ enum Probe {
                     save(image, log: log)
                 }
             case .failed(let failure):
-                log("failed: \(failure.message)")
+                log("failed: \(failure.message(from: source))")
                 exit(1)
             }
         }
-        log("opening \(transport == .rtsps ? "RTSPS on port 322" : "the JPEG stream on port 6000") at \(host)")
+        switch source {
+        case .printer(let transport):
+            log("opening \(transport == .rtsps ? "RTSPS on port 322" : "the JPEG stream on port 6000") at \(host)")
+        case .external(let camera):
+            log("opening \(camera.url.absolute)\(camera.username.isEmpty ? "" : " as \(camera.username)")")
+        }
         client.start()
         Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
             MainActor.assumeIsolated {
                 // JPEG frames arrive decoded, so only the video stream has keyframes and a byte count.
-                log(transport == .jpeg ? "\(frames) frames so far" : "\(frames) frames, \(keyframes) keyframes, \(bytes / 1024) KB so far")
+                log(source == .printer(.jpeg) ? "\(frames) frames so far" : "\(frames) frames, \(keyframes) keyframes, \(bytes / 1024) KB so far")
             }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {

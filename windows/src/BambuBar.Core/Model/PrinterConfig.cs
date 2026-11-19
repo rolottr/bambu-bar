@@ -1,3 +1,5 @@
+using BambuBar.Core.Camera;
+
 namespace BambuBar.Core.Model;
 
 /// <summary>Where to find the printer. The access code lives in Credential Manager, not here.</summary>
@@ -14,6 +16,40 @@ public sealed record PrinterConfig
     /// <summary>Issue codes never to show for this printer (<c>HMS_0300_0100_0001_0007</c>, <c>0700_8006</c>), added
     /// with Ignore next to an issue and removed on the Printers page. Null for printers saved by earlier versions.</summary>
     public List<string>? IgnoredIssues { get; init; }
+    /// <summary>An external camera to show instead of the printer's own (Printers page), without its
+    /// credentials. Null: the printer's own camera.</summary>
+    public string? CameraUrl { get; init; }
+    /// <summary>The username <see cref="CameraUrl"/> needs, if it needs one; its password is in Credential
+    /// Manager.</summary>
+    public string? CameraUsername { get; init; }
+
+    /// <summary>Where this printer's camera stream comes from: an external camera when one is entered and its URL
+    /// still parses, otherwise whatever this model serves. <paramref name="password"/> comes from the secret
+    /// store.</summary>
+    public CameraSource CameraSourceFor(string? password)
+    {
+        if (CameraUrl is null || !RtspUrl.TryParse(CameraUrl, out var url, out _))
+        {
+            return CameraTransports.ForModel(ModelName).Source();
+        }
+        return new Camera.CameraSource.External(new ExternalCamera
+        {
+            Url = url, Username = CameraUsername ?? "", Password = password ?? "",
+        });
+    }
+
+    /// <summary>What to use for a camera someone entered, for both Test and Save so the two can't disagree.
+    /// Each credential typed into the URL wins over the field beside it, so what was pasted is what connects,
+    /// while a URL carrying only a username keeps the password that was typed.</summary>
+    public static (RtspUrl Url, string Username, string Password) EnteredCamera(RtspUrl url, string username,
+        string password) =>
+        (url, url.Username.Length == 0 ? username : url.Username,
+            url.Password.Length == 0 ? password : url.Password);
+
+    /// <summary>Why an entered camera URL can't be used, if it can't. A settings file edited by hand can hold one
+    /// that no longer parses; saying so beats quietly showing the printer's own camera instead.</summary>
+    public string? CameraSourceProblem =>
+        CameraUrl is not null && !RtspUrl.TryParse(CameraUrl, out _, out var problem) ? problem.Message : null;
 
     public string ModelName => PrinterModel.NameFor(ModelCode, Serial);
     public PrinterModel? Model => PrinterModel.Find(ModelCode, Serial);

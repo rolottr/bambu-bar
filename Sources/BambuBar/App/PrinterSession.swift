@@ -116,7 +116,12 @@ final class PrinterSession: Identifiable {
     var speed: SpeedLevel { pendingSpeed ?? status?.speed ?? .standard }
     var accessCode: String? { Keychain.accessCode(for: config.serial) }
     var isDemo: Bool { demo != nil }
+    /// What this printer's model serves, whatever the camera is pointed at: the Printers page note reads it.
     var cameraTransport: CameraTransport { CameraTransport.forModel(config.modelName) }
+    /// Where this printer's camera stream comes from, with the camera's password from the keychain.
+    var cameraSource: CameraSource { config.cameraSource(password: Keychain.cameraPassword(for: config.serial)) }
+    /// Why an entered camera URL can't be used, if it can't.
+    var cameraSourceProblem: String? { config.cameraSourceProblem }
     var cameraAccessCode: String? { activeCode ?? accessCode }
     /// The camera appears (and may stream) only with both switches on: Settings → Camera, and this printer's on
     /// the Printers page. Off, nothing about it shows: not on the Printer page, in the panel or in the menus.

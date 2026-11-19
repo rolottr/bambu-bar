@@ -420,6 +420,33 @@ final class PrinterStore {
         cameraSettingsChanged()
     }
 
+    /// Points one printer's camera at an entered RTSP stream (Printers page). The URL is stored without its
+    /// credentials: the username goes beside it, the password into the keychain.
+    func setExternalCamera(url: RTSPURL, username: String, password: String, for serial: String) {
+        guard let session = session(serial) else { return }
+        session.config.cameraURL = url.absolute
+        session.config.cameraUsername = username.isEmpty ? nil : username
+        if password.isEmpty {
+            Keychain.removeCameraPassword(for: serial)
+        } else {
+            Keychain.setCameraPassword(password, for: serial)
+        }
+        saveConfigs()
+        session.camera.restart()
+        session.camera.update()
+    }
+
+    /// Back to the printer's own camera, keeping no credential for one it no longer uses.
+    func clearExternalCamera(for serial: String) {
+        guard let session = session(serial), session.config.cameraURL != nil else { return }
+        session.config.cameraURL = nil
+        session.config.cameraUsername = nil
+        Keychain.removeCameraPassword(for: serial)
+        saveConfigs()
+        session.camera.restart()
+        session.camera.update()
+    }
+
     /// A camera switch changed: a camera now off stops streaming and its window closes.
     private func cameraSettingsChanged() {
         for session in sessions {
@@ -432,6 +459,7 @@ final class PrinterStore {
         guard let session = session(serial) else { return }
         session.stop()
         Keychain.removeAccessCode(for: serial)
+        Keychain.removeCameraPassword(for: serial)
         sessions.removeAll { $0.id == serial }
         if selectedSerial == serial { selectedSerial = sessions.first?.id }
         if menuBarSerial == serial { menuBarSerial = nil }

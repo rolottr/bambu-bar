@@ -72,6 +72,89 @@ final class PrinterIdentityTests: XCTestCase {
         XCTAssertEqual(PrinterConfig.deduplicated([loaded]).first?.cameraEnabled, true)
     }
 
+    // MARK: - External camera
+
+    func testExternalCameraRoundTripsThroughTheSavedConfig() throws {
+        var config = config("22EF00000000001")
+        config.cameraURL = "rtsp://192.168.1.40:554/stream1"
+        config.cameraUsername = "admin"
+        let loaded = try JSONDecoder().decode(PrinterConfig.self, from: JSONEncoder().encode(config))
+        XCTAssertEqual(loaded.cameraURL, "rtsp://192.168.1.40:554/stream1")
+        XCTAssertEqual(loaded.cameraUsername, "admin")
+        XCTAssertEqual(PrinterConfig.deduplicated([loaded]).first?.cameraURL, "rtsp://192.168.1.40:554/stream1")
+    }
+
+    func testPrinterSavedByAnEarlierVersionHasNoExternalCamera() throws {
+        let json = #"[{"host":"10.0.0.1","serial":"22EF00000000001","name":"Workshop","modelCode":"N7"}]"#
+        let configs = try JSONDecoder().decode([PrinterConfig].self, from: Data(json.utf8))
+        XCTAssertNil(configs.first?.cameraURL)
+        XCTAssertNil(configs.first?.cameraUsername)
+    }
+
+    /// Without a URL the printer's own camera is the source, chosen by its model.
+    func testNoURLMeansThePrintersOwnCamera() {
+        let config = config("22EF00000000001")
+        XCTAssertEqual(config.cameraSource(password: nil), .printer(.rtsps))
+        XCTAssertNil(config.cameraSourceProblem)
+    }
+
+    /// The URL and username come from the config, the password from the keychain.
+    func testURLMeansAnExternalCameraWithTheKeychainPassword() throws {
+        var config = config("22EF00000000001")
+        config.cameraURL = "rtsp://cam:8554/s"
+        config.cameraUsername = "admin"
+        let source = config.cameraSource(password: "cam-secret")
+        guard case .external(let camera) = source else { return XCTFail("\(source)") }
+        XCTAssertEqual(camera.url.absolute, "rtsp://cam:8554/s")
+        XCTAssertEqual(camera.username, "admin")
+        XCTAssertEqual(camera.password, "cam-secret")
+        XCTAssertNil(config.cameraSourceProblem)
+    }
+
+    /// A camera with no credentials: empty, not nil, so the client offers none.
+    func testExternalCameraWithoutCredentials() {
+        var config = config("22EF00000000001")
+        config.cameraURL = "rtsp://cam/s"
+        let source = config.cameraSource(password: nil)
+        guard case .external(let camera) = source else { return XCTFail("\(source)") }
+        XCTAssertEqual(camera.username, "")
+        XCTAssertEqual(camera.password, "")
+    }
+
+    /// A hand-edited settings file: say why there is no picture instead of quietly showing the printer's camera.
+    func testAStoredURLThatNoLongerParsesIsReported() {
+        var config = config("22EF00000000001")
+        config.cameraURL = "nonsense"
+        XCTAssertEqual(config.cameraSource(password: nil), .printer(.rtsps))
+        XCTAssertNotNil(config.cameraSourceProblem)
+    }
+
+    /// Credentials typed into the URL win over the fields, so what was pasted is what connects.
+    func testCredentialsInTheURLOverwriteTheFields() throws {
+        let url = try RTSPURL.parse("rtsp://other:pw@cam:554/s").get()
+        let entered = PrinterConfig.enteredCamera(url: url, username: "admin", password: "cam-secret")
+        XCTAssertEqual(entered.username, "other")
+        XCTAssertEqual(entered.password, "pw")
+        XCTAssertEqual(entered.url.absolute, "rtsp://cam:554/s", "never stored with its credentials")
+    }
+
+    /// A URL carrying only a username keeps the password that was typed beside it: Test and Save have to agree
+    /// on the credentials, and anything else saves a camera that the test said worked.
+    func testURLWithOnlyAUsernameKeepsTheTypedPassword() throws {
+        let url = try RTSPURL.parse("rtsp://admin@cam:554/s").get()
+        let entered = PrinterConfig.enteredCamera(url: url, username: "ignored", password: "cam-secret")
+        XCTAssertEqual(entered.username, "admin")
+        XCTAssertEqual(entered.password, "cam-secret")
+    }
+
+    /// A URL with none leaves what was typed in the fields alone.
+    func testURLWithoutCredentialsKeepsTheFields() throws {
+        let url = try RTSPURL.parse("rtsp://cam:554/s").get()
+        let entered = PrinterConfig.enteredCamera(url: url, username: "admin", password: "cam-secret")
+        XCTAssertEqual(entered.username, "admin")
+        XCTAssertEqual(entered.password, "cam-secret")
+    }
+
     // MARK: - Models (PR #5)
 
     /// Setups before 1.2 saved "N7" (P2S) for a printer typed in by hand; the serial tells the truth.

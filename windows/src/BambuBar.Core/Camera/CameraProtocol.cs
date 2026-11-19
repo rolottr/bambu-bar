@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -291,6 +292,164 @@ public sealed class RtspAuth
         return result;
     }
 }
+
+/// <summary>Why an RTSP address someone typed in cannot be used.</summary>
+public abstract record RtspUrlProblem
+{
+    public sealed record Scheme(string Found) : RtspUrlProblem;
+    public sealed record NoHost : RtspUrlProblem;
+    public sealed record Port(string Found) : RtspUrlProblem;
+    public sealed record Malformed : RtspUrlProblem;
+
+    /// <summary>What to show beside the field.</summary>
+    public string Message => this switch
+    {
+        Scheme s => Loc.F("Only rtsp:// and rtsps:// addresses work here (%@).", s.Found),
+        NoHost => Loc.T("The address has no host."),
+        Port p => Loc.F("%@ isn't a port number.", p.Found),
+        _ => Loc.T("That isn't an RTSP address."),
+    };
+}
+
+/// <summary>
+/// An RTSP address someone typed in for an external camera: <c>rtsp://</c> or <c>rtsps://</c>, with the
+/// credentials held apart from the URL the requests carry, so a password never reaches a request line or a log.
+/// Hand-written rather than left to <see cref="Uri"/>, which reads userinfo differently from the Mac's
+/// URLComponents: the two platforms have to agree. A port of the Mac's RTSPURL in CameraProtocol.swift.
+/// </summary>
+public sealed record RtspUrl
+{
+    public required bool IsTls { get; init; }
+    /// <summary>Without the brackets of an IPv6 literal.</summary>
+    public required string Host { get; init; }
+    public required int Port { get; init; }
+    /// <summary>Always starts with "/", and keeps any query string.</summary>
+    public required string Path { get; init; }
+    /// <summary>"" when the URL carried none.</summary>
+    public string Username { get; init; } = "";
+    public string Password { get; init; } = "";
+
+    /// <summary>The URL to put on the request line: scheme, host, port and path, never the credentials.</summary>
+    public string Absolute => $"{(IsTls ? "rtsps" : "rtsp")}://{(Host.Contains(':') ? $"[{Host}]" : Host)}:{Port}{Path}";
+
+    public static bool TryParse(string text, [NotNullWhen(true)] out RtspUrl? url,
+        [NotNullWhen(false)] out RtspUrlProblem? problem)
+    {
+        url = null;
+        problem = null;
+        var trimmed = text.Trim();
+        var separator = trimmed.IndexOf("://", StringComparison.Ordinal);
+        if (separator < 0)
+        {
+            problem = new RtspUrlProblem.Malformed();
+            return false;
+        }
+        var scheme = trimmed[..separator];
+        bool isTls;
+        switch (scheme.ToLowerInvariant())
+        {
+            case "rtsp": isTls = false; break;
+            case "rtsps": isTls = true; break;
+            default:
+                problem = new RtspUrlProblem.Scheme(scheme);
+                return false;
+        }
+
+        // The path starts at the first "/" after the authority; with none, the whole stream is at "/".
+        var rest = trimmed[(separator + 3)..];
+        var pathStart = rest.IndexOf('/');
+        var authority = pathStart < 0 ? rest : rest[..pathStart];
+        var path = pathStart < 0 ? "/" : rest[pathStart..];
+
+        // A password may hold "@" only percent-encoded, so the last "@" is what separates the credentials.
+        var username = "";
+        var password = "";
+        var at = authority.LastIndexOf('@');
+        if (at >= 0)
+        {
+            var credentials = authority[..at];
+            authority = authority[(at + 1)..];
+            var colon = credentials.IndexOf(':');
+            if (colon >= 0)
+            {
+                username = Decoded(credentials[..colon]);
+                password = Decoded(credentials[(colon + 1)..]);
+            }
+            else
+            {
+                username = Decoded(credentials);
+            }
+        }
+
+        // An IPv6 literal is bracketed, and its colons are not the port's.
+        string host;
+        var portText = "";
+        if (authority.StartsWith('['))
+        {
+            var close = authority.IndexOf(']');
+            if (close < 0)
+            {
+                problem = new RtspUrlProblem.Malformed();
+                return false;
+            }
+            host = authority[1..close];
+            var after = authority[(close + 1)..];
+            if (after.StartsWith(':'))
+            {
+                portText = after[1..];
+            }
+            else if (after.Length > 0)
+            {
+                problem = new RtspUrlProblem.Malformed();
+                return false;
+            }
+        }
+        else
+        {
+            var colon = authority.LastIndexOf(':');
+            if (colon >= 0)
+            {
+                host = authority[..colon];
+                portText = authority[(colon + 1)..];
+            }
+            else
+            {
+                host = authority;
+            }
+        }
+        if (host.Length == 0)
+        {
+            problem = new RtspUrlProblem.NoHost();
+            return false;
+        }
+
+        var port = isTls ? 322 : 554;
+        if (portText.Length > 0)
+        {
+            // int.TryParse accepts a leading sign and digit separators the Mac's UInt16 initialiser refuses.
+            if (!portText.All(char.IsAsciiDigit) || !int.TryParse(portText, out var value) || value is < 1 or > 65535)
+            {
+                problem = new RtspUrlProblem.Port(portText);
+                return false;
+            }
+            port = value;
+        }
+
+        url = new RtspUrl
+        {
+            IsTls = isTls, Host = host, Port = port, Path = path, Username = username, Password = password,
+        };
+        return true;
+    }
+
+    /// <summary>Percent-decoded, or the text as typed when it isn't valid percent-encoding.</summary>
+    private static string Decoded(string text)
+    {
+        try { return Uri.UnescapeDataString(text); }
+        catch (UriFormatException) { return text; }
+    }
+}
+
 
 /// <summary>The video track a camera's DESCRIBE answer offers.</summary>
 public static class Sdp

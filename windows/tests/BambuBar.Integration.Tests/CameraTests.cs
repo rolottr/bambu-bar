@@ -25,7 +25,12 @@ public class CameraTests
 
     /// <summary>Streams from the mock camera in <paramref name="scenario"/> until <paramref name="done"/> says so (or a
     /// failure arrives) within <paramref name="timeoutSeconds"/>, then stops the client.</summary>
-    private static async Task<List<Event>> RecordAsync(string scenario, CameraTransport transport, Func<List<Event>, bool> done,
+    private static Task<List<Event>> RecordAsync(string scenario, CameraTransport transport, Func<List<Event>, bool> done,
+        string code = CameraSimulator.Code, int timeoutSeconds = 10, Action<string?>? onCertificate = null) =>
+        RecordAsync(scenario, transport.Source(), done, code, timeoutSeconds, onCertificate);
+
+    /// <summary>The same, for a camera reached the way an entered one is: its own URL, port and credentials.</summary>
+    private static async Task<List<Event>> RecordAsync(string scenario, CameraSource source, Func<List<Event>, bool> done,
         string code = CameraSimulator.Code, int timeoutSeconds = 10, Action<string?>? onCertificate = null)
     {
         Simulators.Require();
@@ -34,7 +39,7 @@ public class CameraTests
         var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = code, Transport = transport,
+            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = code, Source = source,
             OnCertificate = onCertificate is null ? null : leaf => onCertificate(BambuTrust.CommonName(leaf)),
         });
         client.OnEvent = e =>
@@ -230,5 +235,81 @@ public class CameraTests
     {
         var events = await RecordAsync("jpeg-zero", CameraTransport.Jpeg, _ => false);
         Assert.Equal(new CameraFailure.Malformed("frame header"), FailureIn(events));
+    }
+
+    // MARK: An external camera over plain TCP
+
+    /// The mock camera's plain RTSP port, with Digest auth: what an entered camera looks like.
+    [Fact]
+    public async Task ExternalPlainTcpDigestPlays()
+    {
+        var events = await RecordAsync("h264-digest", CameraSimulator.External(), list => VideoIn(list).Count >= 12);
+        Assert.True(events.FirstOrDefault() == new Event.Started("H.264 · 32×32"), Describe(events));
+        Assert.True(FailureIn(events) is null, Describe(events));
+        Assert.True(VideoIn(events)[0].Keyframe, "a keyframe first");
+    }
+
+    [Fact]
+    public async Task ExternalPlainTcpBasicPlays()
+    {
+        var events = await RecordAsync("h264-basic", CameraSimulator.External(), list => VideoIn(list).Count >= 12);
+        Assert.True(events.FirstOrDefault() == new Event.Started("H.264 · 32×32"), Describe(events));
+        Assert.True(FailureIn(events) is null, Describe(events));
+    }
+
+    /// <summary>A wrong password is permanent: the app says so once and doesn't hammer the camera.</summary>
+    [Fact]
+    public async Task ExternalWrongPasswordIsRejected()
+    {
+        var events = await RecordAsync("h264-digest", CameraSimulator.External(password: "nope"), _ => false);
+        Assert.Equal(new CameraFailure.CredentialsRejected(), FailureIn(events));
+        Assert.Single(events.OfType<Event.Failed>());
+        Assert.True(FailureIn(events)!.IsPermanent);
+    }
+
+    /// <summary>Nothing entered where the camera wants credentials: the same permanent refusal, not a retry loop.</summary>
+    [Fact]
+    public async Task ExternalWithoutCredentialsIsRejected()
+    {
+        var events = await RecordAsync("h264-digest", CameraSimulator.External(username: "", password: ""), _ => false);
+        Assert.Equal(new CameraFailure.CredentialsRejected(), FailureIn(events));
+        Assert.True(FailureIn(events)!.IsPermanent);
+    }
+
+    /// <summary>A path the camera doesn't serve. The reason names the status and never asks about LAN Only
+    /// Liveview, which is a printer's setting and means nothing here.</summary>
+    [Fact]
+    public async Task ExternalUnknownPathReports404()
+    {
+        var events = await RecordAsync("no-such-path", CameraSimulator.External(path: "/nope"), _ => false);
+        var reason = Assert.IsType<CameraFailure.Unreachable>(FailureIn(events));
+        Assert.Contains("404", reason.Reason);
+        Assert.DoesNotContain("Liveview", reason.Reason);
+    }
+
+    /// <summary>An address that never answers fails inside the client's own watchdog, so the feed doesn't hang.</summary>
+    [Fact]
+    public async Task ExternalUnreachableHostFailsWithinTheWatchdog()
+    {
+        // TEST-NET-3 (RFC 5737): routable nowhere, so the connection neither completes nor is refused.
+        var source = CameraSimulator.External(host: "203.0.113.1", port: 554);
+        var events = await RecordAsync("h264-digest", source, _ => false, timeoutSeconds: 30);
+        Assert.True(FailureIn(events) is not null, $"no failure inside 30 s: {Describe(events)}");
+    }
+
+    /// <summary>The same client over TLS when the entered URL says rtsps://.</summary>
+    [Fact]
+    public async Task ExternalOverTlsPlays()
+    {
+        Assert.True(
+            RtspUrl.TryParse($"rtsps://{CameraSimulator.Host}:{CameraSimulator.TlsPort}/streaming/live/1",
+                out var url, out var problem), $"{problem}");
+        var source = new CameraSource.External(new ExternalCamera
+        {
+            Url = url, Username = "bblp", Password = CameraSimulator.Code,
+        });
+        var events = await RecordAsync("h264-digest", source, list => VideoIn(list).Count >= 4);
+        Assert.True(events.FirstOrDefault() == new Event.Started("H.264 · 32×32"), Describe(events));
+        Assert.True(FailureIn(events) is null, Describe(events));
     }
 }
