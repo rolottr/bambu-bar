@@ -129,6 +129,23 @@ final class PrinterIdentityTests: XCTestCase {
         XCTAssertNotNil(config.cameraSourceProblem)
     }
 
+    /// Credentials typed into the URL win over the fields, so what was pasted is what connects.
+    func testCredentialsInTheURLOverwriteTheFields() throws {
+        let url = try RTSPURL.parse("rtsp://other:pw@cam:554/s").get()
+        let entered = PrinterConfig.enteredCamera(url: url, username: "admin", password: "cam-secret")
+        XCTAssertEqual(entered.username, "other")
+        XCTAssertEqual(entered.password, "pw")
+        XCTAssertEqual(entered.url.absolute, "rtsp://cam:554/s", "never stored with its credentials")
+    }
+
+    /// A URL with none leaves what was typed in the fields alone.
+    func testURLWithoutCredentialsKeepsTheFields() throws {
+        let url = try RTSPURL.parse("rtsp://cam:554/s").get()
+        let entered = PrinterConfig.enteredCamera(url: url, username: "admin", password: "cam-secret")
+        XCTAssertEqual(entered.username, "admin")
+        XCTAssertEqual(entered.password, "cam-secret")
+    }
+
     // MARK: - Models (PR #5)
 
     /// Setups before 1.2 saved "N7" (P2S) for a printer typed in by hand; the serial tells the truth.

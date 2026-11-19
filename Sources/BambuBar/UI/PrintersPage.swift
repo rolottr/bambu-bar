@@ -9,6 +9,15 @@ struct PrintersPage: View {
     @State private var code = ""
     @State private var editingConnection = false
     @State private var confirmForget = false
+    /// The camera editor, while it is open: the entered values, what Test said, and the serial it belongs to.
+    @State private var cameraURL = ""
+    @State private var cameraUser = ""
+    @State private var cameraPassword = ""
+    @State private var cameraURLProblem: String?
+    @State private var testState: CameraTestState = .idle
+    @State private var tester: CameraClient?
+    /// The editor is open for a camera not entered yet: shown without anything being saved.
+    @State private var editingCamera = false
 
     var body: some View {
         @Bindable var store = store
@@ -95,6 +104,7 @@ struct PrintersPage: View {
                     SettingsToggle("Camera", isOn: Binding(
                         get: { config.cameraEnabled == true },
                         set: { store.setCameraEnabled($0, for: config.serial) }))
+                    if config.cameraEnabled == true { cameraSource(config) }
                     Text(cameraNote(for: config))
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -135,10 +145,166 @@ struct PrintersPage: View {
     }
 
     private func cameraNote(for config: PrinterConfig) -> LocalizedStringKey {
+        if config.cameraURL != nil {
+            return "Shows a camera you enter yourself, over RTSP. It works while the printer is off."
+        }
         if CameraTransport.forModel(config.modelName) == .rtsps {
             return "Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen)."
         }
         return "Shows the printer's live view."
+    }
+
+    // MARK: - Where the camera comes from
+
+    /// What a test attempt has to say.
+    private enum CameraTestState: Equatable {
+        case idle
+        case testing
+        case worked(String)
+        case failed(String)
+    }
+
+    /// The printer's own camera, or one entered by hand, with an editor that applies on Save so the live feed
+    /// isn't reconnected on every keystroke.
+    @ViewBuilder private func cameraSource(_ config: PrinterConfig) -> some View {
+        Picker("", selection: Binding(
+            get: { config.cameraURL != nil || editingCamera },
+            set: { external in
+                if external {
+                    beginEditingCamera(config)
+                } else {
+                    endEditingCamera()
+                    store.clearExternalCamera(for: config.serial)
+                }
+            })) {
+            Text("Printer's built-in camera").tag(false)
+            Text("External RTSP stream").tag(true)
+        }
+        .pickerStyle(.radioGroup)
+        .labelsHidden()
+        if config.cameraURL != nil || editingCamera { cameraEditor(config) }
+    }
+
+    @ViewBuilder private func cameraEditor(_ config: PrinterConfig) -> some View {
+        SettingsRow("Stream URL") {
+            TextField("rtsp://192.168.1.40:554/stream1", text: $cameraURL)
+                .textFieldStyle(.roundedBorder).frame(width: 260)
+                .onChange(of: cameraURL) { cameraURLProblem = nil; testState = .idle }
+        }
+        SettingsRow("Username") {
+            TextField("Username", text: $cameraUser).textFieldStyle(.roundedBorder).frame(width: 260)
+        }
+        SettingsRow("Password") {
+            SecureField("Password", text: $cameraPassword).textFieldStyle(.roundedBorder).frame(width: 260)
+                .onSubmit { applyCamera(config) }
+        }
+        if let problem = cameraURLProblem {
+            Text(problem).font(.system(size: 11.5)).foregroundStyle(Palette.paused)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        HStack(spacing: 10) {
+            switch testState {
+            case .idle: EmptyView()
+            case .testing: Text("Testing…").font(.system(size: 11.5)).foregroundStyle(.secondary)
+            case .worked(let detail):
+                Text("\u{2713} \(detail)").font(.system(size: 11.5)).foregroundStyle(Palette.accent)
+            case .failed(let reason):
+                Text(reason).font(.system(size: 11.5)).foregroundStyle(Palette.paused)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Button("Test") { testCamera() }
+                .controlSize(.small)
+                .disabled(parsedCameraURL == nil || testState == .testing)
+            Button("Save") { applyCamera(config) }
+                .controlSize(.small)
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.accentDeep)
+                .disabled(parsedCameraURL == nil)
+        }
+    }
+
+    private var parsedCameraURL: RTSPURL? {
+        guard case .success(let url) = RTSPURL.parse(cameraURL) else { return nil }
+        return url
+    }
+
+    /// Opens the editor on whatever the printer already has, or empty for a camera being added. Nothing is
+    /// saved until Save: picking the option must not point a printer at a camera nobody has typed in.
+    private func beginEditingCamera(_ config: PrinterConfig) {
+        cameraURL = config.cameraURL ?? ""
+        cameraUser = config.cameraUsername ?? ""
+        cameraPassword = Keychain.cameraPassword(for: config.serial) ?? ""
+        cameraURLProblem = nil
+        testState = .idle
+        editingCamera = true
+    }
+
+    private func endEditingCamera() {
+        tester?.stop()
+        tester = nil
+        testState = .idle
+        cameraURLProblem = nil
+        editingCamera = false
+    }
+
+    /// Saves what was typed. Credentials inside the URL win and move into the fields, so what was pasted is
+    /// what connects.
+    private func applyCamera(_ config: PrinterConfig) {
+        switch RTSPURL.parse(cameraURL) {
+        case .failure(let problem):
+            cameraURLProblem = problem.message
+        case .success(let url):
+            let entered = PrinterConfig.enteredCamera(url: url, username: cameraUser, password: cameraPassword)
+            cameraUser = entered.username
+            cameraPassword = entered.password
+            cameraURL = entered.url.absolute
+            cameraURLProblem = nil
+            endEditingCamera()
+            store.setExternalCamera(url: entered.url, username: entered.username, password: entered.password,
+                                    for: config.serial)
+        }
+    }
+
+    /// One attempt against what was typed: it saves nothing and leaves the live feed alone.
+    private func testCamera() {
+        guard let url = parsedCameraURL else { return }
+        tester?.stop()
+        let username = url.username.isEmpty ? cameraUser : url.username
+        let password = url.password.isEmpty ? cameraPassword : url.password
+        let source = CameraSource.external(ExternalCamera(url: url, username: username, password: password))
+        let client = makeCameraClient(CameraConfig(host: url.host, serial: store.config?.serial ?? "",
+                                                   accessCode: "", source: source))
+        tester = client
+        testState = .testing
+        client.onEvent = { event in
+            MainActor.assumeIsolated {
+                guard client === tester else { return }
+                switch event {
+                case .started(let detail, _):
+                    testState = .worked(detail)
+                    endEditingCamera()
+                case .image:
+                    testState = .worked(String(localized: "The camera is streaming."))
+                    endEditingCamera()
+                case .failed(let failure):
+                    testState = .failed(failure.message(from: source))
+                    tester?.stop()
+                    tester = nil
+                case .video:
+                    break
+                }
+            }
+        }
+        client.start()
+        // Nothing in 15 seconds is a failure too, so Test always answers.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
+            if testState == .testing {
+                testState = .failed(CameraFailure.timedOut.message(from: source))
+                tester?.stop()
+                tester = nil
+            }
+        }
     }
 
     /// The codes hidden with Ignore next to an issue, each with Bambu's text for this model and a way to show it again.
