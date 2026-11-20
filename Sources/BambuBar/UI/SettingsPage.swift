@@ -59,7 +59,7 @@ struct SettingsPage: View {
 
             SettingsGroup("Camera", symbol: "video.fill") {
                 SettingsToggle("Show the printer camera", isOn: $store.cameraEnabled)
-                Text("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.")
+                Text("Turn the camera on for each printer too, at the bottom of its Printer page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if store.cameraEnabled {
@@ -68,6 +68,13 @@ struct SettingsPage: View {
                         .font(.system(size: 11.5)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+
+            SettingsGroup("Controls", symbol: "slider.horizontal.3") {
+                SettingsToggle("Ask before stopping a print", isOn: $store.confirmStop)
+                Text("Pause, stop and speed changes need **LAN Only** mode with **Developer Mode** on the printer (Settings → Network on its screen). Reading status and the chamber light work in any mode.")
+                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if UpdateChecker.isAvailable {

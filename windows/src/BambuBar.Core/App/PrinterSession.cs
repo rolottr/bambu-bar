@@ -143,7 +143,7 @@ public sealed class PrinterSession : Observable, IDisposable
     public string? AccessCode => _store.Secrets.AccessCode(Config.Serial);
     public bool IsDemo => _demo is not null;
     public string? CameraAccessCode => _activeCode ?? AccessCode;
-    /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printers page.</summary>
+    /// <summary>The camera appears only with both switches on: Settings → Camera, and this printer's on the Printer page settings.</summary>
     public bool ShowsCamera => !IsDemo && _store.CameraEnabled && Config.CameraEnabled == true;
     /// <summary>RTSPS or the JPEG stream, by model.</summary>
     public CameraTransport CameraTransport => CameraTransports.ForModel(Config.ModelName);
@@ -282,7 +282,7 @@ public sealed class PrinterSession : Observable, IDisposable
     /// <summary>Whether this printer's issues never show this code (Ignore next to an issue).</summary>
     public bool IsIgnored(string id) => Config.IgnoredIssues?.Contains(id) == true;
 
-    /// <summary>Hides an issue's code on this printer for good, also after it clears and comes back; the Printers page
+    /// <summary>Hides an issue's code on this printer for good, also after it clears and comes back; the Printer page settings
     /// lists the codes and can show them again. <see cref="PrinterStore.Ignore"/> saves it.</summary>
     internal void Ignore(PrinterIssue issue)
     {

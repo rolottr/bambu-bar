@@ -40,6 +40,7 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
     private FilamentSection _filament = null!;
     private readonly Region _machine = new();
     private ConnectionSection _connection = null!;
+    private PrinterSettingsGroup? _settings;
     private PanelContext _panel = null!;
 
     public override FrameworkElement Build()
@@ -86,7 +87,7 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
 
         _connection = new ConnectionSection(_panel);
 
-        return new Stack
+        var page = new Stack
         {
             Spacing = 18,
             Children =
@@ -94,6 +95,13 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
                 header, _hero, _controlsHost, _lockedNote, _issues.Host, _camera.Host, _metrics, _filamentBlock, _machine.Host, _connection.Root,
             },
         };
+        // The printer's own settings last, online or not (the page is built again for another printer).
+        if (Store.Current is { } current)
+        {
+            _settings = new PrinterSettingsGroup(Ctx, current);
+            page.Children.Add(_settings.Root);
+        }
+        return page;
     }
 
     public override void Refresh()
@@ -146,6 +154,7 @@ internal sealed class PrinterPage(WindowContext ctx) : Page(ctx)
         _filamentBlock.Visibility = filament ? Visibility.Visible : Visibility.Collapsed;
         _filament.Update(filament);
         _connection.Update(session is not null && !online);
+        _settings?.Refresh();
     }
 
     /// <summary>"Bambu Lab P2S · 192.168.1.40 · Firmware 01.03.00.00".</summary>

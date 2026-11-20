@@ -67,7 +67,7 @@ internal sealed class AdaptiveGrid : System.Windows.Controls.Panel
 /// <summary>
 /// One of the printer's issues (the Mac's IssueBanner): the message, its code with a copy button that ticks for
 /// 1.5 s, the wiki link (resolved to the code's own page when clicked), Ignore (hides the code on this printer for
-/// good, listed on the Printers page), and dismiss.
+/// good, listed on the Printer page settings), and dismiss.
 /// </summary>
 internal sealed class IssueBanner : Border
 {
@@ -115,7 +115,7 @@ internal sealed class IssueBanner : Border
         {
             var link = W.Link(Loc.T("Ignore"), ignore, size: 12);
             link.Margin = new Thickness(10, 0, 0, 0);
-            Ui.Tip(link, Loc.T("Never show this code for this printer. You can show it again on the Printers page."));
+            Ui.Tip(link, Loc.T("Never show this code for this printer. You can show it again at the bottom of the Printer page."));
             row.Children.Add(link);
         }
         var grid = Ui.Columns("Auto", "*", "Auto");

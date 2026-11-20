@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Printer management and connection settings, separate from application preferences.
-struct PrintersPage: View {
+/// The selected printer's own settings, at the bottom of the Printer page: its name (with the announced one to fall
+/// back on), model, serial, status, address and access code, camera, ignored codes, and Forget.
+struct PrinterSettingsGroup: View {
     @Environment(PrinterStore.self) private var store
 
     @State private var name = ""
@@ -11,25 +12,9 @@ struct PrintersPage: View {
     @State private var confirmForget = false
 
     var body: some View {
-        @Bindable var store = store
-        VStack(alignment: .leading, spacing: 22) {
-            PageHeader(title: "Printers")
-
-            SettingsGroup("Printers", symbol: "printer.dotmatrix.fill") {
-                ForEach(store.sessions) { session in
-                    printerRow(session)
-                    Divider()
-                }
-                HStack {
-                    Text(store.isConfigured ? "Bambu Bar watches all of them at once." : "No printer set up yet.")
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Add Printer…") { MainWindow.addPrinter() }
-                }
-            }
-
+        Group {
             if let config = store.config {
-                SettingsGroup(store.hasMultiplePrinters ? "\(config.name)" : "Printer", symbol: "printer.fill") {
+                SettingsGroup("Settings", symbol: "gearshape") {
                     SettingsRow("Name") {
                         HStack(spacing: 8) {
                             if name != config.name {
@@ -116,13 +101,6 @@ struct PrintersPage: View {
                     }
                 }
             }
-
-            SettingsGroup("Controls", symbol: "slider.horizontal.3") {
-                SettingsToggle("Ask before stopping a print", isOn: $store.confirmStop)
-                Text("Pause, stop and speed changes need **LAN Only** mode with **Developer Mode** on the printer (Settings → Network on its screen). Reading status and the chamber light work in any mode.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
         .onAppear { name = store.config?.name ?? "" }
         .onChange(of: store.config) { name = store.config?.name ?? "" }
@@ -167,37 +145,6 @@ struct PrintersPage: View {
                 Button("Show Again") { store.unignore(id, for: config.serial) }
                     .controlSize(.small)
                     .help("Remove this code from the ignored codes")
-            }
-        }
-    }
-
-    private func printerRow(_ session: PrinterSession) -> some View {
-        let isCurrent = session.id == store.current?.id
-        return HStack(spacing: 12) {
-            PrinterArt(status: session.status, model: session.config.modelName, dimmed: !session.isOnline, animated: false)
-                .frame(width: 28, height: 34)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(session.config.name).font(.system(size: 12.5, weight: .semibold))
-                    if store.hasMultiplePrinters && session.id == store.menuBarSession?.id {
-                        Image(systemName: "menubar.rectangle")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                            .help("Shown in the menu bar")
-                    }
-                }
-                Text("Bambu Lab \(session.config.modelName) · \(session.config.host)")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            HStack(spacing: 5) {
-                SessionDot(session: session)
-                Text(session.shortState).font(.system(size: 11.5)).foregroundStyle(.secondary)
-            }
-            if store.hasMultiplePrinters {
-                Button(isCurrent ? "Showing" : "Show") { store.select(session.id) }
-                    .controlSize(.small)
-                    .disabled(isCurrent)
             }
         }
     }

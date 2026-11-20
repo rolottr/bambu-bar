@@ -396,7 +396,7 @@ final class PrinterStore {
         writeSnapshot(force: true)
     }
 
-    /// Never shows this issue's code for the printer again, until it's removed on the Printers page.
+    /// Never shows this issue's code for the printer again, until it's removed on the Printer page settings.
     func ignore(_ issue: PrinterIssue, for serial: String) {
         guard let session = session(serial) else { return }
         session.ignore(issue)
@@ -404,7 +404,7 @@ final class PrinterStore {
         writeSnapshot(force: true)
     }
 
-    /// Shows an ignored code again (Printers page); it's back with the printer's next report.
+    /// Shows an ignored code again (Printer page settings); it's back with the printer's next report.
     func unignore(_ id: String, for serial: String) {
         guard let session = session(serial) else { return }
         session.unignore(id)
@@ -412,7 +412,7 @@ final class PrinterStore {
         writeSnapshot(force: true)
     }
 
-    /// Turns one printer's camera on or off (Printers page).
+    /// Turns one printer's camera on or off (Printer page settings).
     func setCameraEnabled(_ on: Bool, for serial: String) {
         guard let session = session(serial), session.config.cameraEnabled != on else { return }
         session.config.cameraEnabled = on

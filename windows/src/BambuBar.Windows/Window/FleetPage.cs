@@ -11,7 +11,8 @@ using BambuBar.TrayPanel;
 namespace BambuBar.AppWindow;
 
 /// <summary>Every printer at a glance (the Mac's FleetPage): a card each, the ones that need someone first, then by
-/// soonest finish, then by name; a click opens the printer's page. Cards are kept and updated in place.</summary>
+/// soonest finish, then by name; a click opens the printer's page. Each card ends with the printer's model and address.
+/// Cards are kept and updated in place.</summary>
 internal sealed class FleetPage(WindowContext ctx) : Page(ctx)
 {
     private TextBlock _subtitle = null!;
@@ -55,6 +56,7 @@ internal sealed class FleetPage(WindowContext ctx) : Page(ctx)
         private readonly TextBlock _name = Ui.Text("", 14, FontWeights.SemiBold);
         private readonly Border _chip = new() { VerticalAlignment = VerticalAlignment.Center };
         private readonly TextBlock _detail = Ui.Text("", WRamp.Note, null, ThemeKeys.TextSecondary);
+        private readonly TextBlock _machine = Ui.Text("", Ramp.Caption, null, ThemeKeys.TextSecondary);
         private readonly Grid _progress = new() { Height = 26 };
         private readonly ProgressCapsule _bar = new(5) { VerticalAlignment = VerticalAlignment.Top };
         private readonly TextBlock _percent = Ui.Tabular(Ui.Text("", Ramp.Caption, FontWeights.SemiBold));
@@ -81,8 +83,10 @@ internal sealed class FleetPage(WindowContext ctx) : Page(ctx)
             var grid = Ui.Columns("Auto", "12", "*");
             grid.Children.Add(Ui.At(_art, 0));
             grid.Children.Add(Ui.At(text, 2));
+            // What the printer really is and where it's reached, whatever it's called in Bambu Bar.
+            _machine.TextTrimming = TextTrimming.CharacterEllipsis;
             // The outline is the frame's, so a card that needs attention keeps its tinted edge on hover.
-            _frame.Child = grid;
+            _frame.Child = new Stack { Spacing = 10, Children = { grid, W.Divider(), _machine } };
             Content = _frame;
             CornerRadius = Metrics.Card;
             Padding = new Thickness(0);
@@ -109,6 +113,7 @@ internal sealed class FleetPage(WindowContext ctx) : Page(ctx)
             }
             var detail = PanelText.FleetDetail(session);
             _detail.Text = detail;
+            _machine.Text = Loc.F("Bambu Lab %@ · %@", session.Config.ModelName, session.Config.Host);
             var showsProgress = online && (s!.State.IsActive() || s.State == JobState.Finished);
             // Kept at the same height without a job, so the cards line up.
             _progress.Opacity = showsProgress ? 1 : 0;

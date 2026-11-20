@@ -119,7 +119,7 @@ final class PrinterSession: Identifiable {
     var cameraTransport: CameraTransport { CameraTransport.forModel(config.modelName) }
     var cameraAccessCode: String? { activeCode ?? accessCode }
     /// The camera appears (and may stream) only with both switches on: Settings → Camera, and this printer's on
-    /// the Printers page. Off, nothing about it shows: not on the Printer page, in the panel or in the menus.
+    /// the Printer page settings. Off, nothing about it shows: not on the Printer page, in the panel or in the menus.
     var showsCamera: Bool { !isDemo && PrinterStore.shared.cameraEnabled && config.cameraEnabled == true }
 
     var linkSummary: String {
@@ -222,7 +222,7 @@ final class PrinterSession: Identifiable {
         status?.issues.removeAll { $0.id == issue.id }
     }
 
-    /// Hides an issue's code on this printer for good, also after it clears and comes back; the Printers page lists
+    /// Hides an issue's code on this printer for good, also after it clears and comes back; the Printer page settings lists
     /// the codes and can show them again.
     func ignore(_ issue: PrinterIssue) {
         guard !isIgnored(issue.id) else { return }

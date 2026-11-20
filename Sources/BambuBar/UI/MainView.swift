@@ -99,7 +99,6 @@ private struct MainContentView: View {
         case .widgets: WidgetsPage()
         case .menuBar: MenuBarPage()
         case .notifications: NotificationsPage()
-        case .printers: PrintersPage()
         case .settings: SettingsPage()
         case .about: AboutPage()
         }
