@@ -624,12 +624,12 @@ struct ConnectionCard: View {
                     } else if store.phase == .unauthorized, let known = store.replacementCode {
                         Button("Use Code from \(known.source)") { store.useReplacementCode() }
                             .controlSize(.small)
-                        Button("Printers") { MainWindow.show(.printers) }
+                        Button("Printer") { MainWindow.show(.overview) }
                             .controlSize(.small)
                     } else {
                         Button("Try Again") { store.refresh() }
                             .controlSize(.small)
-                        Button("Printers") { MainWindow.show(.printers) }
+                        Button("Printer") { MainWindow.show(.overview) }
                             .controlSize(.small)
                     }
                 }
@@ -698,7 +698,7 @@ struct IssueBanner: View {
     var issue: PrinterIssue
     /// Hides the issue until the printer stops reporting it; nil shows no dismiss button.
     var onDismiss: (() -> Void)? = nil
-    /// Hides the code on this printer for good (listed on the Printers page); nil shows no Ignore button.
+    /// Hides the code on this printer for good (listed on the Printer page settings); nil shows no Ignore button.
     var onIgnore: (() -> Void)? = nil
     @State private var copied = false
 
@@ -738,7 +738,7 @@ struct IssueBanner: View {
                         Button(String(localized: "Ignore", comment: "Never show this issue's code for this printer"), action: onIgnore)
                             .buttonStyle(.link)
                             .font(.system(size: 10.5, weight: .semibold))
-                            .help("Never show this code for this printer. You can show it again on the Printers page.")
+                            .help("Never show this code for this printer. You can show it again at the bottom of the Printer page.")
                     }
                 }
             }

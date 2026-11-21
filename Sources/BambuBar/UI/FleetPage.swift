@@ -82,18 +82,25 @@ struct FleetCard: View {
 
     var body: some View {
         Button(action: open) {
-            HStack(alignment: .center, spacing: 12) {
-                PrinterArt(status: session.status, model: session.config.modelName, dimmed: !session.isOnline, animated: false)
-                    .frame(width: 64, height: 76)
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Text(session.config.name).font(.system(size: 13.5, weight: .semibold)).lineLimit(1)
-                        Spacer(minLength: 4)
-                        StateChip(session: session)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 12) {
+                    PrinterArt(status: session.status, model: session.config.modelName, dimmed: !session.isOnline, animated: false)
+                        .frame(width: 64, height: 76)
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Text(session.config.name).font(.system(size: 13.5, weight: .semibold)).lineLimit(1)
+                            Spacer(minLength: 4)
+                            StateChip(session: session)
+                        }
+                        Text(session.fleetDetail).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+                        FleetProgress(session: session)
                     }
-                    Text(session.fleetDetail).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
-                    FleetProgress(session: session)
                 }
+                Divider()
+                // What the printer really is and where it's reached, whatever it's called in Bambu Bar.
+                Text("Bambu Lab \(session.config.modelName) · \(session.config.host)")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)

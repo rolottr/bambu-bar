@@ -314,7 +314,6 @@ public sealed class WindowView : Border, IDisposable
             AppPage.Filament => ("filament", () => new FilamentPage(_ctx)),
             AppPage.Tray => ("tray", () => new TrayPage(_ctx)),
             AppPage.Notifications => ("notifications", () => new NotificationsPage(_ctx)),
-            AppPage.Printers => ("printers|" + id, () => new PrintersPage(_ctx)),
             AppPage.Widgets => ("widgets", () => new WidgetsPage(_ctx)),
             AppPage.Settings => ("settings", () => new SettingsPage(_ctx)),
             _ => ("about", () => new AboutPage(_ctx)),
@@ -327,7 +326,7 @@ public sealed class WindowView : Border, IDisposable
         switch (destination)
         {
             case PanelDestination.Settings: Show(AppPage.Settings); break;
-            case PanelDestination.Printers: Show(AppPage.Printers); break;
+            case PanelDestination.Printers: Show(AppPage.Printer); break;
             case PanelDestination.License: Show(AppPage.About); break;
             case PanelDestination.AddPrinter or PanelDestination.Setup: AddPrinter(printer); break;
             default: Show(AppPage.Printer); break;
@@ -336,7 +335,7 @@ public sealed class WindowView : Border, IDisposable
 
     /// <summary>Pages that only show what the store says, with no timer, animation or setup state of their own.</summary>
     private static bool Keepable(Page page) =>
-        page is PrinterPage or FleetPage or FilamentPage or NotificationsPage or PrintersPage or SettingsPage;
+        page is PrinterPage or FleetPage or FilamentPage or NotificationsPage or SettingsPage;
 
     // MARK: Updating
 

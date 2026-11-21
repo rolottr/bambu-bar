@@ -43,6 +43,7 @@ struct OverviewPage: View {
             } else {
                 ConnectionCard()
             }
+            PrinterSettingsGroup()
         }
     }
 

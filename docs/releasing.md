@@ -74,7 +74,9 @@ Before publication, build the tagged source on the GNOME, KDE and Omarchy hosts;
 
 | Version | Channel | Build | Commit | Date | Status |
 | --- | --- | --- | --- | --- | --- |
-| 2.3.1 | GitHub (Mac) | 202611171153 | `v2.3.1` | 2026-11-17 | Published, latest release; zip SHA-256 `fbd858c13f6f165c8d44a205b782cdc0df59e58e7cc0c02cb5d96c39a583fe29` |
+| 2.3.2 | GitHub (Mac) | 202611201347 | `v2.3.2` | 2026-11-20 | Published, latest release; zip SHA-256 `eb9f967121363e45b8cb2f9c046f8b37ea3ecb5b036249b8fa7ba5284d9a6c56` |
+| 2.3.2 | GitHub (Windows) | CI run 44738757152 | `v2.3.2` | 2026-11-20 | Published, unsigned; x64 SHA-256 `2913e83b5f14a2143523eb1c58600c432851d08d7729b9a51ae2ba5b91648702`, ARM64 SHA-256 `99561b819a7ec4366fd23b62fe26d7f321e8bdbc3f7e8b2bfaccf394bdd11c36`; with `rainmeter-5.0.0.5293-source.zip` |
+| 2.3.1 | GitHub (Mac) | 202611171153 | `v2.3.1` | 2026-11-17 | Published; zip SHA-256 `fbd858c13f6f165c8d44a205b782cdc0df59e58e7cc0c02cb5d96c39a583fe29` |
 | 2.3.1 | GitHub (Windows) | CI run 44068579378 | `v2.3.1` | 2026-11-17 | Published, unsigned; x64 SHA-256 `11370366deaa4a7cb6e5183f69b53432a8a1184ab28464819f1da1a4e527e506`, ARM64 SHA-256 `1fe69ac7c6886c30c8d4e55a537ce70e7d460f5a438092b3481f73395ab82eb4`; with `rainmeter-5.0.0.5293-source.zip` |
 | 2.3.0 | GitHub (Mac) | 202611161712 | `v2.3.0` | 2026-11-16 | Published; includes the unreleased 2.2.4; zip SHA-256 `095fb2dbae59f2263266c7dd242a8a0bd55f90c4244f358d0b64589c22e55857` |
 | 2.3.0 | GitHub (Windows) | CI run 43904888989 | `v2.3.0` | 2026-11-16 | Published, unsigned; x64 SHA-256 `b741d6267f2708d2605cc37c2e635ddfb920320ece257000895007d8b0f3122c`, ARM64 SHA-256 `d7801fb5f1f861925833c208980faa1be8c0aa51a19cf89f4d3bc7b131b1713c`; with `rainmeter-5.0.0.5293-source.zip` |

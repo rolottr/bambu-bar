@@ -9,7 +9,8 @@ using BambuBar.TrayPanel;
 
 namespace BambuBar.AppWindow;
 
-/// <summary>The app's preferences (the Mac's SettingsPage): opening at sign-in, the language, the camera, and updates.</summary>
+/// <summary>The app's preferences (the Mac's SettingsPage): opening at sign-in, the language, the camera, the print
+/// controls, and updates.</summary>
 internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
 {
     private readonly Region _startupNote = new();
@@ -38,10 +39,14 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
 
         var camera = W.Group(Loc.T("Camera"), Icons.Camera, out var cameraBody);
         cameraBody.Children.Add(W.Switch(Loc.T("Show the printer camera"), Store.CameraEnabled, on => { Store.CameraEnabled = on; Refresh(); }));
-        cameraBody.Children.Add(W.Note(Loc.T("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the tray panel and the menus.")));
+        cameraBody.Children.Add(W.Note(Loc.T("Turn the camera on for each printer too, at the bottom of its Printer page. While it's off, the camera is hidden everywhere: the Printer page, the tray panel and the menus.")));
         cameraBody.Children.Add(_cameraMore.Host);
 
-        return new Stack { Spacing = 22, Children = { W.PageHeader(Loc.T("Settings"), null), general, language, camera, _updates.Host } };
+        var controls = W.Group(Loc.T("Controls"), "", out var controlsBody);
+        controlsBody.Children.Add(W.Switch(Loc.T("Ask before stopping a print"), Store.ConfirmStop, on => Store.ConfirmStop = on));
+        controlsBody.Children.Add(W.Note(Loc.T("Pause, stop and speed changes need **LAN Only** mode with **Developer Mode** on the printer (Settings → Network on its screen). Reading status and the chamber light work in any mode.")));
+
+        return new Stack { Spacing = 22, Children = { W.PageHeader(Loc.T("Settings"), null), general, language, camera, controls, _updates.Host } };
     }
 
     public override void Refresh()

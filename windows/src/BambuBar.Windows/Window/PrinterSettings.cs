@@ -1,0 +1,241 @@
+using System.Windows;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation;
+using System.Windows.Controls;
+using System.Windows.Shapes;
+using BambuBar.Core;
+using BambuBar.Core.App;
+using BambuBar.Core.Camera;
+using BambuBar.Core.Model;
+using BambuBar.Theme;
+
+namespace BambuBar.AppWindow;
+
+/// <summary>
+/// The selected printer's own settings, at the bottom of the Printer page (the Mac's PrinterSettingsGroup): its name
+/// (with the announced one to fall back on), model, serial, status, address and access code, camera, ignored codes,
+/// and Forget. Built once per printer, so what's being typed survives the reports.
+/// </summary>
+internal sealed class PrinterSettingsGroup
+{
+    private readonly WindowContext _ctx;
+    private readonly string _serial;
+    private readonly Stack _body;
+    private readonly TextField _name = new(Loc.T("Name"), width: 220);
+    private readonly ChromeButton _revert;
+    private readonly ChromeButton _saveName;
+    private readonly Region _announced = new();
+    private readonly Ellipse _dot = new() { Width = 7, Height = 7, Margin = new Thickness(0, 1, 6, 0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _status = Ui.Text("", WRamp.Body, null, ThemeKeys.TextSecondary);
+    private readonly TextBlock _host = Ui.Text("", WRamp.Body, null, ThemeKeys.TextSecondary);
+    private readonly FrameworkElement _hostRow;
+    private readonly FrameworkElement _connectionEditor;
+    private readonly TextField _hostField = new(Loc.T("IP address"), width: 220);
+    private readonly TextField _codeField = new(Loc.T("Access code"), secret: true, width: 220);
+    private readonly ChromeButton _reconnect;
+    private readonly ToggleSwitch _camera;
+    private readonly Region _cameraWarning = new();
+    private readonly Region _ignored = new();
+    private string _savedName = "";
+
+    public FrameworkElement Root { get; }
+
+    public PrinterSettingsGroup(WindowContext ctx, PrinterSession session)
+    {
+        _ctx = ctx;
+        _serial = session.Id;
+        var config = session.Config;
+        Root = W.Group(Loc.T("Settings"), AppPage.Settings.Glyph(), out _body);
+
+        _revert = W.Button(Loc.T("Revert"), () => _name.Text = Config.Name, small: true);
+        _saveName = W.Button(Loc.T("Save"), SaveName, accent: true, small: true);
+        _name.OnChange(UpdateName).OnKeys(SaveName, () => _name.Text = Config.Name);
+        var nameControls = new Stack { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _revert, _saveName, _name } };
+        _body.Children.Add(W.Row(Loc.T("Name"), nameControls));
+        _body.Children.Add(_announced.Host);
+        _body.Children.Add(W.Row(Loc.T("Model"), Ui.Text(Loc.F("Bambu Lab %@", config.ModelName), WRamp.Body, null, ThemeKeys.TextSecondary)));
+        _body.Children.Add(W.Row(Loc.T("Serial number"), Selectable(config.Serial, Loc.T("Serial number"))));
+        _body.Children.Add(W.Row(Loc.T("Status"), new StackPanel { Orientation = Orientation.Horizontal, Children = { _dot, _status } }));
+
+        var change = W.Button(Loc.T("Change…"), EditConnection, small: true);
+        change.Margin = new Thickness(10, 0, 0, 0);
+        _hostRow = W.Row(Loc.T("IP address"), new StackPanel { Orientation = Orientation.Horizontal, Children = { _host, change } });
+        _host.VerticalAlignment = VerticalAlignment.Center;
+        _body.Children.Add(_hostRow);
+        _hostField.OnChange(UpdateReconnect).OnKeys(ApplyConnection, CancelConnection);
+        _codeField.OnChange(UpdateReconnect).OnKeys(ApplyConnection, CancelConnection);
+        _reconnect = W.Button(Loc.T("Reconnect"), ApplyConnection, accent: true);
+        var buttons = new Stack { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Children = { W.Button(Loc.T("Cancel"), CancelConnection), _reconnect } };
+        _connectionEditor = new Stack
+        {
+            Spacing = 14, Visibility = Visibility.Collapsed,
+            Children = { W.Row(Loc.T("IP address"), _hostField), W.Row(Loc.T("Access code"), _codeField), buttons },
+        };
+        _body.Children.Add(_connectionEditor);
+
+        _body.Children.Add(W.Switch(Loc.T("Camera"), config.CameraEnabled == true, on => _ctx.Store.SetCameraEnabled(on, _serial), out _camera));
+        _body.Children.Add(W.Note(CameraTransports.ForModel(config.ModelName) == CameraTransport.Rtsps
+            ? Loc.T("Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen).")
+            : Loc.T("Shows the printer's live view.")));
+        _body.Children.Add(_cameraWarning.Host);
+        _body.Children.Add(W.Divider());
+        _body.Children.Add(_ignored.Host);
+        _body.Children.Add(W.Divider());
+        var forgetRow = Ui.Columns("*", "Auto");
+        var follows = W.Note(Loc.T("Bambu Bar follows the printer if its IP address changes."));
+        follows.VerticalAlignment = VerticalAlignment.Center;
+        forgetRow.Children.Add(Ui.At(follows, 0));
+        var forget = W.Button(Loc.T("Forget Printer…"), Forget);
+        forget.Look = ButtonLook.Tinted(Palette.Failed);
+        ((TextBlock)forget.Content).Foreground = _ctx.Ink(Palette.Failed);
+        forget.Margin = new Thickness(12, 0, 0, 0);
+        forgetRow.Children.Add(Ui.At(forget, 1));
+        _body.Children.Add(forgetRow);
+        _savedName = config.Name;
+        _name.Text = config.Name;
+    }
+
+    private PrinterConfig Config => _ctx.Store.Session(_serial)?.Config ?? new PrinterConfig { Host = "", Serial = _serial, Name = _serial };
+
+    private static TextBox Selectable(string text, string name)
+    {
+        var box = new TextBox
+        {
+            Text = text, IsReadOnly = true, BorderThickness = new Thickness(0), Background = System.Windows.Media.Brushes.Transparent,
+            Padding = new Thickness(0), FontSize = WRamp.Body,
+        };
+        box.SetResourceReference(Control.ForegroundProperty, ThemeKeys.TextSecondary);
+        box.SetResourceReference(Control.FontFamilyProperty, ThemeKeys.FontText);
+        AutomationProperties.SetName(box, name);
+        return box;
+    }
+
+    public void Refresh()
+    {
+        if (_ctx.Store.Session(_serial) is not { } session) return;
+        var config = session.Config;
+        // A rename from elsewhere (the Printer page) replaces what's in the field.
+        if (config.Name != _savedName)
+        {
+            _savedName = config.Name;
+            _name.Text = config.Name;
+        }
+        UpdateName();
+        _dot.Fill = Palette.Brush(session.IsOnline ? Palette.Accent : Palette.Paused);
+        _status.Text = session.LinkSummary;
+        _host.Text = config.Host;
+        if (_camera.IsChecked != (config.CameraEnabled == true)) _camera.IsChecked = config.CameraEnabled == true;
+        ShowIgnored(config);
+        var warn = config.CameraEnabled == true && !_ctx.Store.CameraEnabled;
+        _cameraWarning.Show(warn.ToString(), () =>
+        {
+            if (!warn) return null;
+            var row = Ui.Columns("*", "Auto");
+            var note = W.Note(Loc.T("The camera is off for every printer in Settings."));
+            note.Foreground = _ctx.Ink(Palette.Paused);
+            note.VerticalAlignment = VerticalAlignment.Center;
+            row.Children.Add(Ui.At(note, 0));
+            var open = W.Button(Loc.T("Open Settings"), () => _ctx.Show(AppPage.Settings), small: true);
+            open.Margin = new Thickness(12, 0, 0, 0);
+            row.Children.Add(Ui.At(open, 1));
+            return row;
+        });
+    }
+
+    /// <summary>The codes hidden with Ignore next to an issue, each with Bambu's text for this model and a way to
+    /// show it again. Codes are only added from an issue the printer reported, never typed in.</summary>
+    private void ShowIgnored(PrinterConfig config)
+    {
+        var ids = config.IgnoredIssues ?? [];
+        _ignored.Show(string.Join("|", ids), () =>
+        {
+            var list = new Stack { Spacing = 10 };
+            list.Children.Add(W.Row(Loc.T("Ignored codes"), ids.Count == 0
+                ? Ui.Text(Loc.T("None"), WRamp.Body, null, ThemeKeys.TextSecondary)
+                : new Border()));
+            if (ids.Count == 0)
+                list.Children.Add(W.Note(Loc.T("To stop showing a code for this printer, click **Ignore** next to the issue on the Printer page.")));
+            var model = config.Serial.Length >= 3 ? config.Serial[..3] : null;
+            foreach (var id in ids)
+            {
+                var row = Ui.Columns("*", "Auto");
+                var code = Ui.Text(id, WRamp.Detail);
+                code.SetResourceReference(TextBlock.FontFamilyProperty, ThemeKeys.FontMono);
+                var text = new Stack { Spacing = 2, Children = { code } };
+                if (HmsCatalog.Shared.IssueText(id, model) is { Length: > 0 } message) text.Children.Add(W.Note(message));
+                row.Children.Add(Ui.At(text, 0));
+                var show = W.Button(Loc.T("Show Again"), () => _ctx.Store.Unignore(id, _serial), small: true);
+                show.Margin = new Thickness(12, 0, 0, 0);
+                show.VerticalAlignment = VerticalAlignment.Top;
+                Ui.Tip(show, Loc.T("Remove this code from the ignored codes"));
+                AutomationProperties.SetName(show, $"{Loc.T("Show Again")} {id}");
+                row.Children.Add(Ui.At(show, 1));
+                list.Children.Add(row);
+            }
+            return list;
+        });
+    }
+
+    private void UpdateName()
+    {
+        var config = Config;
+        var dirty = _name.Text != config.Name;
+        _revert.Visibility = _saveName.Visibility = dirty ? Visibility.Visible : Visibility.Collapsed;
+        _saveName.IsEnabled = _name.Text.Trim().Length > 0;
+        var announced = _ctx.Store.AnnouncedName(_serial);
+        _announced.Show($"{announced}|{config.Name}", () =>
+        {
+            if (announced is null || announced == config.Name) return null;
+            var row = Ui.Columns("*", "Auto");
+            var note = W.Note(Loc.F("The printer calls itself “%@”. This name is only used in Bambu Bar.", announced));
+            note.VerticalAlignment = VerticalAlignment.Center;
+            row.Children.Add(Ui.At(note, 0));
+            var use = W.Button(Loc.F("Use “%@”", announced), () => _ctx.Store.Rename(_serial, announced), small: true);
+            use.Margin = new Thickness(12, 0, 0, 0);
+            row.Children.Add(Ui.At(use, 1));
+            return row;
+        });
+    }
+
+    private void SaveName()
+    {
+        if (_name.Text.Trim().Length == 0) return;
+        _ctx.Store.Rename(_serial, _name.Text);
+    }
+
+    private void EditConnection()
+    {
+        _hostField.Text = Config.Host;
+        _codeField.Text = _ctx.Store.Session(_serial)?.AccessCode ?? "";
+        _hostRow.Visibility = Visibility.Collapsed;
+        _connectionEditor.Visibility = Visibility.Visible;
+        UpdateReconnect();
+        _hostField.FocusInput();
+    }
+
+    private void CancelConnection()
+    {
+        _connectionEditor.Visibility = Visibility.Collapsed;
+        _hostRow.Visibility = Visibility.Visible;
+    }
+
+    private void UpdateReconnect() => _reconnect.IsEnabled = _hostField.Text.Trim().Length > 0 && _codeField.Text.Length >= 4;
+
+    private void ApplyConnection()
+    {
+        var host = _hostField.Text.Trim();
+        var code = _codeField.Text;
+        if (host.Length == 0 || code.Length < 4 || _ctx.Store.Session(_serial) is null) return;
+        _ctx.Store.Connect(Config with { Host = host }, code);
+        CancelConnection();
+    }
+
+    private void Forget()
+    {
+        if (_ctx.Store.Session(_serial) is not { } session) return;
+        if (!Dialogs.Confirm(Root, _ctx, Loc.F("Forget %@?", session.Config.Name),
+            Loc.T("Bambu Bar disconnects and removes the access code from Credential Manager. Print history stays."),
+            Loc.T("Forget"), Loc.T("Cancel"))) return;
+        _ctx.Store.Forget(_serial);
+    }
+}

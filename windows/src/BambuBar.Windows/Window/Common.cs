@@ -11,12 +11,12 @@ using BambuBar.TrayPanel;
 namespace BambuBar.AppWindow;
 
 /// <summary>The window's pages, in the sidebar's order (the Mac's AppSection).</summary>
-public enum AppPage { Fleet, Printer, Filament, Tray, Notifications, Printers, Widgets, Settings, About }
+public enum AppPage { Fleet, Printer, Filament, Tray, Notifications, Widgets, Settings, About }
 
 public static class AppPages
 {
     public static readonly AppPage[] Order =
-        [AppPage.Fleet, AppPage.Printer, AppPage.Filament, AppPage.Tray, AppPage.Notifications, AppPage.Printers, AppPage.Widgets, AppPage.Settings, AppPage.About];
+        [AppPage.Fleet, AppPage.Printer, AppPage.Filament, AppPage.Tray, AppPage.Notifications, AppPage.Widgets, AppPage.Settings, AppPage.About];
 
     public static string Title(this AppPage page) => page switch
     {
@@ -25,7 +25,6 @@ public static class AppPages
         AppPage.Filament => Loc.T("Filament"),
         AppPage.Tray => Loc.T("Tray", "Sidebar page: the tray icon and its panel (the Mac's Menu Bar page)"),
         AppPage.Notifications => Loc.T("Notifications"),
-        AppPage.Printers => Loc.T("Printers"),
         AppPage.Widgets => Loc.T("Widgets"),
         AppPage.Settings => Loc.T("Settings"),
         _ => Loc.T("About"),
@@ -41,7 +40,6 @@ public static class AppPages
         AppPage.Widgets => '3',
         AppPage.Settings => '4',
         AppPage.About => '5',
-        AppPage.Printers => '6',
         AppPage.Tray => '7',
         _ => '8',
     };
@@ -55,7 +53,6 @@ public static class AppPages
         AppPage.Filament => Color.FromRgb(0xFF, 0x8A, 0x3D),
         AppPage.Tray => Color.FromRgb(0x14, 0xB0, 0xC4),
         AppPage.Notifications => Color.FromRgb(0xFF, 0x4F, 0x5E),
-        AppPage.Printers => Color.FromRgb(0x3B, 0x82, 0xF6),
         AppPage.Widgets => Color.FromRgb(0xA2, 0x5C, 0xFF),
         AppPage.Settings => Color.FromRgb(0x7D, 0x87, 0x96),
         _ => Color.FromRgb(0x2E, 0xA3, 0xF2),
@@ -68,7 +65,6 @@ public static class AppPages
         AppPage.Filament => "",       // CircleRing (circle.circle)
         AppPage.Tray => "",           // TVMonitor: the screen with its taskbar (menubar.rectangle)
         AppPage.Notifications => "",  // Ringer (bell.badge)
-        AppPage.Printers => "",       // BulletedList (printer.dotmatrix)
         AppPage.Widgets => "",        // Tiles (widget.medium)
         AppPage.Settings => "",       // Setting (gearshape)
         _ => "",                      // Info (info.circle)

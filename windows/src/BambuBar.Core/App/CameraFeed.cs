@@ -21,7 +21,7 @@ public interface ICameraScheduler
 public sealed record CameraSituation
 {
     public bool IsDemo { get; init; }
-    /// <summary>Both camera switches are on: Settings → Camera, and this printer's on the Printers page.</summary>
+    /// <summary>Both camera switches are on: Settings → Camera, and this printer's on the Printer page settings.</summary>
     public bool ShowsCamera { get; init; }
     /// <summary>A run against the mock fleet (<c>--emulator</c>), whose printers have no camera.</summary>
     public bool IsMockFleet { get; init; }

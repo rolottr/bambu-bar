@@ -63,7 +63,7 @@ internal static class W
         var label = Ui.Text(title, WRamp.GroupTitle, FontWeights.SemiBold);
         AutomationProperties.SetHeadingLevel(label, AutomationHeadingLevel.Level2);
         header.Children.Add(label);
-        // A group named by its heading (which may change later: the Printers page's), like a GroupBox.
+        // A group named by its heading (which may change later), like a GroupBox.
         var group = new Stack { Spacing = 8, Role = AutomationControlType.Group, Children = { header, Ui.Card(body, Metrics.Card, new Thickness(16)) } };
         AutomationProperties.SetLabeledBy(group, label);
         return group;

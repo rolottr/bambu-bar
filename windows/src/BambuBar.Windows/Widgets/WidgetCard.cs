@@ -33,6 +33,7 @@ public sealed class WidgetCard : FrameworkElement
     private DateTimeOffset _now = DateTimeOffset.Now;
     private bool _hover;
     private double _ppd = 1;
+    private double _backgroundOpacity = 1;
 
     public WidgetCard(WidgetHost.Size size)
     {
@@ -45,6 +46,16 @@ public sealed class WidgetCard : FrameworkElement
     }
 
     public WidgetHost.Size Size { get; }
+
+    public double BackgroundOpacity
+    {
+        get => _backgroundOpacity;
+        set
+        {
+            _backgroundOpacity = value;
+            InvalidateVisual();
+        }
+    }
 
     /// <summary>The spinner's angle while connecting (degrees); the showcase turns it.</summary>
     public double SpinAngle { get; set; }
@@ -72,8 +83,10 @@ public sealed class WidgetCard : FrameworkElement
         var outline = new RectangleGeometry(new Rect(card), 14, 14);
         // The card (always dark, ledger O6): the skins' gradient, a white hairline, both lighter on hover.
         var fill = new LinearGradientBrush(_hover ? Rgb(0x31, 0x33, 0x37) : Rgb(0x29, 0x2B, 0x2E), _hover ? Rgb(0x19, 0x1B, 0x1E) : Rgb(0x14, 0x17, 0x19), 90);
+        fill.Opacity = BackgroundOpacity;
         dc.DrawGeometry(fill, null, outline);
-        dc.DrawRoundedRectangle(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(_hover ? 56 : 20), 255, 255, 255)), 1),
+        var border = Color.FromArgb((byte)Math.Round((_hover ? 56 : 20) * BackgroundOpacity), 255, 255, 255);
+        dc.DrawRoundedRectangle(null, new Pen(new SolidColorBrush(border), 1),
             new Rect(0.5, 0.5, card.Width - 1, card.Height - 1), 13.5, 13.5);
         if (_state is null) return;
         dc.PushClip(outline);
