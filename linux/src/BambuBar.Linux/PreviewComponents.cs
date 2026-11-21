@@ -49,12 +49,12 @@ internal sealed partial class Shell
         var image = Gtk.Image.NewFromFile(Assets.PathOf("Printers", (session.Config.Model?.Shape ?? PrinterShape.Enclosed).AssetName() + "-body.png"));
         image.SetPixelSize(size); image.SetSizeRequest(size, size + 6); return image;
     }
-    private Gtk.Image PreviewArt(JobState state, double progress, int size = 120)
+    private Gtk.Image PreviewArt(JobState state, double progress, int size = 120, bool contactShadow = true)
     {
         var image = Gtk.Image.New(); image.SetPixelSize(size); image.SetSizeRequest(size, size + 12);
         var model = _store.Current?.Config.Model;
         var scene = new PrinterArt.Scene { Shape = model?.Shape ?? PrinterShape.Enclosed, State = state, Progress = progress,
-            Filament = "FF9959FF", Spools = ["FF9959FF", "F5E83DFF", "EF333FFF", "181818FF"], LightOn = true };
+            ContactShadow = contactShadow, Filament = "FF9959FF", Spools = ["FF9959FF", "F5E83DFF", "EF333FFF", "181818FF"], LightOn = true };
         var alive = true; _cleanup.Add(() => alive = false);
         _ = Render();
         async Task Render()

@@ -4,7 +4,6 @@ using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using BambuBar.Core;
 using BambuBar.Core.App;
@@ -268,7 +267,6 @@ internal sealed class Showcase : IDisposable
     private readonly Grid _layout = new();
     private readonly Border _stage;
     private readonly Border _widgetSlot = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly DropShadowEffect _widgetShadow = new() { BlurRadius = 24, ShadowDepth = 6, Direction = 270, Opacity = 0.45 };
     private readonly Grid _scenesRow = new();
     private readonly Border _highlight;
     private readonly StackPanel _sceneButtons = new() { Orientation = Orientation.Horizontal };
@@ -326,7 +324,6 @@ internal sealed class Showcase : IDisposable
     {
         _backgroundTransparency = percent;
         _card.BackgroundOpacity = 1 - percent / 100.0;
-        _widgetShadow.Opacity = 0.45 * _card.BackgroundOpacity;
     }
 
     /// <summary>The store changed: the widget is dressed as the current printer, so draw it again.</summary>
@@ -354,7 +351,6 @@ internal sealed class Showcase : IDisposable
         backdrop.Children.Add(new Border { Background = Bloom(Color.FromArgb(0x99, 0x5B, 0x9B, 0xFF), new Point(0.18, 0.18), 0.7) });
         backdrop.Children.Add(new Border { Background = Bloom(Color.FromArgb(0x73, 0xB0, 0x5C, 0xE6), new Point(0.9, 0.95), 0.75) });
 
-        _widgetSlot.Effect = _widgetShadow;
         var content = new Grid();
         content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -367,7 +363,6 @@ internal sealed class Showcase : IDisposable
             CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1),
             VerticalAlignment = VerticalAlignment.Top, MinWidth = ScenesWidth, ClipToBounds = true,
             Child = new Grid { Children = { backdrop, content } },
-            Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 6, Direction = 270, Opacity = 0.18 },
         };
         stage.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.CardStroke);
         backdrop.SizeChanged += (_, e) => backdrop.Clip = new RectangleGeometry(new Rect(e.NewSize), 15, 15);

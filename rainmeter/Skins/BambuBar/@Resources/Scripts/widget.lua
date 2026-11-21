@@ -27,7 +27,7 @@ local fmt, gsub, find, sub = string.format, string.gsub, string.find, string.sub
 
 -- ===================================================================================== constants
 
-BB.MARGIN = 16 -- transparent margin around the card, for the shadow (mockup: Small window 212 x 212)
+BB.MARGIN = 16 -- transparent margin around the card (mockup: Small window 212 x 212)
 BB.SIZES = { Small = { w = 180, h = 180 }, Medium = { w = 380, h = 180 }, Large = { w = 380, h = 380 } }
 BB.STALE_AFTER = 30 * 60
 
@@ -1069,7 +1069,6 @@ end
 
 local function updateBackground()
 	apply("Card", BB.cardOptions(G.w, G.h, G.hover, G.backgroundOpacity))
-	apply("Shadow", { ImageAlpha = tostring(floor(255 * G.backgroundOpacity + 0.5)) })
 end
 
 -- Called by WidgetHost on slider changes, independently of the state and animation timers.

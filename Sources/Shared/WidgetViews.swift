@@ -312,7 +312,7 @@ struct SmallWidgetDial: View {
         ZStack {
             switch s?.state {
             case .printing?, .paused?:
-                ProgressRing(progress: w.progress, tint: w.tint, lineWidth: 6.5)
+                ProgressRing(progress: w.progress, tint: w.tint, lineWidth: 6.5, glow: false)
                     .widgetAccentableCompat()
                 VStack(spacing: -2) {
                     HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -325,15 +325,15 @@ struct SmallWidgetDial: View {
                 }
             case .preparing?:
                 ProgressRing(progress: s.map { $0.activeNozzle.target > 0 ? min(1, $0.activeNozzle.current / $0.activeNozzle.target) : 0.1 } ?? 0.1,
-                             tint: Palette.preparing, lineWidth: 6.5)
+                             tint: Palette.preparing, lineWidth: 6.5, glow: false)
                     .widgetAccentableCompat()
                 Image(systemName: "flame.fill").font(.system(size: 18, weight: .semibold)).foregroundStyle(Palette.nozzle)
             case .finished?:
-                ProgressRing(progress: 1, tint: Palette.finished, lineWidth: 6.5)
+                ProgressRing(progress: 1, tint: Palette.finished, lineWidth: 6.5, glow: false)
                     .widgetAccentableCompat()
                 Image(systemName: "checkmark").font(.system(size: 20, weight: .bold)).foregroundStyle(Palette.finished)
             case .failed?:
-                ProgressRing(progress: w.progress, tint: s?.canceled == true ? .secondary : Palette.failed, lineWidth: 6.5)
+                ProgressRing(progress: w.progress, tint: s?.canceled == true ? .secondary : Palette.failed, lineWidth: 6.5, glow: false)
                 Image(systemName: s?.canceled == true ? "xmark" : "exclamationmark").font(.system(size: 19, weight: .bold))
                     .foregroundStyle(s?.canceled == true ? Color.secondary : Palette.failed)
             default:
@@ -389,7 +389,7 @@ struct MediumWidgetView: View {
                                 .monospacedDigit()
                         }
                     }
-                    FilamentProgressBar(progress: w.progress, tint: w.tint, height: 6)
+                    FilamentProgressBar(progress: w.progress, tint: w.tint, height: 6, glow: false)
                         .widgetAccentableCompat()
                         .padding(.vertical, 5)
                     HStack {
@@ -633,7 +633,7 @@ struct WidgetPrinterArt: View {
     #endif
 
     var body: some View {
-        PrinterArt(status: status, model: model, dimmed: dimmed, animated: false, monochrome: monochrome)
+        PrinterArt(status: status, model: model, dimmed: dimmed, animated: false, monochrome: monochrome, contactShadow: false)
     }
 }
 

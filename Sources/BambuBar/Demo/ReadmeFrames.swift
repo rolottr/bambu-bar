@@ -335,7 +335,6 @@ private struct WidgetStageFrame: View {
             }
             .frame(width: w, height: h, alignment: .topLeading)
             .clipShape(RoundedRectangle(cornerRadius: 22 * (Self.scale(morph.from) * (1 - e) + Self.scale(morph.to) * e), style: .continuous))
-            .shadow(color: .black.opacity(0.3), radius: 14, y: 6)
         } else {
             WidgetFrame(width: size.frame.width, height: size.frame.height) { view(for: size, snapshot: snapshot) }
                 .scaleEffect(Self.scale(size))

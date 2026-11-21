@@ -151,7 +151,7 @@ public sealed partial class WidgetHost : IDisposable
         Widgets.FirstOrDefault(w => string.Equals(w.Config, config.Trim().Trim('"'), StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Puts a new widget top right of the primary screen's work area: the skin's window (the card plus its
-    /// 16 px shadow margin, which is the gap to the edge) flush with the corner, each further widget 24 px down and
+    /// 16 px transparent margin, which is the gap to the edge) flush with the corner, each further widget 24 px down and
     /// left of the one before so none lands exactly on another. Physical pixels, as Rainmeter.ini keeps them.</summary>
     public Widget Add(Size size, string? serial)
     {

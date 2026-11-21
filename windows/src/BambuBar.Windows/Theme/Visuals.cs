@@ -319,7 +319,7 @@ public static class ArtImage
     public static BitmapSource? For(PrinterArt.Scene scene, double width, double height)
     {
         var key = string.Join('|', scene.Shape, scene.State, Math.Round(PrinterArt.ShownFraction(scene.State, scene.Progress), 2),
-            scene.Filament, string.Join(',', scene.Spools), scene.LightOn, scene.Dimmed, width, height);
+            scene.Filament, string.Join(',', scene.Spools), scene.LightOn, scene.Dimmed, scene.ContactShadow, width, height);
         if (Cache.TryGetValue(key, out var hit)) return hit;
         if (Cache.Count > 48) Cache.Clear();
         BitmapSource? bitmap = null;

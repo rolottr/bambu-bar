@@ -71,6 +71,21 @@ public sealed class PrinterArtTests : IDisposable
     }
 
     [Fact]
+    public void WidgetArtKeepsTransparentPixelsBelowThePrinter()
+    {
+        var scene = Printing(0.64);
+        var panel = PrinterArt.WritePng(scene, 196, 232, _folder)!;
+        var widget = PrinterArt.WritePng(scene with { ContactShadow = false }, 196, 232, _folder)!;
+        Assert.NotEqual(panel, widget);
+        var panelImage = Png.Read(Path.Combine(_folder, panel));
+        var widgetImage = Png.Read(Path.Combine(_folder, widget));
+        var x = widgetImage.Width / 2;
+        var y = widgetImage.Height - 1;
+        Assert.True(Pixel(panelImage, x, y).Item4 > 0);
+        Assert.Equal(0, Pixel(widgetImage, x, y).Item4);
+    }
+
+    [Fact]
     public void ArtFilesAreNamedByContentAndPruned()
     {
         var first = PrinterArt.WritePng(Printing(0.64), 196, 232, _folder);

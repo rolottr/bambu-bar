@@ -190,7 +190,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
             Progress = Math.Round((status?.Progress ?? 0) / 5.0) / 20,
             Filament = status?.ActiveSpool?.Color,
             Spools = status?.Ams.FirstOrDefault()?.Spools.Select(s => s.IsLoaded ? s.Color : null).ToArray() ?? [],
-            LightOn = status?.ChamberLightOn ?? false, Dimmed = !state.Live,
+            LightOn = status?.ChamberLightOn ?? false, Dimmed = !state.Live, ContactShadow = false,
         };
         var key = JsonSerializer.Serialize(scene);
         var id = snapshot.Serial;

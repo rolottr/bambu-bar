@@ -71,7 +71,7 @@ internal sealed partial class Shell
                 var progress = Gtk.ProgressBar.New(); progress.SetFraction(percent / 100.0); content.Append(progress);
             }
             if (!small) content.Append(Label(preparing ? Loc.T("Auto bed leveling") : printing ? "1h 12m " + Loc.T("left") + "    " + Loc.T("Done") + " 13:38" : _widgetPreviewState == JobState.Paused ? Loc.T("Filament ran out") : _widgetPreviewState == JobState.Finished ? Loc.T("Finished") + " · 12m" : Loc.T("Ready to print"), "caption", "heading"));
-            if (!small) { var hero = Row(14); hero.Append(PreviewArt(_widgetPreviewState, percent / 100.0, 104)); hero.Append(content); card.Append(hero); var temperatures = SampleTemperatures(true, large); if (!large) temperatures.SetMarginStart(118); card.Append(temperatures); }
+            if (!small) { var hero = Row(14); hero.Append(PreviewArt(_widgetPreviewState, percent / 100.0, 104, contactShadow: false)); hero.Append(content); card.Append(hero); var temperatures = SampleTemperatures(true, large); if (!large) temperatures.SetMarginStart(118); card.Append(temperatures); }
             else card.Append(content);
             if (large) card.Append(SampleSpools(false)); slot.Append(card);
             details.Append(Label(Loc.T(char.ToUpperInvariant(_widgetPreviewSize[0]) + _widgetPreviewSize[1..]), "heading"));

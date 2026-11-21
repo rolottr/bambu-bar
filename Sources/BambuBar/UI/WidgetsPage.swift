@@ -327,7 +327,6 @@ struct WidgetShowcase: View {
         .frame(width: max(scaled.width + margin * 2, Self.scenesWidth), height: scaled.height + margin * 2 + Self.scenesHeight)
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.75))
-        .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
         .animation(.spring(response: 0.6, dampingFraction: 0.82), value: size)
     }
 
@@ -469,7 +468,6 @@ struct WidgetFrame<Content: View>: View {
             .background(WidgetBackdrop())
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.12), lineWidth: 0.75))
-            .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
             .environment(\.colorScheme, .dark)
     }
 }

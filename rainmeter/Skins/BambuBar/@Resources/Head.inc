@@ -1,4 +1,3 @@
-; What every size draws first: the script, the animation timer, the shadow, the card and the content container.
 ; Included from [Variables] of Small/Medium/Large.ini, so these sections come before the size's own meters.
 
 [MeasureScript]
@@ -18,15 +17,6 @@ Frame=[!CommandMeasure MeasureScript "Frame()"]
 ActionList2=Repeat Spin, 50, 200
 Spin=[!CommandMeasure MeasureScript "Spin()"]
 IgnoreWarnings=1
-
-; The soft shadow, pre-rendered for each size (generated once; see ..\README.md).
-[Shadow]
-Meter=Image
-ImageName=#@#Images\shadow-#Size#.png
-X=0
-Y=0
-W=(#CardW#+2*#Margin#)
-H=(#CardH#+2*#Margin#)
 
 ; The card (always dark, ledger O6): gradient #292B2E to #141719, 14 px corners, white 8 % border. Hover lightens
 ; it and takes the border to 22 % (the script tweens it over 140 ms). Left click opens the printer in the app;

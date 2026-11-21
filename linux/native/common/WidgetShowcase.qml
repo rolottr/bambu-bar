@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Effects
 import QtQuick.Window
 
 GridLayout {
@@ -90,14 +89,6 @@ GridLayout {
                                                    showcase.size === "small" ? 1.3 : showcase.size === "medium" ? 1.1 : 1)
         implicitHeight: widget.implicitHeight * cardScale + 48 + sceneBar.height
         Behavior on implicitHeight { enabled: showcase.kit.animationsEnabled; NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-        Rectangle {
-            anchors.centerIn: widget
-            width: widget.width * stage.cardScale; height: widget.height * stage.cardScale
-            radius: widget.radius * stage.cardScale
-            color: "#40000000"
-            layer.enabled: true
-            layer.effect: MultiEffect { shadowEnabled: true; shadowOpacity: 0.55; shadowVerticalOffset: 4; shadowBlur: 0.6 }
-        }
         WidgetCard {
             id: widget
             anchors.horizontalCenter: parent.horizontalCenter

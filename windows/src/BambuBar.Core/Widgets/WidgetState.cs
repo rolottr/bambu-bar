@@ -288,6 +288,7 @@ public sealed class WidgetStateWriter(string folder, Func<bool>? motion = null) 
                 Filament = active?.Color,
                 Spools = (unit?.Spools ?? []).Select(sp => sp.IsLoaded ? sp.Color : null).ToList(),
                 LightOn = status?.ChamberLightOn ?? false,
+                ContactShadow = false,
                 Dimmed = status is null,
             };
             art = PrinterArt.WritePng(scene, ArtWidth, ArtHeight, artFolder);
