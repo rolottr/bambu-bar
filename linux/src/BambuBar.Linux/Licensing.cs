@@ -14,7 +14,8 @@ internal sealed class Licensing : IDisposable
     public bool HasAccess { get; private set; }
     public bool Busy { get; private set; }
     public string? Message { get; private set; }
-    public bool HasRecord { get; private set; }
+    public string? Installation { get; private set; }
+    public bool HasRecord => Installation is not null;
     public event Action? Changed;
     private bool _disposed;
     public Licensing(bool ephemeral)
@@ -25,8 +26,9 @@ internal sealed class Licensing : IDisposable
         {
             _store.PropertyChanged += (_, _) =>
             {
-                var access = _store.HasAccess; var busy = _store.IsBusy; var message = _store.Message; var saved = _store.Record is not null;
-                ui.Post(_ => { if (_disposed) return; HasAccess = access; Busy = busy; Message = message; HasRecord = saved; Changed?.Invoke(); }, null);
+                var access = _store.HasAccess; var busy = _store.IsBusy; var message = _store.Message; var id = _store.Record?.InstallationId;
+                var installation = id is null ? null : $"Linux · {id[..Math.Min(8, id.Length)]}";
+                ui.Post(_ => { if (_disposed) return; HasAccess = access; Busy = busy; Message = message; Installation = installation; Changed?.Invoke(); }, null);
             };
             if (!ephemeral) _store.Start();
         }, null);

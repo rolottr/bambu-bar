@@ -21,7 +21,7 @@ public static class PolarConfiguration
     public enum SupportPlacement { MainWindow, AppMenu, MenuPanel, License }
 
     /// <summary>The website's download page, tagged like the Mac's <c>Website.url("download", …)</c>.</summary>
-    public static Uri SupportUrl(SupportPlacement placement)
+    public static Uri SupportUrl(SupportPlacement placement, string medium = Website.Medium)
     {
         var content = placement switch
         {
@@ -30,7 +30,7 @@ public static class PolarConfiguration
             SupportPlacement.MenuPanel => "menu_panel",
             _ => "license",
         };
-        return Website.Url("download", "support_project", content);
+        return Website.Url("download", "support_project", content, medium);
     }
 }
 

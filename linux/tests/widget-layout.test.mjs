@@ -28,3 +28,17 @@ test('380px illustrated cards have a full gap between wrapped columns', () => {
         assert.ok(Math.abs(a.x-b.x)>=400 || Math.abs(a.y-b.y)>=396);
     }
 });
+
+test('opposite corners stay anchored when large and small cards share an edge', () => {
+    const cards = [
+        {corner:'bottom-right', width:380, height:380},
+        {corner:'bottom-right', width:190, height:190},
+        {corner:'top-right', width:380, height:380},
+        {corner:'bottom-left', width:380, height:190},
+    ];
+    const positions = placeWidgets(cards, {x:0, y:0, width:1366, height:840});
+    assert.deepEqual(positions[0], {x:966, y:440});
+    assert.deepEqual(positions[2], {x:966, y:20});
+    assert.deepEqual(positions[3], {x:20, y:630});
+    assert.ok(positions[1].x + cards[1].width <= positions[0].x - 20);
+});

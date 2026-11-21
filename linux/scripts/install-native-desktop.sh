@@ -27,6 +27,11 @@ backup="$(mktemp -d "${XDG_STATE_HOME:-$HOME/.local/state}/bambu-bar/backups/nat
 mkdir -p "$target" "${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services"
 if [[ -f "$target/host.py" ]]; then cp -a "$target" "$backup/"; fi
 cp -a "$source_dir/." "$target/"
+# A release archive carries the icon alongside the QML. A source checkout
+# uses the same icon file as the Flatpak and Windows builds.
+if [[ -f "$root/../windows/src/BambuBar.Windows/Assets/AppIcon.png" ]]; then
+  cp "$root/../windows/src/BambuBar.Windows/Assets/AppIcon.png" "$target/common/"
+fi
 mkdir -p "$target/common/models"
 tar -xzf "$root/../shared/Printers/qt-models.tar.gz" -C "$target/common/models"
 if [[ -d /usr/share/omarchy/shell ]]; then

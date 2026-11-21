@@ -8,8 +8,8 @@ public static class Website
     public const string Host = "https://bambubar.app";
     public const string Medium = "app_windows";
 
-    public static Uri Url(string path, string campaign, string content) =>
-        new($"{Host}/{path}?utm_source=bambu_bar&utm_medium={Medium}&utm_campaign={Uri.EscapeDataString(campaign)}&utm_content={Uri.EscapeDataString(content)}");
+    public static Uri Url(string path, string campaign, string content, string medium = Medium) =>
+        new($"{Host}/{path}?utm_source=bambu_bar&utm_medium={Uri.EscapeDataString(medium)}&utm_campaign={Uri.EscapeDataString(campaign)}&utm_content={Uri.EscapeDataString(content)}");
 
     /// <summary>The About page's links.</summary>
     public static Uri Home => Url("", "about", "website");

@@ -1,5 +1,5 @@
 /* Shared Mac-like hierarchy, with native GTK controls and Linux window chrome. */
-window { background: var(--window-bg-color); font-size: 13px; }
+window { background: var(--window-bg-color); }
 window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
 .bambu-dark headerbar { background: #222222; }
 .sidebar { background: alpha(var(--window-fg-color),.035); padding: 6px; }
@@ -10,10 +10,8 @@ window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
 .sidebar row:selected image { color: white; }
 .page { padding: 28px; }
 .page-title { font-size: 27px; font-weight: 800; }
-.section-title { font-size: 10px; font-weight: 700; letter-spacing: .6px; opacity: .65; }
+.section-title { font-weight: 700; }
 .heading { font-weight: 700; }
-.caption { font-size: 11px; }
-.note { font-size: 12px; }
 .monospace { font-family: monospace; }
 .muted { opacity: .65; }
 .success, .sample-printing { color: #21cc6b; }
@@ -25,7 +23,7 @@ window.bambu-dark { background: #1f1f1f; color: #eeeeee; }
 .chamber { color: #b8adb8; }
 .module { border-radius: 16px; padding: 13px; background: alpha(var(--window-fg-color),.05); border: 1px solid alpha(var(--window-fg-color),.08); }
 .tile { border-radius: 14px; padding: 11px; background: alpha(var(--window-fg-color),.05); border: 1px solid alpha(var(--window-fg-color),.06); }
-.detail-row { min-height: 14px; font-size: 12px; }
+.detail-row { min-height: 14px; }
 .metric { font-size: 25px; font-weight: 800; font-feature-settings: "tnum"; }
 .job { background: alpha(var(--window-fg-color),.045); border-radius: 24px; padding: 18px; }
 .job-title { font-size: 20px; font-weight: 800; }
@@ -65,7 +63,7 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 .preview-wallpaper { border-radius: 24px; background: linear-gradient(135deg,#98603a,#393f6d); color: #eeeeee; padding: 0 14px 16px; }
 .sample-topbar { margin: 0 -4px 8px; padding: 4px 0; font-size: 12px; }
 .sample-indicator { background: alpha(white,.22); border-radius: 4px; padding: 1px 5px; }
-.sample-panel { padding: 12px; border-radius: 18px; border: 1px solid alpha(white,.14); background: alpha(#292730,.30); }
+.sample-panel { padding: 18px; border-radius: 18px; border: 1px solid alpha(white,.14); background: alpha(#292730,.30); }
 .sample-panel .module { padding: 10px; background: alpha(white,.07); border-color: alpha(white,.08); }
 .sample-panel .sample-job { border-radius: 20px; padding: 10px; }
 .sample-percent { font-size: 34px; font-weight: 800; font-feature-settings: "tnum"; }
@@ -89,7 +87,6 @@ checkbutton check:checked, checkbutton radio:checked { background: #087bfa; bord
 .menu-layout > flowboxchild { background: transparent; padding: 0; border: none; outline: none; }
 
 .bambu-dark .page-background { background-image: linear-gradient(135deg,alpha(#b76d65,.045),transparent 55%,alpha(#21cc6b,.035)); }
-.printer-list-row { padding: 6px 0; }
 .about-links button { background: transparent; box-shadow: none; }
 .fleet-art { min-width: 80px; }
 

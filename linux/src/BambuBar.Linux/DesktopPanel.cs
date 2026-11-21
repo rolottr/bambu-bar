@@ -28,6 +28,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
     private readonly Connection _connection = new(Address.Session);
     private readonly PrinterStore _store;
     private readonly AppSettings _settings;
+    private readonly Func<bool> _hasSupporterAccess;
     private readonly Action<string, PrinterSession?> _invoke;
     private readonly SynchronizationContext _context = SynchronizationContext.Current!;
     private readonly HashSet<PrinterSession> _sessions = [];
@@ -38,9 +39,10 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
     private readonly HashSet<string> _widgetRendering = [];
     private bool _queued, _open, _disposed, _rendering;
 
-    public DesktopPanel(PrinterStore store, AppSettings settings, Action<string, PrinterSession?> invoke)
+    public DesktopPanel(PrinterStore store, AppSettings settings, Action<string, PrinterSession?> invoke, Func<bool> hasSupporterAccess)
     {
         _store = store; _settings = settings; _invoke = invoke;
+        _hasSupporterAccess = hasSupporterAccess;
         _store.PropertyChanged += Changed;
         ((INotifyCollectionChanged)_store.Sessions).CollectionChanged += SessionsChanged;
         Subscribe();
@@ -105,11 +107,12 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
         var controls = online && status?.ControlsLocked == false && _store.ShowPrinterActions;
         var tray = _store.MenuBarSession;
         if ((_open || main) && session is not null) RenderArt(session);
-        var labelKeys = new[] { "Bambu Bar", "No printer set up", "Connected", "Printer", "Settings", "Refresh", "Open Bambu Bar", "Quit", "Camera", "Filament", "All Printers", "Nozzle", "Right", "Left", "Bed", "Chamber", "Fans", "Part cooling", "Auxiliary", "Light", "Turn light on", "Turn light off", "Pause", "Resume", "Stop", "Speed", "Enable Developer Mode on the printer to use controls", "Add Printer…", "Not connected", "Needs attention", "Stopped", "Done", "layers", "Support this project", "Manage License…", "Wiki", "Copy code", "Dismiss" };
+        var labelKeys = new[] { "Bambu Bar", "No printer set up", "Connected", "Printer", "Settings", "Refresh", "Open Bambu Bar", "Quit", "Camera", "Filament", "All Printers", "Nozzle", "Right", "Left", "Bed", "Chamber", "Fans", "Part cooling", "Auxiliary", "Light", "Turn light on", "Turn light off", "Pause", "Resume", "Stop", "Speed", "Enable Developer Mode on the printer to use controls", "Add Printer…", "Cancel", "Hero Supporter", "In use", "Show", "Small", "Medium", "Large", "Quick view", "Widgets", "Empty slot", "Sample print. Changes show here as you make them.", "Not connected", "Needs attention", "Stopped", "Done", "layers", "Support this project", "Manage License…", "Wiki", "Copy code", "Ignore", "Change…", "Dismiss" };
         var payload = new
         {
             version = 1,
             simulated = _store.IsDemo,
+            supporter = _hasSupporterAccess(),
             widgetPrinters = !Platform.IsPlasma || !_settings.Get("linuxWidgetsEnabled", false) ? [] :
                 new[] { new { id = "", state = JsonSerializer.SerializeToElement(WidgetSnapshot(null), WidgetState.Json) } }
                     .Concat(_store.Sessions.Select(s => new { id = s.Id, state = JsonSerializer.SerializeToElement(WidgetSnapshot(s.Id), WidgetState.Json) })).ToArray(),
@@ -122,7 +125,7 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
             panelIcon = TrayIcon.Key(tray, _store.IsConfigured),
             panelText = tray?.Status is { } t && tray.IsOnline && t.State.IsActive() ? _store.MenuBarStyle.Text(t) ?? "" : "",
             title = tray is null ? "Bambu Bar" : tray.Config.Name + " · " + tray.ShortState,
-            printers = _store.Sessions.Select(s => new { id = s.Id, name = s.Config.Name, state = s.ShortState }).ToArray(),
+            printers = _store.Sessions.Select(s => new { id = s.Id, name = s.Config.Name, addressLine = main ? $"Bambu Lab {s.Config.ModelName} · {s.Config.Host}" : null, state = s.ShortState }).ToArray(),
             fleet = main ? _store.Sessions.Select(s => JsonSerializer.SerializeToElement(WidgetSnapshot(s.Id), WidgetState.Json)).ToArray() : [],
             printer = session is null ? null : new
             {
@@ -139,8 +142,8 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
                 issueId = status?.MostSevereIssue?.Id ?? "",
                 issueSeverity = (int?)status?.MostSevereIssue?.Severity,
                 issueWiki = status?.MostSevereIssue?.WikiUrl?.ToString() ?? "",
-                ams = !main && !_settings.Get(AppSettings.Keys.PanelFilament, true) ? [] : status?.Ams.Select(a => new { title = a.Title, humidity = a.Humidity, temperature = a.Temperature, spools = a.Spools.Select(SpoolState).ToArray() }).ToArray(),
-                external = (main || _settings.Get(AppSettings.Keys.PanelFilament, true)) && status?.ExternalSpool is { IsLoaded: true } ext ? SpoolState(ext) : null,
+                ams = !main && !_settings.Get(AppSettings.Keys.PanelFilament, true) ? [] : status?.Ams.Select(a => new { title = a.Title, humidity = a.Humidity, temperature = a.Temperature, spools = a.Spools.Select(sp => SpoolState(sp, status.State.IsActive() && status.ActiveSpoolId == sp.Id)).ToArray() }).ToArray(),
+                external = (main || _settings.Get(AppSettings.Keys.PanelFilament, true)) && status?.ExternalSpool is { IsLoaded: true } ext ? SpoolState(ext, status.State.IsActive() && status.ActiveSpoolId == ext.Id) : null,
                 art = _artSerial == session.Id ? _art : "",
                 temperatures = !main && !_settings.Get(AppSettings.Keys.PanelTemperatures, true) ? [] : new[]
                 {
@@ -150,6 +153,8 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
                     (!main && !_settings.Get(AppSettings.Keys.PanelChamber, true)) || status?.Chamber is null ? null : new { name = Loc.T("Chamber"), value = $"{status.Chamber:0}°" },
                 }.OfType<object>().ToArray(),
                 spools = !main && !_settings.Get(AppSettings.Keys.PanelFilament, true) ? [] : status?.AllSpools.Where(s => s.IsLoaded).Select(s => new { slot = s.SlotName, name = s.DisplayName, color = s.Color, remaining = s.RemainDetail }).ToArray(),
+                fanReadings = main ? FanReadings(status).Select(f => new { name = Loc.T(f.Name), value = f.Value }).ToArray() : null,
+                metricsTitle = main ? Loc.T(status?.Chamber is null && session.Config.Model?.IsEnclosed == false ? "Temperatures & cooling" : "Temperatures & airflow") : null,
                 fans = !main && !_settings.Get(AppSettings.Keys.PanelFans, false) ? "" : FanText(status),
                 camera = session.ShowsCamera && online,
                 light = online && (session.Config.Model?.HasChamberLight == true || status?.ChamberLightOn is not null),
@@ -207,10 +212,11 @@ internal sealed class DesktopPanel : IDesktopPanel, IDisposable
             finally { _widgetRendering.Remove(id); if (!_disposed) Queue(); }
         }
     }
-    internal static string FanText(PrinterStatus? s) => string.Join(" · ", new (string Name, int? Value)[]
+    private static IEnumerable<(string Name, int? Value)> FanReadings(PrinterStatus? s) => new (string Name, int? Value)[]
     { ("Part", s?.PartFan), ("Aux", s?.AuxFan), ("Chamber", s?.ExhaustFan), ("Hotend", s?.HeatbreakFan) }
-        .Where(f => f.Value is not null).Select(f => $"{Loc.T(f.Name)} {f.Value}%"));
-    private static object SpoolState(Spool s) => new { slot = s.SlotName, name = s.Material, color = s.Color, remaining = s.AmountText, loaded = s.IsLoaded, detail = s.DisplayName + " · " + s.RemainDetail, title = s.DisplayName, brand = s.Brand, colorName = s.ColorName, percent = s.Remain, weight = s.Weight, remainingDetail = s.RemainDetail };
+        .Where(f => f.Value is not null);
+    internal static string FanText(PrinterStatus? s) => string.Join(" · ", FanReadings(s).Select(f => $"{Loc.T(f.Name)} {f.Value}%"));
+    private static object SpoolState(Spool s, bool active) => new { active, slot = s.SlotName, name = s.Material, color = s.Color, remaining = s.AmountText, loaded = s.IsLoaded, detail = s.DisplayName + " · " + s.RemainDetail, title = s.DisplayName, brand = s.Brand, colorName = s.ColorName, percent = s.Remain, weight = s.Weight, remainingDetail = s.RemainDetail };
     private static string TemperatureText(Temperature? temperature) => temperature is { } t ? t.Target > 0 && !t.IsAtTarget ? $"{t.Current:0}° → {t.Target:0}°" : $"{t.Current:0}°" : "—";
     private async void RenderArt(PrinterSession session)
     {

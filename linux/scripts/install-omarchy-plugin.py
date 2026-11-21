@@ -23,12 +23,14 @@ backup.mkdir(parents=True, exist_ok=False)
 shutil.copy2(config, backup / 'shell.json')
 if target.exists():
     shutil.copytree(target, backup / 'plugin')
-shutil.copytree(root / 'omarchy', target, dirs_exist_ok=True)
+target.mkdir(parents=True, exist_ok=True)
+shutil.copy2(root / 'gnome/widget-layout.js', target / 'WidgetLayout.mjs')
 shutil.copytree(root / 'native/common', target / 'common', dirs_exist_ok=True)
 shutil.copy2(root / 'native/omarchy/Kit.qml', target / 'Kit.qml')
 shutil.copy2(root / 'native/bridge.py', target / 'bridge.py')
 import subprocess
 subprocess.run(['python3', str(root / 'scripts/generate-tray-icons.py'), str(target / 'tray-icons')], check=True)
+shutil.copytree(root / 'omarchy', target, dirs_exist_ok=True)
 layout = state.setdefault('bar', {}).setdefault('layout', {})
 if not any((entry.get('id') if isinstance(entry, dict) else entry) == 'dev.rolottr.BambuBar' for entries in layout.values() if isinstance(entries, list) for entry in entries):
     layout.setdefault('right', []).insert(0, {'id': 'dev.rolottr.BambuBar'})

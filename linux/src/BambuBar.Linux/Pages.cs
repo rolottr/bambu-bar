@@ -8,6 +8,17 @@ namespace BambuBar.Linux;
 
 internal sealed partial class Shell
 {
+    private static bool ValidPrinterAddress(string address)
+    {
+        if (address.Length is 0 or > 259) return false;
+        if (Uri.CheckHostName(address) != UriHostNameType.Unknown) return true;
+
+        // The simulator exposes several printers on distinct ports at one host.
+        var parts = address.Split(':');
+        return parts.Length == 2 && Uri.CheckHostName(parts[0]) != UriHostNameType.Unknown
+            && ushort.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var port) && port > 0;
+    }
+
     private void SetupPage()
     {
         var heading = Header(Loc.T("Add Printer…"));
@@ -23,7 +34,7 @@ internal sealed partial class Shell
         if (_setupConfig is { } edit) { name.SetText(edit.Name); host.SetText(edit.Host); serial.SetText(edit.Serial); }
         var connect = Button("network-connect-symbolic", Loc.T("Connect"), () => Async(async () =>
         {
-            if (!System.Net.IPAddress.TryParse(host.GetText().Split(':')[0], out _) && Uri.CheckHostName(host.GetText()) == UriHostNameType.Unknown)
+            if (!ValidPrinterAddress(host.GetText().Trim()))
                 throw new IOException("Enter the printer's network address.");
             if (code.GetText().Length != 8) throw new IOException("Enter the 8-character access code from the printer's Network settings.");
             var address = host.GetText().Trim(); var id = serial.GetText().Trim().ToUpperInvariant();
@@ -106,7 +117,7 @@ internal sealed partial class Shell
     private void FleetPage()
     {
         var summary = string.Join(" · ", _store.Sessions.GroupBy(s => s.IsOnline ? s.Status?.StateTitle ?? s.ShortState : Loc.T("Offline")).Select(g => $"{g.Count()} {g.Key.ToLowerInvariant()}"));
-        Header(Loc.T("All Printers"), summary);
+        Header(Loc.T("All Printers"), summary).Append(Button("list-add-symbolic", Loc.T("Add Printer…"), () => BeginSetup(), true));
         var grid = CardGrid(); grid.SetMaxChildrenPerLine(2);
         foreach (var session in _store.Sessions.OrderBy(s => !s.IsOnline ? 6 : s.Status?.State switch { JobState.Failed => 0, JobState.Paused => 1, JobState.Printing or JobState.Preparing => 2, JobState.Finished => 3, _ => 4 }).ThenBy(s => s.Status?.RemainingMinutes ?? int.MaxValue).ThenBy(s => s.Config.Name))
         {
@@ -117,53 +128,61 @@ internal sealed partial class Shell
             var progress = Gtk.ProgressBar.New(); TintProgress(progress, () => session.Status?.ActiveSpool?.Color); info.Append(progress);
             var timing = Live(() => session.Status is { } state && session.IsOnline ? $"{state.Progress}% · {Format.Duration(state.RemainingMinutes)}" : "", null, "caption", "muted"); info.Append(timing);
             _updates.Add(() => { var active = session.IsOnline && (session.Status?.State.IsActive() == true || session.Status?.State == JobState.Finished); progress.SetOpacity(active ? 1 : 0); timing.SetOpacity(active ? 1 : 0); progress.SetFraction(Math.Clamp((session.Status?.Progress ?? 0) / 100.0, 0, 1)); });
-            row.Append(info); var button = Gtk.Button.New(); button.AddCssClass("module"); button.SetChild(row);
+            row.Append(info);
+            var card = Column(8); card.Append(row); card.Append(Gtk.Separator.New(Gtk.Orientation.Horizontal));
+            var address = Label($"Bambu Lab {session.Config.ModelName} · {session.Config.Host}", "caption", "muted");
+            address.SetEllipsize(Pango.EllipsizeMode.Middle); card.Append(address);
+            var button = Gtk.Button.New(); button.AddCssClass("module"); button.SetChild(card);
             var stateClass = "";
             _updates.Add(() => { var next = "fleet-" + (session.IsOnline ? session.Status?.State.ToString().ToLowerInvariant() : "offline"); if (stateClass == next) return; if (stateClass.Length > 0) button.RemoveCssClass(stateClass); button.AddCssClass(next); stateClass = next; });
             button.OnClicked += (_, _) => { _store.Select(session.Id); Navigate("Printer"); }; grid.Insert(button, -1);
         }
         _pageHost.Append(grid);
     }
-    private void PrintersPage()
+    private const string IgnoredCodesHint = "To stop showing a code for this printer, click **Ignore** next to the issue on the Printer page.";
+    private static string PrinterCameraNote(PrinterSession session) =>
+        BambuBar.Core.Camera.CameraTransports.ForModel(session.Config.ModelName) == BambuBar.Core.Camera.CameraTransport.Rtsps
+            ? "Shows the printer's live view. It needs **LAN Only Liveview** turned on on the printer (Settings → Network on its screen)."
+            : "Shows the printer's live view.";
+
+    private void AppendPrinterSettings(PrinterSession session)
     {
-        Header(Loc.T("Printers"));
-        var list = Module();
-        foreach (var printer in _store.Sessions)
+        var details = Module(); var name = Gtk.Entry.New(); name.SetText(session.Config.Name); name.SetWidthChars(22);
+        var editName = Row(8); var revert = Button("edit-undo-symbolic", Loc.T("Revert"), () => name.SetText(session.Config.Name));
+        var save = Button("object-select-symbolic", Loc.T("Save"), () => { _store.Rename(session.Id, name.GetText().Trim()); Rebuild(); });
+        editName.Append(revert); editName.Append(save); editName.Append(name); details.Append(SettingRow("Name", editName));
+        void NameChanged() { var dirty = name.GetText() != session.Config.Name; save.SetVisible(dirty); revert.SetVisible(dirty); save.SetSensitive(!string.IsNullOrWhiteSpace(name.GetText())); }
+        name.OnChanged += (_, _) => NameChanged(); NameChanged();
+        if (_store.AnnouncedName(session.Id) is { } announced && announced != session.Config.Name)
+            details.Append(Button("edit-undo-symbolic", Loc.F("Use “%@”", announced), () => { _store.Rename(session.Id, announced); Rebuild(); }, true));
+        Detail(details, "Model", () => "Bambu Lab " + session.Config.ModelName);
+        Detail(details, "Serial number", () => session.Config.Serial);
+        Detail(details, "Status", () => "● " + session.LinkSummary);
+        var address = Row(8); address.Append(Label(session.Config.Host, "muted")); address.Append(Button("document-edit-symbolic", Loc.T("Change…"), () => BeginSetup(session.Config), true));
+        details.Append(SettingRow("IP address", address));
+        Toggle(details, "Camera", session.Config.CameraEnabled == true, value => _store.SetCameraEnabled(value, session.Id));
+        details.Append(Note(PrinterCameraNote(session)));
+        if (session.Config.CameraEnabled == true && !_store.CameraEnabled)
         {
-            var row = Row(12); row.AddCssClass("printer-list-row");
-            row.Append(PrinterThumbnail(printer, 30));
-            var text = Column(3); text.SetHexpand(true); text.Append(Label(printer.Config.Name, "heading"));
-            text.Append(Label($"Bambu Lab {printer.Config.ModelName} · {printer.Config.Host}", "caption", "muted")); row.Append(text);
-            row.Append(Live(() => "● " + printer.ShortState, null, "caption", "muted"));
-            if (_store.HasMultiplePrinters) row.Append(Button(printer == _store.Current ? "object-select-symbolic" : "go-next-symbolic", Loc.T("Select"), () => _store.Select(printer.Id)));
-            list.Append(row); list.Append(Gtk.Separator.New(Gtk.Orientation.Horizontal));
+            details.Append(Note("The camera is off for every printer in Settings."));
+            details.Append(Button("emblem-system-symbolic", Loc.T("Open Settings"), () => Navigate("Settings"), true));
         }
-        var add = Row(); var note = Note(_store.IsConfigured ? "Bambu Bar watches all of them at once." : "No printer set up yet."); note.SetHexpand(true); add.Append(note);
-        add.Append(Button("list-add-symbolic", Loc.T("Add Printer…"), () => BeginSetup(), true)); list.Append(add);
-        _pageHost.Append(SettingsSection("Printers", "network-wired-symbolic", list));
-        if (_store.Current is { } session)
+        details.Append(Gtk.Separator.New(Gtk.Orientation.Horizontal));
+        var ignored = session.Config.IgnoredIssues ?? [];
+        Detail(details, "Ignored codes", () => ignored.Count == 0 ? Loc.T("None") : "");
+        if (ignored.Count == 0) details.Append(Note(IgnoredCodesHint));
+        foreach (var id in ignored)
         {
-            var details = Module(); var name = Gtk.Entry.New(); name.SetText(session.Config.Name); name.SetWidthChars(22);
-            var editName = Row(8); var revert = Button("edit-undo-symbolic", Loc.T("Revert"), () => name.SetText(session.Config.Name));
-            var save = Button("object-select-symbolic", Loc.T("Save"), () => { _store.Rename(session.Id, name.GetText().Trim()); Rebuild(); });
-            editName.Append(revert); editName.Append(save); editName.Append(name); details.Append(SettingRow("Name", editName));
-            void NameChanged() { var dirty = name.GetText() != session.Config.Name; save.SetVisible(dirty); revert.SetVisible(dirty); save.SetSensitive(!string.IsNullOrWhiteSpace(name.GetText())); }
-            name.OnChanged += (_, _) => NameChanged(); NameChanged();
-            Detail(details, "Model", () => "Bambu Lab " + session.Config.ModelName);
-            Detail(details, "Serial number", () => session.Config.Serial);
-            Detail(details, "Status", () => "● " + session.LinkSummary);
-            var address = Row(8); address.Append(Label(session.Config.Host, "muted")); address.Append(Button("document-edit-symbolic", Loc.T("Change…"), () => BeginSetup(session.Config), true));
-            details.Append(SettingRow("IP address", address));
-            Toggle(details, "Camera", session.Config.CameraEnabled == true, value => _store.SetCameraEnabled(value, session.Id));
-            details.Append(Note("Shows the printer's live view. Turn on LAN Only Liveview in the printer's network settings when required."));
-            details.Append(Gtk.Separator.New(Gtk.Orientation.Horizontal));
-            var forget = Row(); var follows = Note("Bambu Bar follows the printer if its IP address changes."); follows.SetHexpand(true); forget.Append(follows);
-            forget.Append(Button("edit-delete-symbolic", Loc.T("Forget Printer…"), () => Confirm(Loc.T("Remove"), session.Config.Name, Loc.T("Remove"), () => _store.Forget(session.Id)), true)); details.Append(forget);
-            _pageHost.Append(SettingsSection(_store.HasMultiplePrinters ? session.Config.Name : "Printer", "printer-symbolic", details));
+            var line = Row(); var description = Label(id + " " + HmsCatalog.Shared.IssueText(id, session.Id[..Math.Min(3, session.Id.Length)]), "muted");
+            description.SetWrap(true); description.SetHexpand(true); line.Append(description);
+            line.Append(Button("view-visible-symbolic", Loc.T("Show Again"), () => { _store.Unignore(id, session.Id); Rebuild(); }, true));
+            details.Append(line);
         }
-        var controls = Module(); Toggle(controls, "Ask before stopping a print", _store.ConfirmStop, value => _store.ConfirmStop = value);
-        controls.Append(Note("Pause, stop and speed changes need LAN Only mode with Developer Mode on the printer (Settings → Network on its screen). Reading status and the chamber light work in any mode."));
-        _pageHost.Append(SettingsSection("Controls", "preferences-system-symbolic", controls));
+        details.Append(Gtk.Separator.New(Gtk.Orientation.Horizontal));
+        var forget = Row(); var follows = Note("Bambu Bar follows the printer if its IP address changes."); follows.SetHexpand(true); forget.Append(follows);
+        var forgetButton = Button("edit-delete-symbolic", Loc.T("Forget Printer…"), () => Confirm(Loc.T("Remove"), session.Config.Name, Loc.T("Remove"), () => _store.Forget(session.Id)), true);
+        forgetButton.AddCssClass("destructive-action"); forget.Append(forgetButton); details.Append(forget);
+        _pageHost.Append(SettingsSection("Settings", "emblem-system-symbolic", details));
     }
     private void NotificationsPage()
     {
@@ -230,11 +249,15 @@ internal sealed partial class Shell
         _pageHost.Append(SettingsSection("Language", "preferences-desktop-locale-symbolic", languageCard));
 
         var camera = Module(); Toggle(camera, "Show the printer camera", _store.CameraEnabled, v => { _store.CameraEnabled = v; BuildPanel(); });
-        camera.Append(Note("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the top bar panel and the menus."));
+        camera.Append(Note("Turn the camera on for each printer too, on the Printer page. While it's off, the camera is hidden everywhere: the Printer page, the top bar panel and the menus."));
         var advancedCamera = Gtk.Expander.New(Loc.T("Camera options")); var cameraOptions = Column(8);
         Toggle(cameraOptions, "Keep the camera connected during prints", _store.CameraStaysOnWhilePrinting, v => _store.CameraStaysOnWhilePrinting = v);
         advancedCamera.SetChild(cameraOptions); camera.Append(advancedCamera);
         _pageHost.Append(SettingsSection("Camera", "camera-video-symbolic", camera));
+
+        var controls = Module(); Toggle(controls, "Ask before stopping a print", _store.ConfirmStop, value => _store.ConfirmStop = value);
+        controls.Append(Note("Pause, stop and speed changes need LAN Only mode with Developer Mode on the printer (Settings → Network on its screen). Reading status and the chamber light work in any mode."));
+        _pageHost.Append(SettingsSection("Controls", "preferences-system-symbolic", controls));
 
         var updates = Module(Note("Updates are managed by your Linux installation source. Install a newer Bambu Bar package to update this local build."));
         var version = Row(10); version.Append(Gtk.Image.NewFromIconName("software-update-available-symbolic"));
@@ -242,10 +265,6 @@ internal sealed partial class Shell
         versionText.Append(Label(Environment.GetEnvironmentVariable("FLATPAK_ID") is not null ? "Flatpak · " + Platform.Commit : "Linux · " + Platform.Commit, "muted", "caption"));
         versionText.SetHexpand(true); version.Append(versionText); version.Append(Button("web-browser-symbolic", Loc.T("Downloads"), () => Open("https://bambubar.app/download"), true)); updates.Append(version);
         _pageHost.Append(SettingsSection("Updates", "folder-download-symbolic", updates));
-    }
-    private static Gtk.Box AboutSection(string title, string icon, Gtk.Widget content)
-    {
-        var group = Column(8); group.Append(Label(Loc.T(title).ToUpperInvariant(), "section-title")); group.Append(content); return group;
     }
     private void AboutPage()
     {
@@ -257,11 +276,11 @@ internal sealed partial class Shell
         Detail(copy, "System", () => "Linux · " + System.Runtime.InteropServices.RuntimeInformation.OSArchitecture);
         Detail(copy, "License", () => Loc.T(_license.HasAccess ? "Hero Supporter" : "Free · Community edition"));
         var version = Button("edit-copy-symbolic", Loc.T("Copy Version Info"), () => Gdk.Display.GetDefault()!.GetClipboard().SetText($"Bambu Bar {AppVersion.Marketing} ({Platform.Commit})\n{System.Runtime.InteropServices.RuntimeInformation.OSDescription} · {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}"), true); version.SetHalign(Gtk.Align.End); copy.Append(version);
-        columns.Append(AboutSection("This copy", "help-about-symbolic", copy));
+        columns.Append(SettingsSection("This copy", "help-about-symbolic", copy));
         var links = Module(); links.AddCssClass("about-links");
         foreach (var (label, url) in new[] { ("bambubar.app", "https://bambubar.app"), ("Release Notes", "https://bambubar.app/changelog"), ("Report an Issue", "https://github.com/rolottr/bambu-bar/issues/new") })
         { var link = Button("web-browser-symbolic", Loc.T(label), () => Open(url), true); link.SetHalign(Gtk.Align.Start); links.Append(link); }
-        columns.Append(AboutSection("Links", "web-browser-symbolic", links)); _pageHost.Append(columns);
+        columns.Append(SettingsSection("Links", "web-browser-symbolic", links)); _pageHost.Append(columns);
         var license = Module(Label(Loc.T("Support Bambu Bar"), "job-title"), Note("Bambu Bar is free to use. Activate a supporter license to receive the Hero Supporter badge."), Note("Manage your installations in your account. Deactivate an old installation to make room for another.")); license.AddCssClass("license-card");
         var key = Gtk.Entry.New(); key.SetVisibility(false); key.SetPlaceholderText(Loc.T("License key")); key.SetHexpand(true);
         var actions = Row();
@@ -269,12 +288,12 @@ internal sealed partial class Shell
         var check = Button("view-refresh-symbolic", Loc.T("Check License"), _license.Refresh, true);
         var deactivate = Button("list-remove-symbolic", Loc.T("Deactivate"), () => Confirm(Loc.T("Deactivate this installation?"), "", Loc.T("Deactivate"), _license.Deactivate), true);
         actions.Append(key); actions.Append(activate); actions.Append(check); actions.Append(deactivate); license.Append(actions);
-        var purchase = Row(); var support = Button("starred-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); support.SetHexpand(true); purchase.Append(support); purchase.Append(Button("web-browser-symbolic", Loc.T("Manage Purchase"), () => Open(BambuBar.Core.Licensing.PolarConfiguration.PortalUrl.ToString()), true)); license.Append(purchase);
+        var purchase = Row(); var support = Button("starred-symbolic", Loc.T("Support this project"), () => OpenSupport(BambuBar.Core.Licensing.PolarConfiguration.SupportPlacement.License), true); support.AddCssClass("support"); support.SetHexpand(true); purchase.Append(support); purchase.Append(Button("web-browser-symbolic", Loc.T("Manage Purchase"), () => Open(BambuBar.Core.Licensing.PolarConfiguration.PortalUrl.ToString()), true)); license.Append(purchase);
         var state = Live(() => _license.Busy ? Loc.T("Checking…") : _license.HasAccess ? Loc.T("Hero Supporter") : _license.Message ?? Loc.T("Support this project")); state.SetWrap(true); license.Append(state);
         _updates.Add(() => { activate.SetVisible(!_license.HasRecord); key.SetVisible(!_license.HasRecord); check.SetVisible(_license.HasRecord); deactivate.SetVisible(_license.HasRecord); activate.SetSensitive(!_license.Busy && !_license.HasRecord); check.SetSensitive(!_license.Busy && _license.HasRecord); deactivate.SetSensitive(!_license.Busy && _license.HasRecord); key.SetSensitive(!_license.Busy && !_license.HasRecord); });
-        _pageHost.Append(AboutSection("Your license", "application-certificate-symbolic", license));
-        _pageHost.Append(AboutSection("How it works", "network-wireless-symbolic", Module(Note("Bambu Bar connects straight to your printer on the local network over encrypted MQTT, using the printer’s access code. The printer streams its status; the app shows it in the tray and shares a snapshot with the companion desktop widgets."))));
-        _pageHost.Append(AboutSection("Privacy", "changes-prevent-symbolic", Module(Note("Printer data stays on your local network. No app analytics. Printer access codes and supporter license credentials are stored in your desktop keyring. Supporter licenses are validated online."))));
-        var about = Label(Loc.T("Bambu Lab, Bambu Studio and P2S are trademarks of Bambu Lab. Bambu Bar is an independent project, not affiliated with or endorsed by Bambu Lab."), "muted"); about.SetWrap(true); _pageHost.Append(AboutSection("Credits", "help-about-symbolic", Module(Note("Protocol details and HMS error texts come from the open-source ha-bambulab project. The printer models are visual approximations built for this project in Blender."), about)));
+        _pageHost.Append(SettingsSection("Your license", "application-certificate-symbolic", license));
+        _pageHost.Append(SettingsSection("How it works", "network-wireless-symbolic", Module(BodyText("Bambu Bar connects straight to your printer on the local network over encrypted MQTT, using the printer’s access code. The printer streams its status; the app shows it in the tray and shares a snapshot with the companion desktop widgets."))));
+        _pageHost.Append(SettingsSection("Privacy", "changes-prevent-symbolic", Module(BodyText("Printer data stays on your local network. No app analytics. Printer access codes and supporter license credentials are stored in your desktop keyring. Supporter licenses are validated online."))));
+        var about = BodyText("Bambu Lab, Bambu Studio and P2S are trademarks of Bambu Lab. Bambu Bar is an independent project, not affiliated with or endorsed by Bambu Lab."); _pageHost.Append(SettingsSection("Credits", "help-about-symbolic", Module(BodyText("Protocol details and HMS error texts come from the open-source ha-bambulab project. The printer models are visual approximations built for this project in Blender."), about)));
     }
 }

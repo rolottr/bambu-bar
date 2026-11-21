@@ -30,8 +30,10 @@ def desktop_call(method, parameters=None):
             if method == 'GetState':
                 emit({'type': 'state', 'desktop': json.loads(reply.unpack()[0])})
         except GLib.Error:
-            if method == 'Invoke' and parameters.unpack()[0] in ('show', 'settings', 'filament', 'fleet'):
-                page = {'show':'Printer','settings':'Settings','filament':'Filament','fleet':'All Printers'}[parameters.unpack()[0]]
+            pages = {'show':'Printer', 'settings':'Settings', 'filament':'Filament', 'fleet':'All Printers',
+                     'widgets':'Widgets', 'license':'About'}
+            page = pages.get(parameters.unpack()[0]) if method == 'Invoke' else None
+            if page:
                 BUS.call(APP + '.Native', '/dev/rolottr/BambuBar/Native', APP + '.Native', 'Open', GLib.Variant('(s)', (page,)), None, Gio.DBusCallFlags.NONE, 3000, None, None)
             if method == 'GetState':
                 emit({'type': 'state', 'desktop': {}})
@@ -46,7 +48,7 @@ def send(message):
         action = message.get('action')
         if action == 'open':
             desktop_call('SetOpen', GLib.Variant('(b)', (message.get('value') is True,)))
-        elif action in ('select', 'show', 'settings', 'filament', 'fleet', 'refresh', 'camera', 'light',
+        elif action in ('select', 'show', 'settings', 'filament', 'fleet', 'widgets', 'license', 'support-panel', 'support-menu', 'refresh', 'camera', 'light',
                         'pause', 'resume', 'stop', 'stop-confirmed', 'quit', 'dismiss-issue') or (isinstance(action, str) and action.startswith('speed:')):
             desktop_call('Invoke', GLib.Variant('(ss)', (action, str(message.get('printer', '')))))
     elif connection:

@@ -31,7 +31,9 @@ def call(connection, sender, path, interface, method, parameters, invocation):
         if not owned:
             subprocess.Popen(['flatpak', 'run', APP, '--background'], stdin=subprocess.DEVNULL)
         page = parameters.unpack()[0]
-        if page not in ('Printer', 'Filament', 'All Printers', 'Menu Bar', 'Notifications', 'Printers', 'Widgets', 'Settings', 'About'):
+        if page == "Printers":
+            page = "Printer"
+        if page not in ('Printer', 'Filament', 'All Printers', 'Menu Bar', 'Notifications', 'Setup', 'Widgets', 'Settings', 'About'):
             invocation.return_dbus_error(APP + '.InvalidPage', 'Unknown page')
             return
         if process is None or process.poll() is not None:

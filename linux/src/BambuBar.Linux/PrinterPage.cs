@@ -11,6 +11,7 @@ internal sealed partial class Shell
     {
         var session = _store.Current!;
         var heading = Header(session.Config.Name, $"Bambu Lab {session.Config.ModelName} · {session.Config.Host} · Firmware {session.Status?.Firmware ?? "—"}");
+        if (!_store.HasMultiplePrinters) heading.Append(Button("list-add-symbolic", Loc.T("Add Printer…"), () => BeginSetup(), true));
         heading.Append(Button("view-refresh-symbolic", Loc.T("Refresh"), _store.Refresh));
         if (!session.IsOnline)
         {
@@ -50,13 +51,7 @@ internal sealed partial class Shell
             Detail(capabilities, "Filament", () => model.UsesAmsLite ? "AMS Lite" : "AMS, AMS 2 Pro, AMS HT", "media-optical-symbolic");
             specs.Append(dimensions); specs.Append(capabilities); _pageHost.Append(specs);
         }
-        var history = _store.HistoryFor(session.Id);
-        if (history.Count > 0)
-        {
-            var recent = Module(Label(Loc.T("Last print"), "section-title"));
-            foreach (var job in history) recent.Append(Label($"{job.Name} · {job.Outcome.Title()}"));
-            _pageHost.Append(recent);
-        }
+        AppendPrinterSettings(session);
     }
     private static string WifiDescription(int signal) => Loc.T(signal == -90 ? "Ethernet" : signal >= -55 ? "Wi-Fi excellent" : signal >= -67 ? "Wi-Fi good" : signal >= -75 ? "Wi-Fi fair" : signal >= -89 ? "Wi-Fi weak" : "Wi-Fi poor");
     private static string NozzleMaterial(string? code)
@@ -247,7 +242,7 @@ internal sealed partial class Shell
         _panelSchema = Schema;
         foreach (var clean in _panelCleanup) clean(); _panelCleanup.Clear();
         _panelUpdates.Clear();
-        var root = Column(12); root.AddCssClass("quick-panel"); root.SetMarginTop(12); root.SetMarginBottom(14); root.SetMarginStart(14); root.SetMarginEnd(14);
+        var root = Column(12); root.AddCssClass("quick-panel"); root.SetMarginTop(18); root.SetMarginBottom(20); root.SetMarginStart(20); root.SetMarginEnd(20);
         var header = Row(); var title = Label(_store.PrinterName, "heading"); title.SetHexpand(true); header.Append(title);
         header.Append(Button("window-new-symbolic", Loc.T("Open Bambu Bar"), Present)); header.Append(Button("application-exit-symbolic", Loc.T("Quit"), _app.Quit)); root.Append(header);
         if (_store.Current is { } session)
@@ -259,6 +254,15 @@ internal sealed partial class Shell
             if (_settings.Get(AppSettings.Keys.PanelFans, false)) root.Append(Live(() => DesktopPanel.FanText(session.Status), _panelUpdates, "caption", "muted"));
         }
         else root.Append(Button("list-add-symbolic", Loc.T("Add Printer…"), Present, true));
+        if (!_license.HasAccess)
+        {
+            var links = Row();
+            var support = Button("emote-love-symbolic", Loc.T("Support this project"), () => DesktopAction("support-panel", null), true);
+            var manage = Button("changes-allow-symbolic", Loc.T("Manage License…"), () => DesktopAction("license", null), true);
+            support.AddCssClass("flat"); manage.AddCssClass("flat");
+            support.SetHalign(Gtk.Align.Start); support.SetHexpand(true);
+            links.Append(support); links.Append(manage); root.Append(links);
+        }
         var scroll = Gtk.ScrolledWindow.New(); scroll.SetPolicy(Gtk.PolicyType.Never, Gtk.PolicyType.Automatic); scroll.SetPropagateNaturalHeight(true);
         var availableHeight = 700;
         if (_panel.GetSurface() is { } surface && Gdk.Display.GetDefault()?.GetMonitorAtSurface(surface) is { } monitor)

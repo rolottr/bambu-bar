@@ -58,12 +58,17 @@ internal sealed class Tray : IStatusItem, IDisposable
     public ObjectPath ObjectPath => new("/StatusNotifierItem");
     public bool Available { get; private set; }
 
-    public Tray(PrinterStore store, Action<int, int> panel, Action show, Action quit)
+    public Tray(PrinterStore store, Action<int, int> panel, Action show, Action quit, Action<string> navigate)
     {
         var context = SynchronizationContext.Current ?? throw new InvalidOperationException("Create the tray on the GTK thread.");
         Action Dispatch(Action action) => () => context.Post(_ => { if (!_disposed) action(); }, null);
         _store = store; _panel = (x, y) => context.Post(_ => { if (!_disposed) panel(x, y); }, null); _show = Dispatch(show); _quit = Dispatch(quit);
-        _menu = new Menu(() => _panel(-1, -1), _show, _quit);
+        _menu = new Menu([
+            ("Quick view", () => _panel(-1, -1)), ("Open Bambu Bar", _show),
+            ("Filament", Dispatch(() => navigate("filament"))), ("Widgets", Dispatch(() => navigate("widgets"))),
+            ("Settings", Dispatch(() => navigate("settings"))), ("Support this project", Dispatch(() => navigate("support-menu"))),
+            ("Manage License…", Dispatch(() => navigate("license"))), ("Quit", _quit)
+        ]);
     }
     public async Task Start()
     {
@@ -146,16 +151,15 @@ internal sealed class Tray : IStatusItem, IDisposable
     public Task<IDisposable> WatchNewStatusAsync(Action<string> handler) => Task.FromResult(_status.Watch(handler));
     public void Dispose() { _disposed = true; _store.PropertyChanged -= Changed; _watcher?.Dispose(); _shellWatcher?.Dispose(); _connection.Dispose(); }
 
-    private sealed class Menu(Action panel, Action show, Action quit) : ITrayMenu
+    private sealed class Menu((string Label, Action Run)[] entries) : ITrayMenu
     {
         public ObjectPath ObjectPath => new("/Menu");
-        private readonly Action[] _actions = [panel, show, quit];
-        private static IDictionary<string, object> Props(int id) => id == 0 ? new Dictionary<string, object> { ["children-display"] = "submenu" } : new Dictionary<string, object> { ["label"] = id switch { 1 => "Quick view", 2 => "Open Bambu Bar", _ => "Quit" }, ["enabled"] = true, ["visible"] = true };
+        private IDictionary<string, object> Props(int id) => id == 0 ? new Dictionary<string, object> { ["children-display"] = "submenu" } : new Dictionary<string, object> { ["label"] = id > 0 && id <= entries.Length ? Loc.T(entries[id - 1].Label) : "", ["enabled"] = true, ["visible"] = true };
         public Task<(uint, (int, IDictionary<string, object>, object[]))> GetLayoutAsync(int parentId, int recursionDepth, string[] propertyNames) =>
-            Task.FromResult((1u, (parentId, Props(parentId), parentId == 0 && recursionDepth != 0 ? new object[] { (1, Props(1), Array.Empty<object>()), (2, Props(2), Array.Empty<object>()), (3, Props(3), Array.Empty<object>()) } : Array.Empty<object>())));
-        public Task<(int, IDictionary<string, object>)[]> GetGroupPropertiesAsync(int[] ids, string[] propertyNames) => Task.FromResult((ids.Length == 0 ? [0, 1, 2, 3] : ids).Select(id => (id, Props(id))).ToArray());
+            Task.FromResult((1u, (parentId, Props(parentId), parentId == 0 && recursionDepth != 0 ? Enumerable.Range(1, entries.Length).Select(id => (object)(id, Props(id), Array.Empty<object>())).ToArray() : Array.Empty<object>())));
+        public Task<(int, IDictionary<string, object>)[]> GetGroupPropertiesAsync(int[] ids, string[] propertyNames) => Task.FromResult((ids.Length == 0 ? Enumerable.Range(0, entries.Length + 1).ToArray() : ids).Select(id => (id, Props(id))).ToArray());
         public Task<object> GetPropertyAsync(int id, string name) => Task.FromResult(Props(id)[name]);
-        public Task EventAsync(int id, string eventId, object data, uint timestamp) { if (eventId == "clicked" && id is >= 1 and <= 3) _actions[id - 1](); return Task.CompletedTask; }
+        public Task EventAsync(int id, string eventId, object data, uint timestamp) { if (eventId == "clicked" && id >= 1 && id <= entries.Length) entries[id - 1].Run(); return Task.CompletedTask; }
         public async Task<int[]> EventGroupAsync((int id, string eventId, object data, uint timestamp)[] events) { foreach (var e in events) await EventAsync(e.id, e.eventId, e.data, e.timestamp); return []; }
         public Task<bool> AboutToShowAsync(int id) => Task.FromResult(false);
         public Task<(int[], int[])> AboutToShowGroupAsync(int[] ids) => Task.FromResult((Array.Empty<int>(), Array.Empty<int>()));

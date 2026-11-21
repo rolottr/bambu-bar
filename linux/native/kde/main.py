@@ -16,13 +16,11 @@ class Connection(QObject):
     def __init__(self):
         super().__init__()
         self.pending = bytearray()
-        self.ready = False
         self.appearance = None
         self.process = QProcess(self)
         self.process.setProgram('/usr/bin/python3')
         self.process.setArguments([str(ROOT.parent / 'bridge.py')])
         self.process.readyReadStandardOutput.connect(self.read)
-        self.process.start()
     def read(self):
         self.pending.extend(bytes(self.process.readAllStandardOutput()))
         while b'\n' in self.pending:
@@ -67,6 +65,15 @@ class Connection(QObject):
                 palette.setColor(getattr(QPalette.ColorRole, role), QColor(*map(int, raw.split(','))))
         app.setProperty('KDE_COLOR_SCHEME_PATH', str(path))
         app.setPalette(palette)
+    @pyqtProperty(str, constant=True)
+    def previewWallpaper(self):
+        # Plasma ships its default wallpaper as a package with landscape and portrait variants.
+        images = Path("/usr/share/wallpapers/Next/contents/images")
+        landscapes = sorted(p for p in images.glob("*") if p.stem.partition("x")[0].isdigit()
+                            and p.stem.partition("x")[2].isdigit()
+                            and int(p.stem.split("x")[0]) > int(p.stem.split("x")[1]))
+        return landscapes[0].as_uri() if landscapes else ""
+
     @pyqtProperty(bool, constant=True)
     def demo(self):
         return bool(os.environ.get('BAMBUBAR_DEMO'))
@@ -87,7 +94,7 @@ engine = QQmlApplicationEngine()
 engine.rootContext().setContextProperty('backend', bridge)
 engine.load(QUrl.fromLocalFile(str(ROOT / 'Main.qml')))
 if not engine.rootObjects():
-    bridge.close()
     sys.exit(1)
+bridge.process.start()
 app.aboutToQuit.connect(bridge.close)
 sys.exit(app.exec())

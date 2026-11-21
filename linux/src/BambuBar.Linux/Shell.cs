@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using BambuBar.Core.Licensing;
 using BambuBar.Core;
 using BambuBar.Core.App;
 using BambuBar.Core.Model;
@@ -30,7 +31,7 @@ internal sealed partial class Shell : IDisposable
     private string _pickerKey = "";
     private readonly List<Action> _updates = [];
     private readonly List<Action> _cleanup = [];
-    private readonly string[] _pages = ["All Printers", "Printer", "Filament", "Menu Bar", "Notifications", "Printers", "Widgets", "Settings", "About"];
+    private readonly string[] _pages = ["All Printers", "Printer", "Filament", "Menu Bar", "Notifications", "Widgets", "Settings", "About"];
     private PrinterConfig? _setupConfig;
     private string? _error;
     private string _schema = "";
@@ -63,13 +64,28 @@ internal sealed partial class Shell : IDisposable
         var header = Adw.HeaderBar.New();
         header.SetTitleWidget(Label(_testDesktop ? "Bambu Bar — Virtual printers" : "Bambu Bar", "heading"));
         header.PackEnd(Button("application-exit-symbolic", "Quit Bambu Bar", app.Quit));
-        var support = Button("starred-symbolic", Loc.T("Support this project"), () => Open("https://bambubar.app/download"), true); support.AddCssClass("support"); header.PackEnd(support);
+        _license = new Licensing(_ephemeral);
+        var support = Button("emote-love-symbolic", Loc.T("Support this project"), () => OpenSupport(PolarConfiguration.SupportPlacement.MainWindow), true);
+        var hero = Button("starred-symbolic", Loc.T("Hero Supporter"), () => Navigate("About"), true);
+        support.AddCssClass("support");
+        header.PackEnd(support);
+        header.PackEnd(hero);
+        void UpdateSupport()
+        {
+            support.SetVisible(!_license.HasAccess);
+            hero.SetVisible(_license.HasAccess);
+            _desktop?.Queue();
+            if (_panel?.GetVisible() == true) BuildPanel();
+            if (_ready && _page is ("About" or "Menu Bar")) Refresh();
+        }
+        hero.SetVisible(_license.HasAccess);
+        _license.Changed += UpdateSupport;
         root.Append(header);
         var split = Row(0); split.SetVexpand(true);
         var sidebar = Column(6); sidebar.SetSizeRequest(210, -1); sidebar.AddCssClass("sidebar");
         _printerPicker = Column(6); sidebar.Append(_printerPicker);
         _nav = Gtk.ListBox.New(); _nav.SetSelectionMode(Gtk.SelectionMode.Single); _nav.AddCssClass("navigation-sidebar");
-        var icons = new[] { "view-grid-symbolic", "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "network-wired-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "help-about-symbolic" };
+        var icons = new[] { "view-grid-symbolic", "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "help-about-symbolic" };
         for (var i = 0; i < _pages.Length; i++)
         {
             var row = Gtk.ListBoxRow.New(); var content = Row(10);
@@ -91,13 +107,11 @@ internal sealed partial class Shell : IDisposable
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) =>
         {
             if ((e.State & Gdk.ModifierType.ControlMask) == 0) return false;
-            var shortcut = e.Keyval switch { 48 => "All Printers", 49 => "Printer", 50 => "Filament", 51 => "Widgets", 52 => "Settings", 53 => "About", 54 => "Printers", 55 => "Menu Bar", 56 => "Notifications", _ => null };
+            var shortcut = e.Keyval switch { 48 => "All Printers", 49 => "Printer", 50 => "Filament", 51 => "Widgets", 52 => "Settings", 53 => "About", 55 => "Menu Bar", 56 => "Notifications", _ => null };
             if (shortcut is not null) { Navigate(shortcut); return true; }
             switch (e.Keyval) { case 114: _store.Refresh(); return true; case 108: _store.ToggleLight(); return true; case 113: _app.Quit(); return true; case 107: if (_store.Current is { } camera) OpenCamera(camera); return true; case 119: _window.Close(); return true; case 44: _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, "Settings"))); return true; }
             return false;
         }; _window.AddController(keys);
-        _license = new Licensing(_ephemeral);
-        _license.Changed += () => { if (_page == "About") Refresh(); };
         _window.OnNotify += (_, e) => { if (e.Pspec.GetName() == "suspended") _store.Current?.Camera.ViewersChanged(); };
         _window.OnMap += (_, _) => Refresh();
         _store.CameraSettingsChanged = () => { foreach (var entry in _cameraWindows.ToArray()) if (_store.Session(entry.Key)?.ShowsCamera != true) entry.Value.Window.Close(); };
@@ -122,7 +136,7 @@ internal sealed partial class Shell : IDisposable
     public void PrepareQuit() => _native?.Send(new { type = "quit" });
     public void Present() { if (UseNativeUi) { PresentNative(_page); return; } if (_hyprlandPopup is not null) _panel?.SetVisible(false); Platform.Trace($"present before: disposed={_disposed} visible={_window.GetVisible()} mapped={_window.GetMapped()} suspended={_window.IsSuspended()}"); _window.Present(); Refresh(); Platform.Trace($"present after: visible={_window.GetVisible()} mapped={_window.GetMapped()}"); }
     public void ShowQuickView() => ShowPanel();
-    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (OwnsDesktop || UseNativeUi) { _desktop = new DesktopPanel(_store, _settings, DesktopAction); _desktop.Published += QueueNative; if (OwnsDesktop) _ = StartDesktop(); StartNativeUi(); } _tray = new Tray(_store, ShowPanelAt, Present, () => DesktopAction("quit", null)); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
+    public void Started() { _ready = true; SubscribeSessions(); Rebuild(); if (OwnsDesktop || UseNativeUi) { _desktop = new DesktopPanel(_store, _settings, DesktopAction, () => _license.HasAccess); _desktop.Published += QueueNative; if (OwnsDesktop) _ = StartDesktop(); StartNativeUi(); } _tray = new Tray(_store, ShowPanelAt, Present, () => DesktopAction("quit", null), action => DesktopAction(action, _store.Current)); _ = StartTray(); if (!_ephemeral && _store.IsConfigured) _ = RequestBackground(); if (_pendingCommand is { } command) { _pendingCommand = null; var completion = _pendingCompletion; _pendingCompletion = null; HandleCommand(command, completion); } }
     private async Task StartDesktop() { try { await _desktop!.Start(); } catch (Exception) { Platform.Log("Native desktop panel unavailable; standard tray remains available."); } }
     private void DesktopAction(string action, PrinterSession? session)
     {
@@ -131,6 +145,8 @@ internal sealed partial class Shell : IDisposable
             case "select": break;
             case "show": Navigate("Printer"); Present(); break;
             case "widgets": Navigate("Widgets"); Present(); break;
+            case "support-panel": OpenSupport(PolarConfiguration.SupportPlacement.MenuPanel); break;
+            case "support-menu": OpenSupport(PolarConfiguration.SupportPlacement.AppMenu); break;
             case "license": Navigate("About"); Present(); break;
             case "dismiss-issue" when session?.Status?.MostSevereIssue is { } issue: session.Dismiss(issue); break;
             case "settings": Navigate("Settings"); Present(); break;
@@ -200,6 +216,7 @@ internal sealed partial class Shell : IDisposable
     private void BeginSetup(PrinterConfig? config = null) { _setupConfig = config; Navigate("Setup"); }
     private void Navigate(string page)
     {
+        if (page == "Printers") page = "Printer"; // Older launchers used the management page.
         if (page == "All Printers" && !_store.HasMultiplePrinters) page = "Printer";
         var index = Array.IndexOf(_pages, page);
         if (index >= 0 && _nav.GetSelectedRow()?.GetIndex() != index) { _nav.SelectRow(_nav.GetRowAtIndex(index)); return; }
@@ -219,7 +236,6 @@ internal sealed partial class Shell : IDisposable
         else if (_page == "Printer") { if (_store.IsConfigured) PrinterPage(); else SetupPage(); }
         else if (_page == "Filament") FilamentPage();
         else if (_page == "All Printers") FleetPage();
-        else if (_page == "Printers") PrintersPage();
         else if (_page == "Notifications") NotificationsPage();
         else if (_page == "Settings") SettingsPage();
         else if (_page is "Menu Bar" or "Quick view") QuickViewPage();
@@ -229,6 +245,7 @@ internal sealed partial class Shell : IDisposable
     }
     public void Error(string message) { _nativeError = message; QueueNative(); _error = message; _message.SetText(message); _message.SetVisible(true); }
     private void Async(Func<Task> work) { _ = Execute(); async Task Execute() { try { await work(); } catch (Exception e) { Error(e.Message); } } }
+    private void OpenSupport(PolarConfiguration.SupportPlacement placement) => Open(PolarConfiguration.SupportUrl(placement, "app_linux").ToString());
     private void Open(string uri) => Gtk.Functions.ShowUri(_window, uri, 0);
     private static Gtk.Box Column(int gap = 12) => Gtk.Box.New(Gtk.Orientation.Vertical, gap);
     private static Gtk.Box Row(int gap = 12) => Gtk.Box.New(Gtk.Orientation.Horizontal, gap);

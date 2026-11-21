@@ -194,8 +194,13 @@ export default class BambuBarExtension extends Extension {
         const footerItem = new PopupMenu.PopupBaseMenuItem({reactive: true, activate: false, hover: false, can_focus: false});
         footerItem.add_style_class_name('bambu-container');
         const footerBody = box(true, 'bambu-content bambu-footer-body');
-        const links = box(false, 'bambu-footer');
-        this._support = this._textButton('Support this project', () => Gio.AppInfo.launch_default_for_uri('https://bambubar.app/download', null));
+        const links = this._supportLinks = box(false, 'bambu-footer');
+        this._support = this._textButton('Support this project', () => this._invoke('support-panel', true));
+        const supportContent = box(false, 'bambu-inline-icon');
+        supportContent.add_child(new St.Icon({icon_name: 'emote-love-symbolic', icon_size: 14}));
+        this._supportText = label('Support this project');
+        supportContent.add_child(this._supportText);
+        this._support.set_child(supportContent);
         this._support.style_class = 'bambu-link';
         this._support.x_align = Clutter.ActorAlign.START;
         this._license = this._textButton('Manage License…', () => this._invoke('license', true));
@@ -307,6 +312,9 @@ export default class BambuBarExtension extends Extension {
         this._quit.visible = Boolean(this._proxy?.g_name_owner);
         this._openText.text = this._t('Open Bambu Bar');
         this._quit.label = this._t('Quit');
+        this._supportLinks.visible = this._state.supporter === false;
+        this._supportText.text = this._support.accessible_name = this._t('Support this project');
+        this._license.label = this._t('Manage License…');
 
         const printers = this._state.printers ?? [];
         const pickerKey = JSON.stringify(printers) + p?.id;
@@ -340,8 +348,6 @@ export default class BambuBarExtension extends Extension {
         this._issueCode.label = p.issueId ?? '';
         this._issueCode.accessible_name = this._t('Copy code');
         this._wiki.visible = Boolean(p.issueWiki);
-        this._support.label = this._t('Support this project');
-        this._license.label = this._t('Manage License…');
         this._issue.visible = Boolean(p.issue);
         if (p.art && this._artPath !== p.art) {
             this._artPath = p.art;

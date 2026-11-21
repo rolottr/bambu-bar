@@ -142,6 +142,10 @@ internal sealed partial class Shell
         var codeRow = Row(6); codeRow.Append(Live(() => session.Status?.MostSevereIssue?.Id ?? "", updates, "monospace", "muted", "caption"));
         codeRow.Append(Button("edit-copy-symbolic", Loc.T("Copy code"), () => { if (session.Status?.MostSevereIssue is { } issue) Gdk.Display.GetDefault()?.GetClipboard().SetText(issue.Id); }));
         codeRow.Append(Button("help-browser-symbolic", "Wiki", () => { if (session.Status?.MostSevereIssue?.WikiUrl is { } url) Open(url.ToString()); }, true)); text.Append(codeRow);
+        if (updates is null)
+            codeRow.Append(Button("view-conceal-symbolic", Loc.T("Ignore"), () => {
+                if (session.Status?.MostSevereIssue is { } issue) { _store.Ignore(issue, session.Id); Rebuild(); }
+            }, true));
         row.Append(text); var dismiss = Button("window-close-symbolic", Loc.T("Dismiss until the printer clears it"), () => { if (session.Status?.MostSevereIssue is { } issue) session.Dismiss(issue); }); dismiss.SetValign(Gtk.Align.Start); row.Append(dismiss); card.Append(row);
         (updates ?? _updates).Add(() => card.SetVisible(session.Status?.MostSevereIssue is not null)); return card;
     }

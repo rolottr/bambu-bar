@@ -25,8 +25,14 @@ internal sealed partial class Shell
         var svg = $"<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='{path}' fill='none' stroke='{color}' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>";
         using var bytes = GLib.Bytes.New(System.Text.Encoding.UTF8.GetBytes(svg)); image.SetFromGicon(Gio.BytesIcon.New(bytes)); return image;
     }
-    private static Gtk.Label Note(string text)
-    { var label = Label(Loc.T(text), "muted", "note"); label.SetWrap(true); return label; }
+    private static Gtk.Label BodyText(string text, params string[] css)
+    {
+        var label = Label(Loc.T(text).Replace("**", ""), css);
+        label.SetWrap(true);
+        return label;
+    }
+
+    private static Gtk.Label Note(string text) => BodyText(text, "dim-label");
 
     private static Gtk.Box SettingsSection(string title, string icon, Gtk.Widget content)
     {

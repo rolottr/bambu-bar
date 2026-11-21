@@ -12,9 +12,8 @@ internal sealed partial class Shell
         if (!_ready) { _pendingCommand = args; _pendingCompletion = complete; return; }
         var page = Array.IndexOf(args, "--page");
         if (UseNativeUi) { HandleNativeCommand(args, complete); return; }
-        if (page >= 0 && page + 1 < args.Length && _pages.Contains(args[page + 1]))
+        if (page >= 0 && page + 1 < args.Length && (_pages.Contains(args[page + 1]) || args[page + 1] == "Printers"))
         {
-            _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, args[page + 1])));
             Navigate(args[page + 1]);
         }
         if (args.Contains("--hide")) { HideMain(); _panel?.SetVisible(false); complete?.Invoke(); return; }

@@ -36,6 +36,12 @@ internal sealed partial class Shell
         panel.Append(temperatures); panel.Append(fans); panel.Append(filament);
         var controls = Row(8); var pause = PreviewControl("media-playback-pause-symbolic", "Pause"); pause.SetHexpand(true); controls.Append(pause);
         var stop = PreviewControl("media-playback-stop-symbolic", "Stop", "sample-stop"); stop.SetHexpand(true); controls.Append(stop); controls.Append(PreviewControl("speedometer-symbolic", "")); panel.Append(controls);
+        var links = Row();
+        var support = PreviewControl("emote-love-symbolic", "Support this project");
+        support.SetHexpand(true); support.SetHalign(Gtk.Align.Start);
+        links.Append(support); links.Append(PreviewControl("changes-allow-symbolic", "Manage License…")); panel.Append(links);
+        _updates.Add(() => links.SetVisible(!_license.HasAccess));
+        links.SetVisible(!_license.HasAccess);
         var footer = Row(); var open = PreviewControl("window-new-symbolic", "Open Bambu Bar"); open.SetHexpand(true); footer.Append(open); footer.Append(PreviewControl("application-exit-symbolic", "Quit")); footer.AddCssClass("sample-footer"); panel.Append(footer);
         var styles = Module(Label(Loc.T("While printing, show"), "heading")); styles.SetSpacing(4);
         Gtk.CheckButton? group = null;
