@@ -578,8 +578,10 @@ internal sealed class ControlsSection : PanelSection
         var paused = s.State == JobState.Paused;
 
         _pause.Look = paused ? ButtonLook.Accent : ButtonLook.Standard;
+        // White on the green gradient, as the Mac draws it, in Bambu Glass; elsewhere the text that reads on the accent.
+        var macWhite = Ctx.Dark && AppTheme.IsGlass && AppTheme.AccentChoice == AccentChoice.Bambu;
         _pause.Content = Label(locked ? Icons.Lock : paused ? Icons.Play : Icons.Pause, paused ? Loc.T("Resume") : Loc.T("Pause"),
-            paused ? (Ctx.Dark ? Brushes.White : Ctx.Brush(ThemeKeys.TextOnAccent)) : Ctx.Brush(ThemeKeys.TextPrimary));
+            paused ? (macWhite ? Brushes.White : Ctx.Brush(ThemeKeys.TextOnAccent)) : Ctx.Brush(ThemeKeys.TextPrimary));
         AutomationProperties.SetName(_pause, paused ? Loc.T("Resume") : Loc.T("Pause"));
         Ui.Tip(_pause, lockedHelp ?? (paused ? Loc.T("Resume the print") : Loc.T("Pause the print")));
 

@@ -1,7 +1,11 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using BambuBar.Core;
+using BambuBar.Core.App;
 using BambuBar.Core.Updates;
 using BambuBar.Platform;
 using BambuBar.Theme;
@@ -9,7 +13,8 @@ using BambuBar.TrayPanel;
 
 namespace BambuBar.AppWindow;
 
-/// <summary>The app's preferences (the Mac's SettingsPage): opening at sign-in, the language, the camera, and updates.</summary>
+/// <summary>The app's preferences (the Mac's SettingsPage): opening at sign-in, the language, the appearance, the camera,
+/// and updates.</summary>
 internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
 {
     private readonly Region _startupNote = new();
@@ -19,6 +24,10 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
     private ToggleSwitch _signIn = null!;
     private TextBlock _signInError = null!;
     private Dropdown _language = null!;
+    private Dropdown _mode = null!;
+    private Dropdown _accent = null!;
+    private readonly Dictionary<AppearanceStyle, ChromeToggle> _styles = [];
+    private AccentChoice? _accentShown;
 
     public override FrameworkElement Build()
     {
@@ -36,12 +45,14 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         languageBody.Children.Add(W.Row(Loc.T("Language"), _language));
         languageBody.Children.Add(_languageNote.Host);
 
+        var appearance = AppearanceGroup();
+
         var camera = W.Group(Loc.T("Camera"), Icons.Camera, out var cameraBody);
         cameraBody.Children.Add(W.Switch(Loc.T("Show the printer camera"), Store.CameraEnabled, on => { Store.CameraEnabled = on; Refresh(); }));
         cameraBody.Children.Add(W.Note(Loc.T("Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the tray panel and the menus.")));
         cameraBody.Children.Add(_cameraMore.Host);
 
-        return new Stack { Spacing = 22, Children = { W.PageHeader(Loc.T("Settings"), null), general, language, camera, _updates.Host } };
+        return new Stack { Spacing = 22, Children = { W.PageHeader(Loc.T("Settings"), null), general, language, appearance, camera, _updates.Host } };
     }
 
     public override void Refresh()
@@ -72,6 +83,15 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
             }
             return row;
         });
+
+        _mode.Text = AppTheme.Mode.Title();
+        foreach (var (style, toggle) in _styles) toggle.IsChecked = style == AppTheme.Style;
+        if (_accentShown != AppTheme.AccentChoice)
+        {
+            _accentShown = AppTheme.AccentChoice;
+            _accent.Text = _accentShown.Value.Title();
+            _accent.Icon = Swatch(_accentShown.Value);
+        }
 
         var cameraOn = Store.CameraEnabled;
         _cameraMore.Show(cameraOn.ToString(), () => cameraOn
@@ -159,6 +179,71 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
     {
         Ctx.Settings.Set(WindowSettings.Language, code);
         Refresh();
+    }
+
+    // MARK: Appearance
+
+    /// <summary>Mode, style and accent (the Mac's AppearanceGroup). A change re-themes the panel and this window at once
+    /// (AppTheme.Changed), this page included.</summary>
+    private Stack AppearanceGroup()
+    {
+        var group = W.Group(Loc.T("Appearance"), Icons.ColorPalette, out var body);
+        _mode = new Dropdown(Loc.T("Mode"), Ctx.Theme, () => Enum.GetValues<AppearanceMode>()
+            .Select(mode => new MenuEntry(mode.Title(), () => { AppTheme.Mode = mode; Refresh(); }, mode == AppTheme.Mode)).ToList());
+        body.Children.Add(W.Row(Loc.T("Mode"), _mode));
+
+        body.Children.Add(W.Row(Loc.T("Style"), StylePicker()));
+        body.Children.Add(W.Note(Loc.T("Windows looks like the apps that come with Windows 11: Mica, flat cards and the standard controls. Bambu Glass keeps the soft gradients of the Mac version.")));
+        body.Children.Add(W.Divider());
+
+        _accent = new Dropdown(Loc.T("Accent colour"), Ctx.Theme, () => Enum.GetValues<AccentChoice>()
+            .Select(accent => new MenuEntry(accent.Title(), () => { AppTheme.AccentChoice = accent; Refresh(); }, accent == AppTheme.AccentChoice,
+                _ => Swatch(accent))).ToList());
+        body.Children.Add(W.Row(Loc.T("Accent colour"), _accent));
+        body.Children.Add(W.Note(Loc.T("The accent colour marks buttons, switches, links and selections. Printer states keep their own colours.")));
+        return group;
+    }
+
+    /// <summary>Windows or Bambu Glass: a segmented control, as the Widgets page picks a size.</summary>
+    private AccessibleGroup StylePicker()
+    {
+        var row = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
+        _styles.Clear();
+        foreach (var style in Enum.GetValues<AppearanceStyle>())
+        {
+            var toggle = new ChromeToggle
+            {
+                Content = Ui.Text(style.Title(), WRamp.Body), Height = 30, Padding = new Thickness(12, 0, 12, 1),
+                HorizontalContentAlignment = HorizontalAlignment.Center, CheckedLook = ButtonLook.Standard, CornerRadius = Metrics.Control,
+            };
+            AutomationProperties.SetName(toggle, style.Title());
+            toggle.Click += (_, _) =>
+            {
+                // A click on the current one leaves it on.
+                toggle.IsChecked = true;
+                AppTheme.Style = style;
+                Refresh();
+            };
+            _styles[style] = toggle;
+            row.Children.Add(toggle);
+        }
+        var box = new AccessibleGroup { Child = row, CornerRadius = Metrics.Control, Padding = new Thickness(2), BorderThickness = new Thickness(1), Width = 240 };
+        box.SetResourceReference(Border.BackgroundProperty, WindowKeys.OffFill);
+        box.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.ControlStroke);
+        AutomationProperties.SetName(box, Loc.T("Style"));
+        return box;
+    }
+
+    /// <summary>A dot of the accent as its buttons fill in this theme (decoration: the name says it).</summary>
+    private Ellipse Swatch(AccentChoice accent)
+    {
+        var dot = new Ellipse
+        {
+            Width = 14, Height = 14, VerticalAlignment = VerticalAlignment.Center, StrokeThickness = 1,
+            Fill = Palette.Brush(Palette.Rgb(AppTheme.Shades(accent).Fill(Ctx.Dark))),
+        };
+        dot.SetResourceReference(Shape.StrokeProperty, ThemeKeys.ControlStroke);
+        return dot;
     }
 
     // MARK: Updates

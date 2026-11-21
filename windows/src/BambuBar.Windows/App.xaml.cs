@@ -66,6 +66,8 @@ public partial class App : Application
 
         var folder = AppSettings.DefaultFolder;
         _settings = new AppSettings(ephemeral ? null : Path.Combine(folder, "settings.json"));
+        // Settings → Appearance, before the first view is built with it.
+        AppTheme.Use(_settings);
         // The language picked in Settings, else the first of Windows' languages the catalog has.
         // Only the language shown (and English): a language change restarts the app.
         string? language = null;

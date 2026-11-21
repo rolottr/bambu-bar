@@ -32,9 +32,9 @@ struct WidgetsPage: View {
         HStack(alignment: .top, spacing: 12) {
             Text("\(n)")
                 .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.tint)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Palette.accent.opacity(0.15)))
+                .background(Circle().fill(Palette.tint.opacity(0.15)))
             Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(.secondary).frame(width: 18).padding(.top, 3)
             Text(text).font(.system(size: 12.5)).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
@@ -405,8 +405,8 @@ struct WidgetShowcase: View {
                     Label(feature.title, systemImage: feature.symbol)
                         .font(.system(size: 11, weight: .medium))
                         .padding(.horizontal, 9).padding(.vertical, 4)
-                        .foregroundStyle(on ? Palette.accent : Color.secondary.opacity(0.6))
-                        .background(Capsule().fill(on ? Palette.accent.opacity(0.13) : Color.primary.opacity(0.04)))
+                        .foregroundStyle(on ? Palette.tint : Color.secondary.opacity(0.6))
+                        .background(Capsule().fill(on ? Palette.tint.opacity(0.13) : Color.primary.opacity(0.04)))
                 }
             }
         }

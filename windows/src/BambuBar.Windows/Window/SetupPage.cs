@@ -260,7 +260,7 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         add.Margin = new Thickness(12, 0, 0, 0);
         add.VerticalAlignment = VerticalAlignment.Center;
         grid.Children.Add(Ui.At(add, 2));
-        return W.Card(grid, 14, Palette.Accent);
+        return W.Card(grid, 14, Palette.Tint);
     }
 
     private string ModelCode(SlicerPrinter printer) => Store.Discovered.FirstOrDefault(d => d.Serial == printer.Serial)?.ModelCode ?? "";
@@ -271,8 +271,8 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         var badge = new Border
         {
             Width = 32, Height = 32, CornerRadius = new CornerRadius(16), Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center,
-            Background = Palette.Brush(Palette.WithAlpha(Palette.Accent, 0.15)),
-            Child = Icons.Glyph(glyph, 15, null, Palette.Brush(Palette.Accent)),
+            Background = Palette.Brush(Palette.WithAlpha(Palette.Tint, 0.15)),
+            Child = Icons.Glyph(glyph, 15, null, Palette.Brush(Palette.Tint)),
         };
         return badge;
     }
@@ -297,13 +297,13 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         if (Store.SlicerPrinter(printer.Serial) is { } known)
         {
             var text = printer.LastSeen == DateTimeOffset.MinValue ? Loc.F("From %@", known.Source) : Loc.F("Code in %@", known.Source);
-            grid.Children.Add(Ui.At(Chip(text, "", Palette.Accent), 2));
+            grid.Children.Add(Ui.At(Chip(text, "", Palette.Tint), 2));
         }
         if (printer.ConnectMode is { } mode)
             grid.Children.Add(Ui.At(Chip(mode.Equals("lan", StringComparison.OrdinalIgnoreCase) ? Loc.T("LAN Only") : Loc.T("Cloud"), null, null), 3));
         var button = new ChromeButton
         {
-            Content = grid, Look = selected ? ButtonLook.Tinted(Palette.Accent) : ButtonLook.Card, CornerRadius = Metrics.Card,
+            Content = grid, Look = selected ? ButtonLook.Tinted(Palette.Tint) : ButtonLook.Card, CornerRadius = Metrics.Card,
             Padding = new Thickness(14, 12, 14, 12), HorizontalContentAlignment = HorizontalAlignment.Stretch,
             // The Mac's radio list: one of the printers found, the picked one selected.
             Role = AutomationControlType.RadioButton, Selected = selected,
@@ -448,7 +448,7 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         type.Margin = new Thickness(12, 0, 0, 0);
         type.VerticalAlignment = VerticalAlignment.Center;
         grid.Children.Add(Ui.At(type, 2));
-        return W.Card(grid, 14, Palette.Accent);
+        return W.Card(grid, 14, Palette.Tint);
     }
 
     /// <summary>The typed code, and below it the way to bring the codes of a slicer on another computer: a picked or
@@ -503,8 +503,8 @@ internal sealed class SetupPage(WindowContext ctx, DiscoveredPrinter? candidate)
         e.Effects = files ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
         var lit = over && files;
-        Ui.Tint(card, lit ? Palette.Accent : null);
-        _importIcon.Foreground = lit ? Ctx.Ink(Palette.Accent) : Ctx.Brush(ThemeKeys.TextSecondary);
+        Ui.Tint(card, lit ? Palette.Tint : null);
+        _importIcon.Foreground = lit ? Ctx.Ink(Palette.Tint) : Ctx.Brush(ThemeKeys.TextSecondary);
     }
 
     private void FillImportText()

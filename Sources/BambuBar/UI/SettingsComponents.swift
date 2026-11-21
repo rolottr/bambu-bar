@@ -53,7 +53,7 @@ struct SettingsToggle: View {
         HStack {
             Text(title).font(.system(size: 12.5))
             Spacer()
-            Toggle("", isOn: $isOn).toggleStyle(.switch).labelsHidden().tint(Palette.accentDeep)
+            Toggle("", isOn: $isOn).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
         }
     }
 }

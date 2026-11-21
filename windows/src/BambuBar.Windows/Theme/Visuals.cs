@@ -298,7 +298,8 @@ public sealed class Spinner : FrameworkElement
         var stroke = Math.Max(2, size / 8);
         var r = (size - stroke) / 2;
         var c = new Point(size / 2, size / 2);
-        var pen = new Pen(Palette.Brush(Palette.Accent), stroke) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+        // Fluent's ProgressRing is in the accent.
+        var pen = new Pen(Palette.Brush(Palette.Tint), stroke) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
         var g = new StreamGeometry();
         using (var ctx = g.Open())
         {

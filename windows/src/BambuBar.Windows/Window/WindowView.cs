@@ -156,9 +156,13 @@ public sealed class WindowView : Border, IDisposable
         Refresh();
     }
 
+    /// <summary>Follows a change of the Windows theme or of Settings → Appearance: rebuilds the window and its page, and
+    /// puts the scroll position and keyboard focus back (a mode picked in Settings keeps focus on its drop-down).</summary>
     public void ApplyTheme(ThemeVariant variant)
     {
-        if (variant == Variant) return;
+        if (AppTheme.Look with { Variant = variant } == _look) return;
+        var focus = FocusedName();
+        var offset = _scroller.VerticalOffset;
         Variant = variant;
         _page?.Dispose();
         _page = null;
@@ -168,12 +172,39 @@ public sealed class WindowView : Border, IDisposable
         _route = "";
         Build();
         Refresh();
+        _scroller.ScrollToVerticalOffset(offset);
+        if (focus is not null) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => Refocus(focus));
+    }
+
+    /// <summary>What the window was built for.</summary>
+    private ThemeLook _look;
+
+    /// <summary>The screen reader name of the control with keyboard focus in this view, if it has one.</summary>
+    private string? FocusedName() =>
+        Keyboard.FocusedElement is DependencyObject focused && IsAncestorOf(focused) && AutomationProperties.GetName(focused) is { Length: > 0 } name
+            ? name : null;
+
+    /// <summary>Focuses the first control named <paramref name="name"/> again, in the rebuilt view.</summary>
+    private void Refocus(string name)
+    {
+        static UIElement? Find(DependencyObject parent, string name)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is UIElement { Focusable: true, IsVisible: true } element && AutomationProperties.GetName(element) == name) return element;
+                if (Find(child, name) is { } found) return found;
+            }
+            return null;
+        }
+        Find(this, name)?.Focus();
     }
 
     // MARK: Building
 
     private void Build()
     {
+        _look = AppTheme.Look with { Variant = Variant };
         Theme = WindowTheme.Create(Variant);
         Resources.MergedDictionaries.Clear();
         Resources.MergedDictionaries.Add(Theme);

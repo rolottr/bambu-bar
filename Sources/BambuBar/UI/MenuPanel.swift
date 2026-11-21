@@ -96,14 +96,21 @@ struct MenuPanel: View {
         }
         .padding(12)
         .frame(width: 372)
-        // The menu bar window is clear glass; frost it so text stays legible over busy windows.
-        .background(plainPanel ? AnyShapeStyle(Color.clear) : AnyShapeStyle(.regularMaterial))
+        .background(backdrop)
         .animation(.smooth(duration: 0.3), value: store.toast)
         .animation(.smooth(duration: 0.3), value: store.status?.state)
         .animation(.smooth(duration: 0.25), value: store.selectedSerial)
         .animation(.smooth(duration: 0.25), value: showsAll)
         // Opening the panel shows the printer the menu bar is showing.
         .onAppear { if showsAllOverride == nil, let serial = store.menuBarSession?.id { store.select(serial) } }
+    }
+
+    /// The menu bar window is clear glass. Classic frosts it so text stays legible over busy windows; Liquid Glass
+    /// leaves the window's glass showing and lets its modules, each a pane of glass, carry the legibility, with only
+    /// a light frost for the header and footer between them.
+    private var backdrop: AnyShapeStyle {
+        if plainPanel { return AnyShapeStyle(Color.clear) }
+        return Appearance.shared.usesGlass ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.regularMaterial)
     }
 
     private var header: some View {
@@ -544,7 +551,7 @@ struct PrintControls: View {
         HStack(spacing: 8) {
             if status.state == .paused {
                 Button { store.resume() } label: { Label("Resume", systemImage: locked ? "lock.fill" : "play.fill") }
-                    .buttonStyle(ControlButtonStyle(tint: Palette.accentDeep, prominent: true))
+                    .buttonStyle(ControlButtonStyle(tint: Palette.tintDeep, prominent: true))
                     .help(lockedHelp ?? String(localized: "Resume the print"))
             } else if status.state.isActive {
                 Button { store.pause() } label: { Label("Pause", systemImage: locked ? "lock.fill" : "pause.fill") }
@@ -650,7 +657,7 @@ struct SetupPrompt: View {
             ForEach(store.discovered.prefix(3)) { printer in
                 Button { MainWindow.show(.overview, setup: printer) } label: {
                     HStack {
-                        Image(systemName: "printer.fill").foregroundStyle(Palette.accent)
+                        Image(systemName: "printer.fill").foregroundStyle(Palette.tint)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(printer.name).font(.system(size: 12, weight: .semibold))
                             Text("\(printer.modelName) · \(printer.host)").font(.system(size: 10.5)).foregroundStyle(.secondary)
@@ -666,7 +673,7 @@ struct SetupPrompt: View {
             Button { MainWindow.show(.overview) } label: {
                 Text("Set Up…").frame(maxWidth: .infinity)
             }
-            .buttonStyle(ControlButtonStyle(tint: Palette.accentDeep, prominent: true))
+            .buttonStyle(ControlButtonStyle(tint: Palette.tintDeep, prominent: true))
         }
         .panel(radius: 20, padding: 14)
     }
@@ -695,7 +702,7 @@ struct IssueBanner: View {
                         Button(action: copyCode) {
                             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                                 .font(.system(size: 9.5, weight: .semibold))
-                                .foregroundStyle(copied ? Palette.accent : .secondary)
+                                .foregroundStyle(copied ? Palette.tint : .secondary)
                                 .contentTransition(.symbolEffect(.replace))
                                 .frame(width: 14, height: 14)
                                 .contentShape(Rectangle())
@@ -743,7 +750,7 @@ struct UpdateRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "arrow.down.circle.fill").foregroundStyle(Palette.accent)
+            Image(systemName: "arrow.down.circle.fill").foregroundStyle(Palette.tint)
             Text("Bambu Bar \(release.version) is available").font(.system(size: 11.5, weight: .medium))
             Spacer(minLength: 0)
             Button("Later") { UpdateChecker.shared.dismissOffer() }
@@ -761,7 +768,7 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: toast.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                .foregroundStyle(toast.isError ? Palette.paused : Palette.accent)
+                .foregroundStyle(toast.isError ? Palette.paused : Palette.tint)
             Text(toast.message).font(.system(size: 11.5, weight: .medium)).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
@@ -771,12 +778,18 @@ struct ToastView: View {
 
 struct HeaderIconStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let label = configuration.label
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(.secondary)
             .frame(width: 28, height: 28)
-            .background(Circle().fill(Color.primary.opacity(configuration.isPressed ? 0.14 : 0.06)))
-            .contentShape(Circle())
+        Group {
+            if Appearance.shared.usesGlass {
+                label.glassEffect(.regular.interactive(), in: Circle())
+            } else {
+                label.background(Circle().fill(Color.primary.opacity(configuration.isPressed ? 0.14 : 0.06)))
+            }
+        }
+        .contentShape(Circle())
     }
 }
 

@@ -58,6 +58,8 @@ public static class Icons
     public const string Download = "";
     /// <summary>printer.fill</summary>
     public const string Printer = "";
+    /// <summary>paintpalette (Color): Settings → Appearance.</summary>
+    public const string ColorPalette = "";
     /// <summary>video</summary>
     public const string Camera = "";
     /// <summary>Pin and Pinned: the camera window's "keep on top".</summary>

@@ -12,10 +12,19 @@ namespace BambuBar.Theme;
 /// </summary>
 public static class Palette
 {
-    /// <summary>Bambu-ish green, a touch brighter so it reads on dark glass (0.13, 0.80, 0.42).</summary>
+    /// <summary>Bambu-ish green, a touch brighter so it reads on dark glass (0.13, 0.80, 0.42): the Printing state, and
+    /// the brand's colour (the app's mark, the supporter's star). Buttons, switches, links and selections use
+    /// <see cref="Tint"/>, the accent picked in Settings → Appearance.</summary>
     public static readonly Color Accent = Color.FromRgb(0x21, 0xCC, 0x6B);
-    /// <summary>(0.00, 0.60, 0.29): prominent buttons.</summary>
+    /// <summary>(0.00, 0.60, 0.29): the deep green, beside <see cref="Accent"/>.</summary>
     public static readonly Color AccentDeep = Color.FromRgb(0x00, 0x99, 0x4A);
+
+    /// <summary>The accent for interactive things (Settings → Appearance; Bambu green by default), bright: dots, icons
+    /// and tints in both themes. As text, through <see cref="Ink"/>. Read when views are built; they rebuild when it
+    /// changes (<see cref="AppTheme.Changed"/>).</summary>
+    public static Color Tint => Rgb(AppTheme.Accent.Bright);
+    /// <summary>The accent's deep shade.</summary>
+    public static Color TintDeep => Rgb(AppTheme.Accent.Deep);
     public static readonly Color Preparing = Color.FromRgb(0x5C, 0xA8, 0xFF);
     public static readonly Color Paused = Color.FromRgb(0xFF, 0xB8, 0x3D);
     public static readonly Color Failed = Color.FromRgb(0xFF, 0x5C, 0x5C);
@@ -66,6 +75,9 @@ public static class Palette
     /// <summary>A state colour as text: as is on dark backgrounds, darkened to about 4.5:1 on light ones.</summary>
     public static Color Ink(Color color, bool dark) =>
         dark ? color : Color.FromRgb((byte)(color.R * 0.6), (byte)(color.G * 0.6), (byte)(color.B * 0.6));
+
+    /// <summary>An opaque colour from <c>0xRRGGBB</c> (Core's <see cref="Core.App.AccentShades"/>).</summary>
+    public static Color Rgb(uint rgb) => Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
 
     public static Color WithAlpha(Color color, double alpha) =>
         Color.FromArgb((byte)Math.Round(Math.Clamp(alpha, 0, 1) * 255), color.R, color.G, color.B);

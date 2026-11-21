@@ -61,7 +61,7 @@ internal sealed class SetupSection : PanelSection
     private ChromeButton Row(DiscoveredPrinter printer)
     {
         var grid = Ui.Columns("Auto", "*", "Auto");
-        var icon = Icons.Glyph(Icons.Printer, 14, null, Palette.Brush(Palette.Accent));
+        var icon = Icons.Glyph(Icons.Printer, 14, null, Palette.Brush(Palette.Tint));
         icon.Margin = new Thickness(0, 0, 10, 0);
         grid.Children.Add(Ui.At(icon, 0));
         var name = Ui.Text(printer.Name, Ramp.Footnote, FontWeights.SemiBold);

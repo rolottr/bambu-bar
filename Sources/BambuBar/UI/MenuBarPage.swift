@@ -186,9 +186,9 @@ struct MenuBarPreview: View {
         .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(.white.opacity(0.22)))
         .overlay {
             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .strokeBorder(Palette.accent, lineWidth: 1.5)
+                .strokeBorder(Palette.tint, lineWidth: 1.5)
                 .padding(-3)
-                .shadow(color: Palette.accent.opacity(0.8), radius: 5)
+                .shadow(color: Palette.tint.opacity(0.8), radius: 5)
                 .opacity(lit == .statusItem ? 1 : 0)
         }
         .animation(.smooth(duration: 0.35), value: text)
@@ -297,9 +297,9 @@ private extension View {
     func lit(_ on: Bool) -> some View {
         overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Palette.accent, lineWidth: 1.5)
+                .strokeBorder(Palette.tint, lineWidth: 1.5)
                 .padding(-3)
-                .shadow(color: Palette.accent.opacity(0.7), radius: 6)
+                .shadow(color: Palette.tint.opacity(0.7), radius: 6)
                 .opacity(on ? 1 : 0)
         }
     }

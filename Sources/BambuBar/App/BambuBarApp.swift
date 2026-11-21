@@ -103,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                             transport: probe.transport)
             return
         }
+        Appearance.shared.applyMode()
         SingleInstance.handOverIfRunning(background: background)
         SingleInstance.listen()
         WidgetUpdate.refreshIfUpdated()

@@ -9,7 +9,9 @@ namespace BambuBar.Theme;
 /// <summary>
 /// Builds the theme dictionaries: brushes for <see cref="ThemeVariant"/> under <see cref="ThemeKeys"/>, the fonts, and
 /// implicit styles for tooltips and scroll bars. Built in code rather than loose XAML so a typo fails the build, not a
-/// launch (nobody runs this app on a Mac). Dictionaries are rebuilt when the theme changes; brushes are frozen.
+/// launch (nobody runs this app on a Mac). Dictionaries are rebuilt when the theme changes; brushes are frozen. The
+/// accent and the style are <see cref="AppTheme"/>'s: Fluent's flat tokens for the Windows style, with the Mac's
+/// gradients on top for Bambu Glass.
 /// </summary>
 public static class ThemeResources
 {
@@ -23,6 +25,10 @@ public static class ThemeResources
         var d = new ResourceDictionary();
         void Put(string key, Color color) => d[key] = Palette.Brush(color);
         static Color C(uint argb) => Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb);
+        var accent = AppTheme.Accent;
+        var bright = Palette.Rgb(accent.Bright);
+        // Fluent's TextOnAccentFillColorPrimary: near-black or white, whichever reads on this accent's fill.
+        Color OnAccent(bool dark) => accent.DarkTextOn(dark) ? C(0xE4000000) : C(0xFFFFFFFF);
 
         switch (variant)
         {
@@ -30,8 +36,8 @@ public static class ThemeResources
                 Put(ThemeKeys.TextPrimary, C(0xE4000000));
                 Put(ThemeKeys.TextSecondary, C(0x9E000000));
                 Put(ThemeKeys.TextTertiary, C(0x72000000));
-                Put(ThemeKeys.TextOnAccent, C(0xFFFFFFFF));
-                Put(ThemeKeys.TextLink, Palette.Ink(Palette.Accent, dark: false));
+                Put(ThemeKeys.TextOnAccent, OnAccent(false));
+                Put(ThemeKeys.TextLink, Palette.Ink(bright, dark: false));
                 Put(ThemeKeys.PanelBackground, C(0xFFF3F3F3));
                 Put(ThemeKeys.PanelStroke, C(0x26000000));
                 Put(ThemeKeys.CardFill, C(0x0A000000));
@@ -42,23 +48,25 @@ public static class ThemeResources
                 Put(ThemeKeys.ControlHover, C(0x80F9F9F9));
                 Put(ThemeKeys.ControlPressed, C(0x4DF9F9F9));
                 Put(ThemeKeys.ControlStroke, C(0x17000000));
-                Put(ThemeKeys.ControlSelected, Palette.WithAlpha(Palette.Accent, 0.18));
+                Put(ThemeKeys.ControlSelected, Palette.WithAlpha(bright, 0.18));
                 Put(ThemeKeys.Track, C(0x17000000));
                 Put(ThemeKeys.Divider, C(0x14000000));
                 Put(ThemeKeys.FlyoutFill, C(0xFFFCFCFC));
                 Put(ThemeKeys.FlyoutStroke, C(0x1F000000));
                 Put(ThemeKeys.FocusOuter, C(0xE4000000));
                 Put(ThemeKeys.FocusInner, C(0xB3FFFFFF));
-                Put(ThemeKeys.AccentFill, C(0xFF007A3D));
-                Put(ThemeKeys.AccentHover, C(0xE6007A3D));
-                Put(ThemeKeys.AccentPressed, C(0xCC007A3D));
+                // Fluent's AccentFillColorDefault/Secondary/Tertiary: the fill at 100, 90 and 80 %.
+                var fill = Palette.Rgb(accent.Fill(dark: false));
+                Put(ThemeKeys.AccentFill, fill);
+                Put(ThemeKeys.AccentHover, Palette.WithAlpha(fill, 0.9));
+                Put(ThemeKeys.AccentPressed, Palette.WithAlpha(fill, 0.8));
                 break;
             case ThemeVariant.Dark:
                 Put(ThemeKeys.TextPrimary, C(0xFFFFFFFF));
                 Put(ThemeKeys.TextSecondary, C(0xC5FFFFFF));
                 Put(ThemeKeys.TextTertiary, C(0x87FFFFFF));
-                Put(ThemeKeys.TextOnAccent, C(0xE4000000));
-                Put(ThemeKeys.TextLink, Palette.Accent);
+                Put(ThemeKeys.TextOnAccent, OnAccent(true));
+                Put(ThemeKeys.TextLink, bright);
                 Put(ThemeKeys.PanelBackground, C(0xFF2C2C2C));
                 Put(ThemeKeys.PanelStroke, C(0x1FFFFFFF));
                 Put(ThemeKeys.CardFill, C(0x0DFFFFFF));
@@ -69,16 +77,16 @@ public static class ThemeResources
                 Put(ThemeKeys.ControlHover, C(0x15FFFFFF));
                 Put(ThemeKeys.ControlPressed, C(0x08FFFFFF));
                 Put(ThemeKeys.ControlStroke, C(0x12FFFFFF));
-                Put(ThemeKeys.ControlSelected, Palette.WithAlpha(Palette.Accent, 0.22));
+                Put(ThemeKeys.ControlSelected, Palette.WithAlpha(bright, 0.22));
                 Put(ThemeKeys.Track, C(0x17FFFFFF));
                 Put(ThemeKeys.Divider, C(0x15FFFFFF));
                 Put(ThemeKeys.FlyoutFill, C(0xFF2C2C2C));
                 Put(ThemeKeys.FlyoutStroke, C(0x33000000));
                 Put(ThemeKeys.FocusOuter, C(0xFFFFFFFF));
                 Put(ThemeKeys.FocusInner, C(0xB3000000));
-                Put(ThemeKeys.AccentFill, Palette.Accent);
-                Put(ThemeKeys.AccentHover, Palette.WithAlpha(Palette.Accent, 0.9));
-                Put(ThemeKeys.AccentPressed, Palette.WithAlpha(Palette.Accent, 0.8));
+                Put(ThemeKeys.AccentFill, bright);
+                Put(ThemeKeys.AccentHover, Palette.WithAlpha(bright, 0.9));
+                Put(ThemeKeys.AccentPressed, Palette.WithAlpha(bright, 0.8));
                 break;
             default:
                 // High contrast: the user's system colours, solid surfaces, outlines instead of tints.
@@ -110,7 +118,8 @@ public static class ThemeResources
                 break;
         }
 
-        if (variant != ThemeVariant.HighContrast) Glass(d, variant == ThemeVariant.Dark);
+        var isDark = variant == ThemeVariant.Dark;
+        if (variant != ThemeVariant.HighContrast && AppTheme.IsGlass) Glass(d, isDark, Palette.Rgb(accent.Fill(isDark)));
 
         // Segoe UI Variable on Windows 11; WPF falls back along the list (Segoe UI on Windows 10).
         d[ThemeKeys.FontText] = new FontFamily("Segoe UI Variable Text, Segoe UI");
@@ -129,7 +138,7 @@ public static class ThemeResources
     /// Mac's hairline that fades from top to bottom (PanelBackground's 10 % → 3 % stroke), so they read as lit glass
     /// modules; and the accent fills (Resume, Set Up, switches) are the Mac's tint gradient, lighter at the top.
     /// </summary>
-    private static void Glass(ResourceDictionary d, bool dark)
+    private static void Glass(ResourceDictionary d, bool dark, Color accent)
     {
         static Brush Vertical(Color top, Color bottom)
         {
@@ -143,7 +152,6 @@ public static class ThemeResources
         d[ThemeKeys.PanelBackground] = dark
             ? Vertical(Color.FromRgb(0x33, 0x31, 0x31), Color.FromRgb(0x27, 0x28, 0x2B))
             : Vertical(Color.FromRgb(0xF6, 0xF5, 0xF4), Color.FromRgb(0xEC, 0xED, 0xEF));
-        var accent = dark ? Palette.Accent : Color.FromRgb(0x00, 0x7A, 0x3D);
         d[ThemeKeys.AccentFill] = Vertical(SpoolArt.Mix(accent, Colors.White, 0.12), SpoolArt.Mix(accent, Colors.Black, 0.06));
         d[ThemeKeys.AccentHover] = Vertical(SpoolArt.Mix(accent, Colors.White, 0.2), accent);
         d[ThemeKeys.AccentPressed] = Vertical(accent, SpoolArt.Mix(accent, Colors.Black, 0.12));

@@ -19,7 +19,7 @@ internal sealed class UpdateSection : PanelSection
 
     public UpdateSection(PanelContext ctx) : base(ctx)
     {
-        var icon = Icons.Glyph(Icons.Download, 14, null, Palette.Brush(Palette.Accent));
+        var icon = Icons.Glyph(Icons.Download, 14, null, Palette.Brush(Palette.Tint));
         icon.Margin = new Thickness(0, 0, 8, 0);
         var later = new ChromeButton { Padding = new Thickness(8, 3, 8, 4), Content = Ui.Text(Loc.T("Later"), Ramp.Footnote, null, ThemeKeys.TextSecondary) };
         AutomationProperties.SetName(later, Loc.T("Later"));

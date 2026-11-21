@@ -381,8 +381,8 @@ internal sealed class TrayPreview : AccessibleCard, IDisposable
             _outline = new Border
             {
                 BorderThickness = new Thickness(1.5), CornerRadius = new CornerRadius(11), Margin = new Thickness(-3), IsHitTestVisible = false, Opacity = 0,
-                BorderBrush = Palette.Brush(Palette.Accent),
-                Effect = new DropShadowEffect { Color = Palette.Accent, BlurRadius = 12, ShadowDepth = 0, Opacity = 0.7 },
+                BorderBrush = Palette.Brush(Palette.Tint),
+                Effect = new DropShadowEffect { Color = Palette.Tint, BlurRadius = 12, ShadowDepth = 0, Opacity = 0.7 },
             };
             Children.Add(content);
             Children.Add(_outline);

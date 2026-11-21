@@ -112,7 +112,7 @@ struct SetupPage: View {
                     }
                 }
                 .toggleStyle(.checkbox)
-                .tint(Palette.accentDeep)
+                .tint(Palette.tintDeep)
             }
 
             HStack(spacing: 12) {
@@ -123,7 +123,7 @@ struct SetupPage: View {
                     }
                     .frame(width: 150)
                 }
-                .buttonStyle(ControlButtonStyle(tint: Palette.accentDeep, prominent: true))
+                .buttonStyle(ControlButtonStyle(tint: Palette.tintDeep, prominent: true))
                 .frame(width: 150)
                 .disabled(!canConnect)
                 .keyboardShortcut(.defaultAction)
@@ -211,9 +211,9 @@ struct SetupPage: View {
         return HStack(alignment: .center, spacing: 12) {
             Image(systemName: "square.stack.3d.down.right.fill")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.tint)
                 .frame(width: 30, height: 30)
-                .background(Circle().fill(Palette.accent.opacity(0.15)))
+                .background(Circle().fill(Palette.tint.opacity(0.15)))
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: String(localized: "\(printers.count) printers") + " · " + sources).font(.system(size: 13, weight: .semibold))
                 Text(models).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(2)
@@ -230,10 +230,10 @@ struct SetupPage: View {
             } label: {
                 Text("Add All \(printers.count)").frame(width: 120)
             }
-            .buttonStyle(ControlButtonStyle(tint: Palette.accentDeep, prominent: true))
+            .buttonStyle(ControlButtonStyle(tint: Palette.tintDeep, prominent: true))
             .frame(width: 120)
         }
-        .panel(radius: 16, padding: 14, tint: Palette.accent)
+        .panel(radius: 16, padding: 14, tint: Palette.tint)
     }
 
     private func modelCode(for printer: SlicerPrinter) -> String {
@@ -245,9 +245,9 @@ struct SetupPage: View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: "key.fill")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.tint)
                 .frame(width: 30, height: 30)
-                .background(Circle().fill(Palette.accent.opacity(0.15)))
+                .background(Circle().fill(Palette.tint.opacity(0.15)))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Found in \(source)").font(.system(size: 13, weight: .semibold))
                 Text("Bambu Bar uses the access code saved there for this printer. It's kept in your keychain and only ever sent to the printer.")
@@ -264,7 +264,7 @@ struct SetupPage: View {
             }
             .controlSize(.small)
         }
-        .panel(radius: 16, padding: 14, tint: Palette.accent)
+        .panel(radius: 16, padding: 14, tint: Palette.tint)
     }
 
     private var codeEntry: some View {
@@ -288,7 +288,7 @@ struct SetupPage: View {
             Divider()
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: "square.and.arrow.down.on.square")
-                    .foregroundStyle(dropTargeted ? Palette.accent : .secondary)
+                    .foregroundStyle(dropTargeted ? Palette.tint : .secondary)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(store.slicerAccessNeeded ? "Use the codes Bambu Studio saved" : "Bambu Studio on another Mac?")
                         .font(.system(size: 12, weight: .semibold))
@@ -304,7 +304,7 @@ struct SetupPage: View {
                     .controlSize(.small)
             }
         }
-        .panel(radius: 16, padding: 14, tint: dropTargeted ? Palette.accent : nil)
+        .panel(radius: 16, padding: 14, tint: dropTargeted ? Palette.tint : nil)
         .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
             guard let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -374,7 +374,7 @@ struct SetupPage: View {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 17))
-                    .foregroundStyle(isSelected ? Palette.accent : .secondary)
+                    .foregroundStyle(isSelected ? Palette.tint : .secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(printer.name).font(.system(size: 13, weight: .semibold))
                     Text("Bambu Lab \(printer.modelName) · \(printer.host) · \(printer.serial)")
@@ -385,9 +385,9 @@ struct SetupPage: View {
                     Label(printer.lastSeen == .distantPast ? "From \(knownCode.source)" : "Code in \(knownCode.source)",
                           systemImage: "key.fill")
                         .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(Palette.accent)
+                        .foregroundStyle(Palette.tint)
                         .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(Capsule().fill(Palette.accent.opacity(0.12)))
+                        .background(Capsule().fill(Palette.tint.opacity(0.12)))
                 }
                 if let mode = printer.connectMode {
                     Text(mode.lowercased() == "lan" ? "LAN Only" : "Cloud")
@@ -400,7 +400,7 @@ struct SetupPage: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .panel(radius: 14, padding: 12, tint: isSelected ? Palette.accent : nil)
+        .panel(radius: 14, padding: 12, tint: isSelected ? Palette.tint : nil)
     }
 
     private func field(_ title: LocalizedStringKey, text: Binding<String>, prompt: Text) -> some View {

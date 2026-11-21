@@ -54,10 +54,15 @@ public static class Ui
         if (tint is { } t)
         {
             card.Background = Palette.Brush(Palette.WithAlpha(t, 0.12));
-            // The Mac's hairline, in the tint: brighter at the top, fading down.
-            var edge = new LinearGradientBrush(Palette.WithAlpha(t, 0.34), Palette.WithAlpha(t, 0.08), 90);
-            edge.Freeze();
-            card.BorderBrush = edge;
+            if (AppTheme.IsGlass)
+            {
+                // The Mac's hairline, in the tint: brighter at the top, fading down.
+                var edge = new LinearGradientBrush(Palette.WithAlpha(t, 0.34), Palette.WithAlpha(t, 0.08), 90);
+                edge.Freeze();
+                card.BorderBrush = edge;
+            }
+            // Windows' InfoBar: a flat edge.
+            else card.BorderBrush = Palette.Brush(Palette.WithAlpha(t, 0.22));
         }
         else
         {
