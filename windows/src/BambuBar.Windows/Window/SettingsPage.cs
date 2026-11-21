@@ -218,7 +218,9 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
             var toggle = new ChromeToggle
             {
                 Content = Ui.Text(style.Title(), WRamp.Body), Height = 30, Padding = new Thickness(12, 0, 12, 1),
-                HorizontalContentAlignment = HorizontalAlignment.Center, CheckedLook = ButtonLook.Standard, CornerRadius = Metrics.Control,
+                // The checked look stays the toggle's own: the accent's tint, so the chosen style shows in dark too
+                // (the grey of a standard button barely differs from the track there), as on the Mac.
+                HorizontalContentAlignment = HorizontalAlignment.Center, CornerRadius = Metrics.Control,
             };
             AutomationProperties.SetName(toggle, style.Title());
             toggle.Click += (_, _) =>

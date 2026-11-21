@@ -229,6 +229,28 @@ public class ChromeToggle : ToggleButton
     protected override void OnMouseLeave(MouseEventArgs e) { base.OnMouseLeave(e); Refresh(); }
 
     private void Refresh() => Chrome.Apply(this, IsChecked == true ? CheckedLook : Look, IsMouseOver, IsPressed);
+
+    /// <summary>Narrator and other UI Automation clients toggle a toggle button through its peer, which flips
+    /// <c>IsChecked</c> without raising <c>Click</c>. Every Click handler here (the style segments, the widget sizes,
+    /// all printers, the chamber light) would then see nothing: the button looks pressed, but nothing happens. The
+    /// peer toggles the way a click does instead.</summary>
+    protected override AutomationPeer OnCreateAutomationPeer() => new ClickingPeer(this);
+
+    private sealed class ClickingPeer(ChromeToggle owner) : ToggleButtonAutomationPeer(owner), IToggleProvider
+    {
+        void IToggleProvider.Toggle()
+        {
+            if (!IsEnabled()) throw new ElementNotEnabledException();
+            owner.OnClick();
+        }
+
+        ToggleState IToggleProvider.ToggleState => owner.IsChecked switch
+        {
+            true => ToggleState.On,
+            false => ToggleState.Off,
+            _ => ToggleState.Indeterminate,
+        };
+    }
 }
 
 /// <summary>The template and states shared by the chrome buttons.</summary>
