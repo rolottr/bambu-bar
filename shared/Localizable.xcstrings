@@ -12371,112 +12371,6 @@
         }
       }
     },
-    "Bambu Bar watches all of them at once.": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar sleduje všechny najednou."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar überwacht alle gleichzeitig."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar las supervisa todas a la vez."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar les surveille toutes en même temps."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A Bambu Bar egyszerre mindet figyeli."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar le monitora tutte contemporaneamente."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Barはすべてのプリンターを同時に監視します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar가 모든 프린터를 한 번에 모니터링합니다."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar houdt ze allemaal tegelijk in de gaten."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar obserwuje je wszystkie jednocześnie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Bambu Bar acompanha todas ao mesmo tempo."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar следит за всеми сразу."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar bevakar alla samtidigt."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar hepsini aynı anda izler."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar стежить за всіма одночасно."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar 会同时监控所有打印机。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bambu Bar 會同時監看所有印表機。"
-          }
-        }
-      }
-    },
     "Bambu Bar watches every printer you add; pick which one the menu bar shows in Settings.": {
       "localizations": {
         "cs": {
@@ -31774,6 +31668,220 @@
         }
       }
     },
+    "Ignore": {
+      "comment": "Never show this issue's code for this printer",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorovat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mellőzés"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無視"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무시"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Negeer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignoruj"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorar"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Игнорировать"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorera"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yok say"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ігнорувати"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忽略"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忽略"
+          }
+        }
+      }
+    },
+    "Ignored codes": {
+      "comment": "Printers page: the issue codes hidden for this printer",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorované kódy"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorierte Codes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Códigos ignorados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codes ignorés"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mellőzött kódok"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codici ignorati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無視するコード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무시한 코드"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genegeerde codes"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorowane kody"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Códigos ignorados"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Игнорируемые коды"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorerade koder"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yok sayılan kodlar"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ігноровані коди"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已忽略的代码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已忽略的代碼"
+          }
+        }
+      }
+    },
     "In progress": {
       "comment": "How a print ended",
       "localizations": {
@@ -32196,6 +32304,113 @@
           "stringUnit": {
             "state": "translated",
             "value": "資訊"
+          }
+        }
+      }
+    },
+    "Inserted": {
+      "comment": "Storage media",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vloženo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingelegt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insertado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inséré"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behelyezve"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挿入済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삽입됨"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplaatst"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włożono"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserido"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вставлен"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isatt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takılı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вставлено"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已插入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已插入"
           }
         }
       }
@@ -34437,6 +34652,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "左"
+          }
+        }
+      }
+    },
+    "Left light": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Levé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linke Beleuchtung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luz izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lumière de gauche"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bal világítás"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luce sinistra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左の照明"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 조명"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linker verlichting"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lewe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luz esquerda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Левая подсветка"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vänsterlampa"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sol ışığı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ліве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左側照明"
           }
         }
       }
@@ -38068,6 +38389,112 @@
         }
       }
     },
+    "Never show this code for this printer. You can show it again at the bottom of the Printer page.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tento kód u této tiskárny už nikdy nezobrazovat. Znovu ho můžete zobrazit dole na stránce Tiskárna."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Code für diesen Drucker nie mehr anzeigen. Unten auf der Seite „Drucker“ lässt er sich wieder einblenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No volver a mostrar este código para esta impresora. Puede volver a mostrarlo al final de la página Impresora."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus afficher ce code pour cette imprimante. Vous pourrez le réafficher en bas de la page Imprimante."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ez a kód többé nem jelenik meg ennél a nyomtatónál. A Nyomtató lap alján újra megjelenítheted."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non mostrare più questo codice per questa stampante. Puoi mostrarlo di nuovo in fondo alla pagina Stampante."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプリンターではこのコードを今後表示しません。「プリンター」ページの下部で再表示できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 프린터에서 이 코드를 더 이상 표시하지 않습니다. 프린터 페이지 하단에서 다시 표시할 수 있습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toon deze code nooit meer voor deze printer. Onderaan de pagina Printer kun je hem weer tonen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie pokazuj już tego kodu dla tej drukarki. Możesz go przywrócić na dole strony Drukarka."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não mostrar mais este código para esta impressora. Você pode mostrá-lo de novo no fim da página Impressora."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Больше не показывать этот код для этого принтера. Вернуть его можно внизу страницы «Принтер»."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visa aldrig den här koden för den här skrivaren. Du kan visa den igen längst ned på sidan Skrivare."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kodu bu yazıcı için bir daha gösterme. Yazıcı sayfasının en altından yeniden gösterebilirsin."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Більше не показувати цей код для цього принтера. Повернути його можна внизу сторінки «Принтер»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不再为这台打印机显示此代码。可在“打印机”页面底部重新显示。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不再為這台印表機顯示此代碼。可在「印表機」頁面底部重新顯示。"
+          }
+        }
+      }
+    },
     "No AMS connected": {
       "localizations": {
         "cs": {
@@ -38382,6 +38809,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "無 SD 卡"
+          }
+        }
+      }
+    },
+    "No USB drive": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bez USB disku"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein USB-Stick"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin unidad USB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de clé USB"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nincs USB-meghajtó"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna chiavetta USB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USBドライブなし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB 드라이브 없음"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen USB-stick"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak pamięci USB"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem pen drive"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет USB-накопителя"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inget USB-minne"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB bellek yok"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Немає USB-накопичувача"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无 U 盘"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無 USB 隨身碟"
           }
         }
       }
@@ -38810,112 +39343,6 @@
         }
       }
     },
-    "No printer set up yet.": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zatím není nastavena žádná tiskárna."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch kein Drucker eingerichtet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aún no hay ninguna impresora configurada."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune imprimante configurée pour l’instant."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Még nincs beállított nyomtató."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ancora nessuna stampante configurata."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プリンターがまだ設定されていません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 설정된 프린터가 없습니다."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nog geen printer ingesteld."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie skonfigurowano jeszcze drukarki."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhuma impressora configurada ainda."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Принтер ещё не настроен."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingen skrivare har konfigurerats än."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Henüz yazıcı ayarlanmadı."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Принтер ще не налаштовано."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未设置打印机。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未設定印表機。"
-          }
-        }
-      }
-    },
     "No printer.": {
       "localizations": {
         "cs": {
@@ -39129,6 +39556,113 @@
         }
       }
     },
+    "None": {
+      "comment": "Printers page: no ignored codes",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Žádné"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ninguno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nincs"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inga"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yok"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Немає"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無"
+          }
+        }
+      }
+    },
     "Not checked yet": {
       "localizations": {
         "cs": {
@@ -39337,6 +39871,113 @@
           "stringUnit": {
             "state": "translated",
             "value": "未連線"
+          }
+        }
+      }
+    },
+    "Not inserted": {
+      "comment": "Storage media",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nevloženo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht eingelegt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No insertado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non inséré"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nincs behelyezve"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non inserito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未挿入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niet geplaatst"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie włożono"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não inserido"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вставлен"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inte isatt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takılı değil"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не вставлено"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未插入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未插入"
           }
         }
       }
@@ -49454,6 +50095,7 @@
       }
     },
     "Printers": {
+      "comment": "Windows: the tray icon's menu, the submenu listing every printer",
       "localizations": {
         "cs": {
           "stringUnit": {
@@ -51693,6 +52335,112 @@
         }
       }
     },
+    "Remove this code from the ignored codes": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odebrat tento kód z ignorovaných kódů"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Code aus den ignorierten Codes entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar este código de los códigos ignorados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer ce code des codes ignorés"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A kód eltávolítása a mellőzött kódok közül"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi questo codice dai codici ignorati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコードを無視するコードから外す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 코드를 무시한 코드에서 제거"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haal deze code uit de genegeerde codes"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń ten kod z ignorowanych kodów"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover este código dos códigos ignorados"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убрать этот код из игнорируемых"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta bort koden från ignorerade koder"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu kodu yok sayılan kodlardan çıkar"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прибрати цей код з ігнорованих"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将此代码从已忽略的代码中移除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將此代碼從已忽略的代碼中移除"
+          }
+        }
+      }
+    },
     "Rename this printer in Bambu Bar": {
       "localizations": {
         "cs": {
@@ -52537,6 +53285,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "右"
+          }
+        }
+      }
+    },
+    "Right light": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pravé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechte Beleuchtung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luz derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lumière de droite"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jobb világítás"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luce destra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右の照明"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 조명"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechter verlichting"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prawe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luz direita"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правая подсветка"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Högerlampa"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sağ ışığı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Праве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右側照明"
           }
         }
       }
@@ -54663,6 +55517,113 @@
         }
       }
     },
+    "Show Again": {
+      "comment": "Printers page: shows an ignored issue code again",
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Znovu zobrazovat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wieder anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a mostrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réafficher"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Újra megjelenítés"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra di nuovo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 표시"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weer tonen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuj ponownie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar de novo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать снова"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visa igen"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeniden göster"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показувати знову"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新显示"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新顯示"
+          }
+        }
+      }
+    },
     "Show Camera": {
       "localizations": {
         "cs": {
@@ -56256,6 +57217,7 @@
       }
     },
     "Showing": {
+      "comment": "Windows: Widgets page, screen-reader status of a widget that is on the desktop",
       "localizations": {
         "cs": {
           "stringUnit": {
@@ -56357,219 +57319,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示中"
-          }
-        }
-      }
-    },
-    "Shown in the menu bar": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobrazeno v řádku nabídek"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In der Menüleiste angezeigt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se muestra en la barra de menús"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affichée dans la barre des menus"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Megjelenik a menüsorban"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostrata nella barra dei menu"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メニューバーに表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "메뉴 막대에 표시됨"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Getoond in de menubalk"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokazywana na pasku menu"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exibida na barra de menus"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показан в строке меню"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visas i menyraden"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menü çubuğunda gösterilen"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показано в смузі меню"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在菜单栏中显示"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顯示於選單列"
-          }
-        }
-      }
-    },
-    "Shown in the tray": {
-      "comment": "Windows: Printers page, tooltip on the mark beside the printer the tray icon shows",
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobrazeno v oznamovací oblasti"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Im Infobereich angezeigt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se muestra en el área de notificación"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affichée dans la zone de notification"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Megjelenik az értesítési területen"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostrata nell'area di notifica"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通知領域に表示"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "알림 영역에 표시됨"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Getoond in het systeemvak"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokazywana w obszarze powiadomień"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exibida na área de notificação"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показан в области уведомлений"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Visas i meddelandefältet"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bildirim alanında gösterilen"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показано в області сповіщень"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在通知区域中显示"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顯示於通知區域"
           }
         }
       }
@@ -62214,113 +62963,6 @@
         }
       }
     },
-    "The camera's certificate couldn't be verified: %@": {
-      "comment": "A technical reason, in English",
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Certifikát kamery nelze ověřit: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Zertifikat der Kamera konnte nicht verifiziert werden: %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo verificar el certificado de la cámara: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le certificat de la caméra n’a pas pu être vérifié : %@"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A kamera tanúsítványa nem ellenőrizhető: %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossibile verificare il certificato della telecamera: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カメラの証明書を検証できませんでした：%@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카메라의 인증서를 확인할 수 없습니다: %@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Het certificaat van de camera kan niet worden geverifieerd: %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie można zweryfikować certyfikatu kamery: %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível verificar o certificado da câmera: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось проверить сертификат камеры: %@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamerans certifikat kunde inte verifieras: %@"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kameranın sertifikası doğrulanamadı: %@"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не вдалося перевірити сертифікат камери: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法验证摄像头的证书：%@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法驗證攝影機的憑證：%@"
-          }
-        }
-      }
-    },
     "The certificate belongs to another device (%@).": {
       "comment": "The name in the certificate",
       "localizations": {
@@ -67314,6 +67956,112 @@
         }
       }
     },
+    "To stop showing a code for this printer, click **Ignore** next to the issue on the Printer page.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chcete-li kód u této tiskárny přestat zobrazovat, klikněte na stránce Tiskárna vedle hlášení na **Ignorovat**."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um einen Code für diesen Drucker nicht mehr anzuzeigen, klicken Sie auf der Seite „Drucker“ neben der Meldung auf **Ignorieren**."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para dejar de mostrar un código para esta impresora, haga clic en **Ignorar** junto al aviso en la página Impresora."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour ne plus afficher un code pour cette imprimante, cliquez sur **Ignorer** à côté du message dans la page Imprimante."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha egy kódot ennél a nyomtatónál nem szeretnél többé látni, kattints a Nyomtató oldalon az üzenet melletti **Mellőzés** gombra."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per non mostrare più un codice per questa stampante, fai clic su **Ignora** accanto al messaggio nella pagina Stampante."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプリンターでコードを表示しないようにするには、「プリンター」ページでメッセージの横にある**無視**をクリックします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 프린터에서 코드를 더 이상 표시하지 않으려면 프린터 페이지에서 메시지 옆의 **무시**를 클릭하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klik op de pagina Printer naast de melding op **Negeer** om een code voor deze printer niet meer te tonen."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aby przestać pokazywać kod dla tej drukarki, kliknij **Ignoruj** obok komunikatu na stronie Drukarka."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para deixar de mostrar um código para esta impressora, clique em **Ignorar** ao lado do aviso na página Impressora."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чтобы больше не показывать код для этого принтера, нажмите **Игнорировать** рядом с сообщением на странице «Принтер»."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om du inte vill se en kod för den här skrivaren igen klickar du på **Ignorera** bredvid meddelandet på sidan Skrivare."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir kodu bu yazıcı için artık göstermemek için Yazıcı sayfasında mesajın yanındaki **Yok say** düğmesine tıkla."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щоб більше не показувати код для цього принтера, натисніть **Ігнорувати** поруч із повідомленням на сторінці «Принтер»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要不再为这台打印机显示某个代码，请在“打印机”页面中点按该消息旁的**忽略**。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "若要不再為這台印表機顯示某個代碼，請在「印表機」頁面中按一下該訊息旁的**忽略**。"
+          }
+        }
+      }
+    },
     "Tray": {
       "comment": "Windows: sidebar page and title for the tray icon and its panel (the Mac's Menu Bar page)",
       "localizations": {
@@ -67952,6 +68700,430 @@
         }
       }
     },
+    "Turn Left Off": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vypnout levé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linke Beleuchtung ausschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar luz izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Éteindre la lumière de gauche"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bal világítás kikapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spegni luce sinistra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左の照明をオフにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 조명 끄기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet linker verlichting uit"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącz lewe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligar Luz Esquerda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить левую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Släck vänsterlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sol Işığı Kapat"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вимкнути ліве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭左侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉左側照明"
+          }
+        }
+      }
+    },
+    "Turn Left On": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapnout levé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linke Beleuchtung einschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encender luz izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allumer la lumière de gauche"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bal világítás bekapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accendi luce sinistra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左の照明をオンにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 조명 켜기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet linker verlichting aan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz lewe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligar Luz Esquerda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить левую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tänd vänsterlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sol Işığı Aç"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Увімкнути ліве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开左侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟左側照明"
+          }
+        }
+      }
+    },
+    "Turn Right Off": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vypnout pravé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechte Beleuchtung ausschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar luz derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Éteindre la lumière de droite"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jobb világítás kikapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spegni luce destra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右の照明をオフにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 조명 끄기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet rechter verlichting uit"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącz prawe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligar Luz Direita"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить правую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Släck högerlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sağ Işığı Kapat"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вимкнути праве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭右侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉右側照明"
+          }
+        }
+      }
+    },
+    "Turn Right On": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapnout pravé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechte Beleuchtung einschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encender luz derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allumer la lumière de droite"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jobb világítás bekapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accendi luce destra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右の照明をオンにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 조명 켜기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet rechter verlichting aan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz prawe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligar Luz Direita"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить правую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tänd högerlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sağ Işığı Aç"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Увімкнути праве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开右侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟右側照明"
+          }
+        }
+      }
+    },
     "Turn on LAN Only Liveview on the printer (Settings → Network) to see the camera here.": {
       "localizations": {
         "cs": {
@@ -68164,215 +69336,215 @@
         }
       }
     },
-    "Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.": {
+    "Turn the camera on for each printer too, at the bottom of its Printer page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.": {
       "localizations": {
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kameru zapněte také u každé tiskárny na stránce Tiskárny. Dokud je tato volba vypnutá, kamera je skrytá všude: na stránce Tiskárna, v panelu v řádku nabídek i v nabídkách."
+            "value": "Kameru zapněte také u každé tiskárny, dole na její stránce Tiskárna. Dokud je tato volba vypnutá, kamera je skrytá všude: na stránce Tiskárna, v panelu v řádku nabídek i v nabídkách."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schalten Sie die Kamera zusätzlich für jeden Drucker ein, auf der Seite „Druckerverwaltung“. Solange diese Option aus ist, ist die Kamera überall ausgeblendet: auf der Seite „Drucker“, im Menüleisten-Panel und in den Menüs."
+            "value": "Schalten Sie die Kamera zusätzlich für jeden Drucker ein, unten auf seiner Seite „Drucker“. Solange diese Option aus ist, ist die Kamera überall ausgeblendet: auf der Seite „Drucker“, im Menüleisten-Panel und in den Menüs."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Active también la cámara de cada impresora en la página Impresoras. Mientras esta opción esté desactivada, la cámara se oculta en todas partes: la página Impresora, el panel de la barra de menús y los menús."
+            "value": "Active también la cámara de cada impresora, al final de su página Impresora. Mientras esta opción esté desactivada, la cámara se oculta en todas partes: la página Impresora, el panel de la barra de menús y los menús."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activez aussi la caméra de chaque imprimante dans la page Imprimantes. Tant que ce réglage est désactivé, la caméra est masquée partout : la page Imprimante, le panneau de la barre des menus et les menus."
+            "value": "Activez aussi la caméra de chaque imprimante, en bas de sa page Imprimante. Tant que ce réglage est désactivé, la caméra est masquée partout : la page Imprimante, le panneau de la barre des menus et les menus."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A kamerát minden nyomtatónál külön is kapcsold be a Nyomtatók lapon. Amíg ez ki van kapcsolva, a kamera mindenhol rejtve marad: a Nyomtató lapon, a menüsor-panelen és a menükben."
+            "value": "A kamerát minden nyomtatónál külön is kapcsold be, a Nyomtató lap alján. Amíg ez ki van kapcsolva, a kamera mindenhol rejtve marad: a Nyomtató lapon, a menüsor-panelen és a menükben."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Attiva la telecamera anche per ogni stampante, nella pagina Stampanti. Finché questa opzione è disattivata, la telecamera è nascosta ovunque: nella pagina Stampante, nel pannello della barra dei menu e nei menu."
+            "value": "Attiva la telecamera anche per ogni stampante, in fondo alla sua pagina Stampante. Finché questa opzione è disattivata, la telecamera è nascosta ovunque: nella pagina Stampante, nel pannello della barra dei menu e nei menu."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「プリンター管理」ページでも、プリンターごとにカメラをオンにしてください。この設定がオフの間は、「プリンター」ページ、メニューバーパネル、メニューのすべてでカメラが非表示になります。"
+            "value": "プリンターごとに、「プリンター」ページの下部でもカメラをオンにしてください。この設定がオフの間は、「プリンター」ページ、メニューバーパネル、メニューのすべてでカメラが非表示になります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "프린터 관리 페이지에서도 프린터마다 카메라를 켜십시오. 이 설정이 꺼져 있으면 프린터 페이지, 메뉴 막대 패널, 메뉴 등 모든 곳에서 카메라가 숨겨집니다."
+            "value": "프린터마다 프린터 페이지 하단에서도 카메라를 켜십시오. 이 설정이 꺼져 있으면 프린터 페이지, 메뉴 막대 패널, 메뉴 등 모든 곳에서 카메라가 숨겨집니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zet de camera ook per printer aan, op de pagina Printers. Zolang deze optie uit staat, is de camera overal verborgen: op de pagina Printer, in het menubalkpaneel en in de menu’s."
+            "value": "Zet de camera ook per printer aan, onderaan zijn pagina Printer. Zolang deze optie uit staat, is de camera overal verborgen: op de pagina Printer, in het menubalkpaneel en in de menu’s."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Włącz też kamerę dla każdej drukarki na stronie Drukarki. Gdy ta opcja jest wyłączona, kamera jest ukryta wszędzie: na stronie Drukarka, w panelu na pasku menu i w menu."
+            "value": "Włącz też kamerę dla każdej drukarki, na dole jej strony Drukarka. Gdy ta opcja jest wyłączona, kamera jest ukryta wszędzie: na stronie Drukarka, w panelu na pasku menu i w menu."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ative também a câmera de cada impressora na página Impressoras. Enquanto esta opção estiver desligada, a câmera fica oculta em todo lugar: na página Impressora, no painel da barra de menus e nos menus."
+            "value": "Ative também a câmera de cada impressora, no fim da página Impressora dela. Enquanto esta opção estiver desligada, a câmera fica oculta em todo lugar: na página Impressora, no painel da barra de menus e nos menus."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Включите камеру и для каждого принтера — на странице «Принтеры». Пока этот параметр выключен, камера скрыта везде: на странице «Принтер», в панели строки меню и в меню."
+            "value": "Включите камеру и для каждого принтера — внизу его страницы «Принтер». Пока этот параметр выключен, камера скрыта везде: на странице «Принтер», в панели строки меню и в меню."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Slå också på kameran för varje skrivare på sidan Hantera skrivare. När det här är avstängt döljs kameran överallt: på sidan Skrivare, i menyradspanelen och i menyerna."
+            "value": "Slå också på kameran för varje skrivare, längst ned på dess sida Skrivare. När det här är avstängt döljs kameran överallt: på sidan Skrivare, i menyradspanelen och i menyerna."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamerayı ayrıca Yazıcılar sayfasında her yazıcı için de aç. Bu ayar kapalıyken kamera her yerde gizlenir: Yazıcı sayfasında, menü çubuğu panelinde ve menülerde."
+            "value": "Kamerayı ayrıca her yazıcı için, o yazıcının Yazıcı sayfasının en altında da aç. Bu ayar kapalıyken kamera her yerde gizlenir: Yazıcı sayfasında, menü çubuğu panelinde ve menülerde."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Також увімкніть камеру для кожного принтера на сторінці «Принтери». Поки цей параметр вимкнено, камеру приховано всюди: на сторінці «Принтер», на панелі в смузі меню та в меню."
+            "value": "Також увімкніть камеру для кожного принтера внизу його сторінки «Принтер». Поки цей параметр вимкнено, камеру приховано всюди: на сторінці «Принтер», на панелі в смузі меню та в меню."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还需要在“打印机管理”页面为每台打印机开启摄像头。此项关闭时，摄像头在所有位置都会隐藏：“打印机”页面、菜单栏面板和菜单中。"
+            "value": "还需要在每台打印机的“打印机”页面底部为其开启摄像头。此项关闭时，摄像头在所有位置都会隐藏：“打印机”页面、菜单栏面板和菜单中。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "還需要在「印表機管理」頁面為每台印表機開啟攝影機。此選項關閉時，攝影機在所有地方都會隱藏：「印表機」頁面、選單列面板和選單。"
+            "value": "還需要在每台印表機的「印表機」頁面底部為其開啟攝影機。此選項關閉時，攝影機在所有地方都會隱藏：「印表機」頁面、選單列面板和選單。"
           }
         }
       }
     },
-    "Turn the camera on for each printer too, on the Printers page. While it's off, the camera is hidden everywhere: the Printer page, the tray panel and the menus.": {
+    "Turn the camera on for each printer too, at the bottom of its Printer page. While it's off, the camera is hidden everywhere: the Printer page, the tray panel and the menus.": {
       "comment": "Windows: Settings page, below the camera switch (the Mac's names the menu bar panel)",
       "localizations": {
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kameru zapněte také u každé tiskárny na stránce Tiskárny. Dokud je tato volba vypnutá, kamera je skrytá všude: na stránce Tiskárna, v panelu oznamovací oblasti i v nabídkách."
+            "value": "Kameru zapněte také u každé tiskárny, dole na její stránce Tiskárna. Dokud je tato volba vypnutá, kamera je skrytá všude: na stránce Tiskárna, v panelu oznamovací oblasti i v nabídkách."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schalten Sie die Kamera zusätzlich für jeden Drucker ein, auf der Seite „Druckerverwaltung“. Solange diese Option aus ist, ist die Kamera überall ausgeblendet: auf der Seite „Drucker“, im Panel des Infobereichs und in den Menüs."
+            "value": "Schalten Sie die Kamera zusätzlich für jeden Drucker ein, unten auf seiner Seite „Drucker“. Solange diese Option aus ist, ist die Kamera überall ausgeblendet: auf der Seite „Drucker“, im Panel des Infobereichs und in den Menüs."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Active también la cámara de cada impresora en la página Impresoras. Mientras esta opción esté desactivada, la cámara se oculta en todas partes: la página Impresora, el panel del área de notificación y los menús."
+            "value": "Active también la cámara de cada impresora, al final de su página Impresora. Mientras esta opción esté desactivada, la cámara se oculta en todas partes: la página Impresora, el panel del área de notificación y los menús."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activez aussi la caméra de chaque imprimante dans la page Imprimantes. Tant que ce réglage est désactivé, la caméra est masquée partout : la page Imprimante, le panneau de la zone de notification et les menus."
+            "value": "Activez aussi la caméra de chaque imprimante, en bas de sa page Imprimante. Tant que ce réglage est désactivé, la caméra est masquée partout : la page Imprimante, le panneau de la zone de notification et les menus."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A kamerát minden nyomtatónál külön is kapcsold be a Nyomtatók lapon. Amíg ez ki van kapcsolva, a kamera mindenhol rejtve marad: a Nyomtató lapon, az értesítési terület paneljén és a menükben."
+            "value": "A kamerát minden nyomtatónál külön is kapcsold be, a Nyomtató lap alján. Amíg ez ki van kapcsolva, a kamera mindenhol rejtve marad: a Nyomtató lapon, az értesítési terület paneljén és a menükben."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Attiva la telecamera anche per ogni stampante, nella pagina Stampanti. Finché questa opzione è disattivata, la telecamera è nascosta ovunque: nella pagina Stampante, nel pannello dell'area di notifica e nei menu."
+            "value": "Attiva la telecamera anche per ogni stampante, in fondo alla sua pagina Stampante. Finché questa opzione è disattivata, la telecamera è nascosta ovunque: nella pagina Stampante, nel pannello dell'area di notifica e nei menu."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「プリンター管理」ページでも、プリンターごとにカメラをオンにしてください。この設定がオフの間は、「プリンター」ページ、通知領域のパネル、メニューのすべてでカメラが非表示になります。"
+            "value": "プリンターごとに、「プリンター」ページの下部でもカメラをオンにしてください。この設定がオフの間は、「プリンター」ページ、通知領域のパネル、メニューのすべてでカメラが非表示になります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "프린터 관리 페이지에서도 프린터마다 카메라를 켜십시오. 이 설정이 꺼져 있으면 프린터 페이지, 알림 영역 패널, 메뉴 등 모든 곳에서 카메라가 숨겨집니다."
+            "value": "프린터마다 프린터 페이지 하단에서도 카메라를 켜십시오. 이 설정이 꺼져 있으면 프린터 페이지, 알림 영역 패널, 메뉴 등 모든 곳에서 카메라가 숨겨집니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zet de camera ook per printer aan, op de pagina Printers. Zolang deze optie uit staat, is de camera overal verborgen: op de pagina Printer, in het systeemvakpaneel en in de menu’s."
+            "value": "Zet de camera ook per printer aan, onderaan zijn pagina Printer. Zolang deze optie uit staat, is de camera overal verborgen: op de pagina Printer, in het systeemvakpaneel en in de menu’s."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Włącz też kamerę dla każdej drukarki na stronie Drukarki. Gdy ta opcja jest wyłączona, kamera jest ukryta wszędzie: na stronie Drukarka, w panelu obszaru powiadomień i w menu."
+            "value": "Włącz też kamerę dla każdej drukarki, na dole jej strony Drukarka. Gdy ta opcja jest wyłączona, kamera jest ukryta wszędzie: na stronie Drukarka, w panelu obszaru powiadomień i w menu."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ative também a câmera de cada impressora na página Impressoras. Enquanto esta opção estiver desligada, a câmera fica oculta em todo lugar: na página Impressora, no painel da área de notificação e nos menus."
+            "value": "Ative também a câmera de cada impressora, no fim da página Impressora dela. Enquanto esta opção estiver desligada, a câmera fica oculta em todo lugar: na página Impressora, no painel da área de notificação e nos menus."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Включите камеру и для каждого принтера — на странице «Принтеры». Пока этот параметр выключен, камера скрыта везде: на странице «Принтер», в панели области уведомлений и в меню."
+            "value": "Включите камеру и для каждого принтера — внизу его страницы «Принтер». Пока этот параметр выключен, камера скрыта везде: на странице «Принтер», в панели области уведомлений и в меню."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Slå också på kameran för varje skrivare på sidan Hantera skrivare. När det här är avstängt döljs kameran överallt: på sidan Skrivare, i panelen i meddelandefältet och i menyerna."
+            "value": "Slå också på kameran för varje skrivare, längst ned på dess sida Skrivare. När det här är avstängt döljs kameran överallt: på sidan Skrivare, i panelen i meddelandefältet och i menyerna."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamerayı ayrıca Yazıcılar sayfasında her yazıcı için de aç. Bu ayar kapalıyken kamera her yerde gizlenir: Yazıcı sayfasında, bildirim alanı panelinde ve menülerde."
+            "value": "Kamerayı ayrıca her yazıcı için, o yazıcının Yazıcı sayfasının en altında da aç. Bu ayar kapalıyken kamera her yerde gizlenir: Yazıcı sayfasında, bildirim alanı panelinde ve menülerde."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Також увімкніть камеру для кожного принтера на сторінці «Принтери». Поки цей параметр вимкнено, камеру приховано всюди: на сторінці «Принтер», на панелі в області сповіщень та в меню."
+            "value": "Також увімкніть камеру для кожного принтера внизу його сторінки «Принтер». Поки цей параметр вимкнено, камеру приховано всюди: на сторінці «Принтер», на панелі в області сповіщень та в меню."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还需要在“打印机管理”页面为每台打印机开启摄像头。此项关闭时，摄像头在所有位置都会隐藏：“打印机”页面、通知区域面板和菜单中。"
+            "value": "还需要在每台打印机的“打印机”页面底部为其开启摄像头。此项关闭时，摄像头在所有位置都会隐藏：“打印机”页面、通知区域面板和菜单中。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "還需要在「印表機管理」頁面為每台印表機開啟攝影機。此選項關閉時，攝影機在所有地方都會隱藏：「印表機」頁面、通知區域面板和選單。"
+            "value": "還需要在每台印表機的「印表機」頁面底部為其開啟攝影機。此選項關閉時，攝影機在所有地方都會隱藏：「印表機」頁面、通知區域面板和選單。"
           }
         }
       }
@@ -68589,6 +69761,430 @@
         }
       }
     },
+    "Turn the left light off": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vypnout levé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linke Beleuchtung ausschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar la luz izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Éteindre la lumière de gauche"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bal világítás kikapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spegni la luce sinistra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左の照明をオフ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 조명 끄기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet de linker verlichting uit"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącz lewe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligar a luz esquerda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить левую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Släck vänsterlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sol ışığını kapat"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вимкнути ліве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭左侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉左側照明"
+          }
+        }
+      }
+    },
+    "Turn the left light on": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapnout levé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linke Beleuchtung einschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encender la luz izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allumer la lumière de gauche"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bal világítás bekapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accendi la luce sinistra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左の照明をオン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 조명 켜기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet de linker verlichting aan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz lewe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligar a luz esquerda"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить левую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tänd vänsterlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sol ışığını aç"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Увімкнути ліве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开左侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟左側照明"
+          }
+        }
+      }
+    },
+    "Turn the right light off": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vypnout pravé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechte Beleuchtung ausschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar la luz derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Éteindre la lumière de droite"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jobb világítás kikapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spegni la luce destra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右の照明をオフ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 조명 끄기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet de rechter verlichting uit"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącz prawe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desligar a luz direita"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключить правую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Släck högerlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sağ ışığını kapat"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вимкнути праве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭右侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉右側照明"
+          }
+        }
+      }
+    },
+    "Turn the right light on": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapnout pravé osvětlení"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechte Beleuchtung einschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encender la luz derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allumer la lumière de droite"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jobb világítás bekapcsolása"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accendi la luce destra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右の照明をオン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 조명 켜기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet de rechter verlichting aan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz prawe oświetlenie"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligar a luz direita"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить правую подсветку"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tänd högerlampan"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sağ ışığını aç"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Увімкнути праве освітлення"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开右侧照明灯"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟右側照明"
+          }
+        }
+      }
+    },
     "Two, up to %lld °C": {
       "localizations": {
         "cs": {
@@ -68797,6 +70393,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "改為輸入存取碼"
+          }
+        }
+      }
+    },
+    "USB drive inserted": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB disk vložen"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-Stick eingesteckt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unidad USB insertada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé USB insérée"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-meghajtó csatlakoztatva"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiavetta USB inserita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USBドライブ挿入済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB 드라이브 연결됨"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-stick geplaatst"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włożono pamięć USB"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pen drive inserido"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-накопитель вставлен"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-minne isatt"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB bellek takılı"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-накопичувач вставлено"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已插入 U 盘"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已插入 USB 隨身碟"
           }
         }
       }

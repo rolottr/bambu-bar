@@ -7,9 +7,12 @@ struct PrinterConfig: Codable, Equatable {
     var name: String
     /// SSDP model code ("N7" for the P2S).
     var modelCode: String
-    /// The camera is on for this printer (Printers page). Off, or never set (printers saved by earlier
+    /// The camera is on for this printer (Printer page settings). Off, or never set (printers saved by earlier
     /// versions), it's hidden; the switch in Settings has to be on too.
     var cameraEnabled: Bool? = nil
+    /// Issue codes never to show for this printer (`HMS_0300_0100_0001_0007`, `0700_8006`), added with Ignore next
+    /// to an issue and removed on the Printer page settings. Nil for printers saved by earlier versions.
+    var ignoredIssues: [String]? = nil
 
     var modelName: String { PrinterModel.name(for: modelCode, serial: serial) }
     var model: PrinterModel? { PrinterModel.find(code: modelCode, serial: serial) }

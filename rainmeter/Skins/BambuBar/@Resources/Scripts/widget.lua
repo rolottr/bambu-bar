@@ -60,6 +60,7 @@ BB.styles = {
 	tempRow = { face = "num", px = 14, weight = 600, lh = 1.25 },
 	spoolLine = { face = "text", px = 11, weight = 500, color = "sec", lh = 1.25 },
 	footTitle = { face = "text", px = 13, weight = 600, lh = 1.25 },
+	footName = { face = "text", px = 11, weight = 600, color = "sec", lh = 1.25 },
 	footDetail = { face = "num", px = 11, weight = 600, color = "sec", lh = 1.25 },
 	footLine = { face = "text", px = 11, weight = 400, color = "sec", lh = 1.25 },
 	dialPct = { face = "num", px = 18, weight = 700, lh = 1.1, pct = { px = 9.5, color = "sec" } },
@@ -453,17 +454,18 @@ function BB.pulseOptions(cx, cy, r, k, color, width, grow)
 end
 
 -- The card at hover amount h (0–1).
-function BB.cardOptions(w, h, hover)
+function BB.cardOptions(w, h, hover, opacity)
+	local alpha = max(1, floor(255 * opacity + 0.5)) -- alpha 1 keeps a transparent card clickable
 	local function mix(a, b)
-		return fmt("%02X%02X%02X", floor(a[1] + (b[1] - a[1]) * hover + 0.5), floor(a[2] + (b[2] - a[2]) * hover + 0.5),
-			floor(a[3] + (b[3] - a[3]) * hover + 0.5))
+		return fmt("%02X%02X%02X%02X", floor(a[1] + (b[1] - a[1]) * hover + 0.5), floor(a[2] + (b[2] - a[2]) * hover + 0.5),
+			floor(a[3] + (b[3] - a[3]) * hover + 0.5), alpha)
 	end
 	local C = BB.CARD
 	local border = C.border + (C.hoverBorder - C.border) * hover
 	return {
 		Shape = fmt("Rectangle 0,0,%d,%d,14 | Fill LinearGradient CardGradient | StrokeWidth 0", w, h),
 		Shape2 = fmt("Rectangle 0.5,0.5,%d,%d,13.5 | Fill Color 00000000 | StrokeWidth 1 | Stroke Color FFFFFF%02X",
-			w - 1, h - 1, floor(border * 255 + 0.5)),
+			w - 1, h - 1, floor(border * opacity * 255 + 0.5)),
 		CardGradient = fmt("90 | %s ; 0 | %s ; 1", mix(C.top, C.hoverTop), mix(C.bottom, C.hoverBottom)),
 	}
 end
@@ -704,7 +706,11 @@ function BB.viewSmall(m, ctx)
 			end
 		elseif m.state == "finished" or m.state == "failed" then
 			local job = m.lastJob or {}
-			y = y + v:text("Big", "bigAgo", job.ago or "", colX, y, { w = colW, fit = 0.7 }) + 1
+			-- No record of the print's end (the app started after it): say it's done, as the Mac does.
+			local function word(text, fallback) return (text and text ~= "") and text or fallback end
+			local ended = m.state == "finished" and word(m.strings.doneWord, "Done") or word(m.strings.stoppedWord, "Stopped")
+			local ago = (job.ago and job.ago ~= "") and job.ago or ended
+			y = y + v:text("Big", "bigAgo", ago, colX, y, { w = colW, fit = 0.7 }) + 1
 			if job.took then y = y + v:text("Sub", "sub", job.took, colX, y, { w = colW }) + 1 end
 		elseif m.state == "idle" then
 			y = y + 2
@@ -729,11 +735,25 @@ function BB.viewSmall(m, ctx)
 	-- Footer, from the bottom up
 	local bottom = 180 - P
 	local footTop = bottom
+	-- The printer's name over the footer, so two Small widgets side by side tell their printers apart. Left out
+	-- where the footer already says it, or where it would run into the text above.
+	local function nameAbove(top, shown, above)
+		local name = m.name or ""
+		if name == "" or name == shown then return top end
+		local h = v:text("FootName", "footName", name, P, 0, { w = fullW, measureOnly = true })
+		if top - h - 1 < (above or topBottom) + 4 then return top end
+		v:text("FootName", "footName", name, P, top - h - 1, { w = fullW })
+		return top - h - 1
+	end
 	if m.live and m.state == "idle" then
 		local hd = v:text("FootDetail", "footLine", m.stateLine or "", P, 0, { w = fullW, measureOnly = true })
-		footTop = bottom - hd - 4 - 21
 		v:text("FootDetail", "footLine", m.stateLine or "", P, bottom - hd, { w = fullW })
 		local x, n = P, 0
+		for _, sp in ipairs(m.spools) do
+			if not sp.empty and n < 5 then n = n + 1 end
+		end
+		footTop = n > 0 and (bottom - hd - 4 - 21) or (bottom - hd)
+		n = 0
 		for _, sp in ipairs(m.spools) do
 			if not sp.empty and n < 5 then
 				n = n + 1
@@ -743,6 +763,7 @@ function BB.viewSmall(m, ctx)
 				x = x + 26
 			end
 		end
+		footTop = nameAbove(n > 0 and footTop - 2 or footTop, m.stateLine)
 	elseif m.live then
 		local detail = (not reflow) and m.detail or nil
 		local hd = 0
@@ -753,6 +774,9 @@ function BB.viewSmall(m, ctx)
 		local ht = v:text("FootTitle", "footTitle", m.headline or "", P, 0, { w = fullW, measureOnly = true })
 		footTop = bottom - hd - ht
 		v:text("FootTitle", "footTitle", m.headline or "", P, footTop, { w = fullW })
+		local above = topBottom
+		if reflow then above = topBottom + 8 + v:text("ReasonFull", "reason", m.reason, P, 0, { w = fullW, lines = 3, measureOnly = true }) end
+		footTop = nameAbove(footTop, m.headline, above)
 	else
 		local hd = v:text("FootDetail", "footLine", m.stateLine or "", P, 0, { w = fullW, lines = 2, measureOnly = true })
 		v:text("FootDetail", "footLine", m.stateLine or "", P, bottom - hd, { w = fullW, lines = 2 })
@@ -963,7 +987,7 @@ BB.views = { Small = BB.viewSmall, Medium = BB.viewMedium, Large = BB.viewLarge 
 BB.METERS = {
 	Small = { "ArtA", "ArtB", "Ring", "Spinner", "DialPct", "DialIcon", "Caption", "Big", "Sub", "Reason",
 		"TempIcon1", "Temp1", "TempIcon2", "Temp2", "TempIcon3", "Temp3", "ReasonFull", "ActiveSpool",
-		"ActiveSpoolText", "Swatch1", "Swatch2", "Swatch3", "Swatch4", "Swatch5", "FootTitle", "FootDetail" },
+		"ActiveSpoolText", "Swatch1", "Swatch2", "Swatch3", "Swatch4", "Swatch5", "FootName", "FootTitle", "FootDetail" },
 	Medium = { "ArtA", "ArtB", "Name", "Dot", "Status", "Spinner", "HeaderIcon", "Headline", "Pct", "Layers", "Bar",
 		"StateLine", "Finish", "TempIcon1", "Temp1", "TempIcon2", "Temp2", "TempIcon3", "Temp3", "Line2",
 		"Swatch1", "Swatch2", "Swatch3", "Swatch4", "Swatch5", "Swatch6", "Swatch7", "Swatch8" },
@@ -1037,6 +1061,22 @@ local function flush()
 	for name in pairs(G.touched) do SKIN:Bang("!UpdateMeter", name) end
 	G.touched = {}
 	SKIN:Bang("!Redraw")
+end
+
+local function backgroundOpacity(percent)
+	return 1 - min(100, max(0, tonumber(percent) or 0)) / 100
+end
+
+local function updateBackground()
+	apply("Card", BB.cardOptions(G.w, G.h, G.hover, G.backgroundOpacity))
+	apply("Shadow", { ImageAlpha = tostring(floor(255 * G.backgroundOpacity + 0.5)) })
+end
+
+-- Called by WidgetHost on slider changes, independently of the state and animation timers.
+function SetBackgroundTransparency(percent)
+	G.backgroundOpacity = backgroundOpacity(percent)
+	updateBackground()
+	flush()
 end
 
 -- Text measurement with the two invisible probe meters (see the note at the top). Results are cached: the
@@ -1237,11 +1277,12 @@ function Initialize()
 	G.lineCache, G.measured, G.measuredCount = {}, {}, 0
 	G.applied, G.touched, G.anims, G.model, G.view, G.raw, G.state = {}, {}, {}, nil, nil, nil, nil
 	G.pending, G.artHold, G.hover, G.frameRunning, G.spinRunning = nil, nil, 0, false, false
+	G.backgroundOpacity = backgroundOpacity(SKIN:GetVariable("WidgetBackgroundTransparency", "0"))
 	-- Segoe UI Variable ships with Windows 11 only; Windows 10 has Segoe UI (mockup O7).
 	local windir = os.getenv("WINDIR") or "C:\\Windows"
 	local f = io.open(windir .. "\\Fonts\\SegUIVar.ttf", "rb")
 	if f then f:close(); BB.faces.text = "Segoe UI Variable Text" else BB.faces.text = "Segoe UI" end
-	apply("Card", BB.cardOptions(G.w, G.h, 0))
+	updateBackground()
 	setContentAlpha(1)
 end
 
@@ -1274,7 +1315,7 @@ function Frame()
 			apply("ArtB", { ImageAlpha = tostring(floor(v + 0.5)) })
 		elseif name == "hover" then
 			G.hover = v
-			apply("Card", BB.cardOptions(G.w, G.h, v))
+			apply("Card", BB.cardOptions(G.w, G.h, v, G.backgroundOpacity))
 		elseif name == "pulse" then
 			local g = G.view and G.view.geo.pulse
 			if g then
@@ -1323,7 +1364,7 @@ function Hover(on)
 	local to = on == 1 and 1 or 0
 	if G.model and not G.model.motion then
 		G.hover = to
-		apply("Card", BB.cardOptions(G.w, G.h, to))
+		apply("Card", BB.cardOptions(G.w, G.h, to, G.backgroundOpacity))
 		flush()
 		return
 	end

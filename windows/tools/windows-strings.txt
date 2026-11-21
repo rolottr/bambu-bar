@@ -3,3 +3,4 @@
 # move, and fails once a key listed here is in the catalog.
 Downloading…
 The license could not be saved in Windows Credential Manager. Try again, or restart Windows if it keeps failing.
+Widget background transparency

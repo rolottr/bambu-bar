@@ -37,6 +37,8 @@ struct PrinterModel: Equatable, Sendable {
     var hasLidar: Bool
     /// Takes the laser and cutting modules (H2 family).
     var hasLaserModule: Bool
+    /// Where it keeps print files and recordings. The report's `sdcard` flag means this media on every model.
+    var storage: StorageMedia { Self.usbStorage.contains(code) ? .usbDrive : .sdCard }
 
     static func == (a: PrinterModel, b: PrinterModel) -> Bool { a.code == b.code }
 
@@ -49,6 +51,9 @@ struct PrinterModel: Equatable, Sendable {
     }
 
     // MARK: - Catalog
+
+    /// Models with a USB-A port for a flash drive instead of a microSD slot (Bambu Lab's specs: P2S, X2D, H2 family, H3C).
+    private static let usbStorage: Set<String> = ["N7", "N6", "O1D", "O1E", "O1C", "O1S", "N10"]
 
     static let all: [PrinterModel] = [
         .init(code: "N7", name: "P2S", shape: .enclosed, serialPrefix: "22E", isEnclosed: true, hasChamberSensor: true,
@@ -126,6 +131,27 @@ struct PrinterModel: Equatable, Sendable {
     }
 }
 
+/// The removable media a printer stores files on.
+enum StorageMedia: Sendable {
+    case sdCard, usbDrive
+
+    var symbol: String { self == .usbDrive ? "mediastick" : "sdcard" }
+}
+
+extension StorageMedia? {
+    /// The Storage row: what's in the slot, named for the model's media; neutral when the model is unknown.
+    func describe(inserted: Bool?) -> String {
+        guard let inserted else { return "—" }
+        switch self {
+        case .sdCard: return inserted ? String(localized: "SD card inserted") : String(localized: "No SD card")
+        case .usbDrive: return inserted ? String(localized: "USB drive inserted") : String(localized: "No USB drive")
+        case nil: return inserted ? String(localized: "Inserted", comment: "Storage media") : String(localized: "Not inserted", comment: "Storage media")
+        }
+    }
+
+    var symbol: String { self?.symbol ?? "externaldrive" }
+}
+
 extension PrinterStatus {
     /// Drops readings the model has no sensor or fan for. Some firmware reports placeholders there (a P1S sends
     /// a chamber temperature without a sensor, an A1 sends fan fields it doesn't have).
@@ -136,7 +162,7 @@ extension PrinterStatus {
         if !model.hasAuxFan { auxFan = nil; leftAuxFan = nil }
         if !model.hasChamberFan { exhaustFan = nil; circulationFan = nil }
         if !model.isEnclosed { doorOpen = nil }
-        if !model.hasChamberLight { chamberLightOn = nil }
+        if !model.hasChamberLight { chamberLightOn = nil; chamberLight2On = nil }
         if model.nozzleCount < 2 { secondNozzle = nil; leftNozzleInUse = nil }
         if !model.hasAMSHumidity {
             for i in ams.indices where ams[i].kind == .lite { ams[i].humidity = nil; ams[i].humidityLevel = nil }

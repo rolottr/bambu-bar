@@ -84,6 +84,49 @@ public class HmsWikiTests
         Assert.Equal("wiki.bambulab.com", error.WikiUrl!.Host);
     }
 
+    [Fact]
+    public void ParserSkipsCodesBambuListsWithoutText()
+    {
+        var doc = new ReportDocument();
+        // HMS_0503_0000_0003_0027 and _0028, which the X2D reports while it runs, and internal print error 0C00_8002,
+        // next to a real code and one the catalogue doesn't know.
+        doc.Apply(new()
+        {
+            ["print"] = new Dictionary<string, object?>
+            {
+                ["gcode_state"] = "RUNNING",
+                ["print_error"] = 0x0C00_8002L,
+                ["hms"] = new List<object?>
+                {
+                    new Dictionary<string, object?> { ["attr"] = 0x0503_0000L, ["code"] = 0x0003_0027L },
+                    new Dictionary<string, object?> { ["attr"] = 0x0503_0000L, ["code"] = 0x0003_0028L },
+                    new Dictionary<string, object?> { ["attr"] = 0x0700_2100L, ["code"] = 0x0002_0019L },
+                    new Dictionary<string, object?> { ["attr"] = 0x0F0F_0000L, ["code"] = 0x0002_0001L },
+                },
+            },
+        });
+        var ids = ReportParser.Status(doc, new HmsCatalog("en"), null).Issues.Select(i => i.Id).ToHashSet();
+        Assert.Equal(["HMS_0700_2100_0002_0019", "HMS_0F0F_0000_0002_0001"], ids.Order());
+    }
+
+    [Fact]
+    public void TextsFollowThePrintersModel()
+    {
+        var catalog = new HmsCatalog("en");
+        // Print error 0500_C011 has text on the P1 series and none elsewhere.
+        Assert.Equal("", catalog.ErrorText("0500C011", "00M"));
+        Assert.False(string.IsNullOrEmpty(catalog.ErrorText("0500C011", "01S")));
+        // H3C codes come from its own catalogue.
+        Assert.False(string.IsNullOrEmpty(catalog.HmsText("1A00080000010051", "32X")));
+        var doc = new ReportDocument();
+        doc.Apply(new Dictionary<string, object?>
+        {
+            ["print"] = new Dictionary<string, object?> { ["gcode_state"] = "RUNNING", ["print_error"] = 0x0500_C011L },
+        });
+        Assert.Equal(["0500_C011"], ReportParser.Status(doc, catalog, "01S00A000000000").Issues.Select(i => i.Id));
+        Assert.Empty(ReportParser.Status(doc, catalog, "00M00A000000000").Issues);
+    }
+
     /// <summary>A redirect that sends the slot-specific code to the index but the shared AMS page to the real one.</summary>
     private sealed class FakeRedirect : HttpMessageHandler
     {

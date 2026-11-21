@@ -49,8 +49,7 @@ final class RTSPCameraClient: CameraClient {
     // MARK: - Connection
 
     private func open() {
-        let socket = CameraSocket(host: config.host, port: CameraTransport.rtsps.port, serial: config.serial,
-                                  insecure: config.insecure, queue: queue)
+        let socket = CameraSocket(host: config.host, port: CameraTransport.rtsps.port, serial: config.serial, queue: queue)
         socket.log = log
         socket.onReady = { [weak self] in
             guard let self else { return }

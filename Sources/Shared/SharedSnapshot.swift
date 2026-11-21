@@ -21,8 +21,11 @@ struct SharedSnapshot: Codable, Equatable, Sendable {
     var lastJob: JobRecord?
     var savedAt: Date
 
-    static let placeholder = SharedSnapshot(
-        printerName: "P2S", model: "P2S", link: .online, status: .sample, lastJob: nil, savedAt: Date())
+    /// Built on each use: a stored one would keep the time it was first read, and the widget would show the
+    /// gallery's sample print as stale once the extension had run for a while.
+    static var placeholder: SharedSnapshot {
+        SharedSnapshot(printerName: "P2S", model: "P2S", link: .online, status: .sample, lastJob: nil, savedAt: Date())
+    }
 
     static func unconfigured(_ now: Date = Date()) -> SharedSnapshot {
         SharedSnapshot(printerName: "Bambu Bar", model: "P2S", link: .unconfigured, status: nil, lastJob: nil, savedAt: now)
@@ -83,17 +86,58 @@ enum SharedStore {
         }
     }
 
-    private static let encoder: JSONEncoder = {
+    static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .secondsSince1970
         return e
     }()
 
-    private static let decoder: JSONDecoder = {
+    static let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .secondsSince1970
         return d
     }()
+}
+
+/// What a desktop widget last built its timeline from, one per printer. The extension writes it each time WidgetKit
+/// asks for a timeline; the app reads it to know what the widgets really show, since macOS drops reload requests
+/// without telling the app (a daily allowance per widget).
+struct WidgetReceipt: Codable, Equatable, Sendable {
+    /// When the extension built the timeline.
+    var builtAt: Date
+    /// When the app wrote the snapshot it was built from.
+    var savedAt: Date
+    /// As the widget took it: a snapshot too old to trust reads as offline.
+    var link: SharedSnapshot.Link
+    var status: PrinterStatus?
+}
+
+enum WidgetReceipts {
+    static let fileName = "widget-receipts.json"
+    private static let lock = NSLock()
+
+    /// Receipts by printer serial.
+    static func load() -> [String: WidgetReceipt] {
+        guard let url = SharedStore.containerURL?.appendingPathComponent(fileName),
+              let data = try? Data(contentsOf: url) else { return [:] }
+        return (try? SharedStore.decoder.decode([String: WidgetReceipt].self, from: data)) ?? [:]
+    }
+
+    /// Records that a widget built its timeline from `snapshot` (in the extension). Widgets for several printers
+    /// build at once, so the read and write are one step.
+    static func record(_ snapshot: SharedSnapshot, at date: Date = Date()) {
+        guard !snapshot.serial.isEmpty, let dir = SharedStore.containerURL else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        var receipts = load()
+        receipts[snapshot.serial] = WidgetReceipt(builtAt: date, savedAt: snapshot.savedAt, link: snapshot.link,
+                                                  status: snapshot.status)
+        // A printer removed from the app, or a widget removed from the desktop, leaves a receipt that stops changing.
+        receipts = receipts.filter { date.timeIntervalSince($0.value.builtAt) < 7 * 86400 }
+        if let data = try? SharedStore.encoder.encode(receipts) {
+            try? data.write(to: dir.appendingPathComponent(fileName), options: .atomic)
+        }
+    }
 }
 
 extension PrinterStatus {

@@ -31,7 +31,7 @@ public class CameraDecodingTests
         var enough = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = CameraSimulator.Code, Transport = transport, Insecure = true,
+            Host = CameraSimulator.Host, Serial = CameraSimulator.Serial, AccessCode = CameraSimulator.Code, Transport = transport,
         });
         client.OnEvent = e =>
         {
@@ -99,7 +99,7 @@ public class CameraDecodingTests
             var situation = new CameraSituation
             {
                 ShowsCamera = true, IsOnline = true, Transport = transport, Host = CameraSimulator.Host, Serial = CameraSimulator.Serial,
-                AccessCode = CameraSimulator.Code, Insecure = true,
+                AccessCode = CameraSimulator.Code,
             };
             var feed = new CameraFeed(() => situation);
             feed.FrameChanged += () =>

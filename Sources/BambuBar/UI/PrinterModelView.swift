@@ -342,9 +342,10 @@ final class PrinterSceneView: SCNView {
             if let color { spool.filament.diffuse.contents = NSColor(color) }
         }
 
-        let lit = art.lightOn && !art.dimmed
-        lampLight.light?.intensity = lit && hasLamp ? 4 : 0
-        lampMaterial?.emission.contents = lit ? NSColor(red: 1, green: 0.95, blue: 0.86, alpha: 1) : NSColor.black
+        // One lamp in the model. A printer with two bars lights it in proportion, so turning one off is visible.
+        let level: CGFloat = art.dimmed ? 0 : art.rightLightOn == nil ? (art.lightOn ? 1 : 0) : (art.lightOn ? 0.5 : 0) + (art.rightLightOn == true ? 0.5 : 0)
+        lampLight.light?.intensity = level > 0 && hasLamp ? 4 * level : 0
+        lampMaterial?.emission.contents = level > 0 ? NSColor(red: 1, green: 0.95, blue: 0.86, alpha: CGFloat(level)) : NSColor.black
 
         // The bed (CoreXY) drops, or the gantry (bed slinger) rises, by what has been printed.
         let rest = partHeight * CGFloat(1 - fraction)

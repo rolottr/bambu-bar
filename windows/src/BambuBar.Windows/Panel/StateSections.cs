@@ -219,7 +219,7 @@ internal sealed class ConnectionSection : PanelSection
         _useCode.Click += (_, _) => Store.UseReplacementCode();
         _tryAgain = SmallButton(Loc.T("Try Again"));
         _tryAgain.Click += (_, _) => Store.Refresh();
-        _printers = SmallButton(Loc.T("Printers"));
+        _printers = SmallButton(Loc.T("Printer"));
         _printers.Click += (_, _) => Ctx.Navigate(PanelDestination.Printers, null);
         var buttons = new Stack { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 4, 0, 0), Children = { _spinner, _useCode, _tryAgain, _printers } };
         var text = new Stack { Spacing = 5, VerticalAlignment = VerticalAlignment.Center, Children = { _title, _detail, buttons } };

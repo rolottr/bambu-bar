@@ -171,8 +171,7 @@ enum Probe {
             print(String(format: "[%5.1fs] ", Date().timeIntervalSince(started)) + text)
             fflush(stdout)
         }
-        let client = makeCameraClient(CameraConfig(host: host, serial: serial, accessCode: code, transport: transport,
-                                                   insecure: CommandLine.arguments.contains("--insecure-tls")))
+        let client = makeCameraClient(CameraConfig(host: host, serial: serial, accessCode: code, transport: transport))
         camera = client
         var frames = 0, keyframes = 0, bytes = 0, saved = false
         client.log = { line in DispatchQueue.main.async { log(line) } }

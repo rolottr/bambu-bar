@@ -59,7 +59,9 @@ CERTS = "/tmp/fleet-certs"
 #           humidity, nine hotends in a rack, nine virtual slots, five fans.
 # chamber: "sensor" reports a real reading, "placeholder" sends chamber_temper 5 without a sensor (P1, A1: the
 # app must hide it), None sends nothing. door: `fun` bit 12, the printer has a door sensor and reports it in `stat`.
-# lights: the nodes in lights_report (the A1 lists a chamber_light it doesn't have).
+# lights: the nodes in lights_report, in the order the printer sends them. chamber_light is the chamber bar
+# (the A1 lists one it doesn't have); chamber_light2 is a second bar, on the printers whose reports include it.
+# work_light is the toolhead light and stays flashing.
 # fans: the `airduct` parts as (id, func, percent while printing); by default part cooling, then aux and exhaust
 # where the model has them. Bambu Studio names a part by bits 4-11 of its id: 1 part, 2 aux, 3 exhaust, and on the
 # H3C 10 left aux and 15 chamber (resources/printers/N10.json, Widgets/FanControl.cpp).
@@ -71,6 +73,9 @@ def model(product, prefix, fmt, ams, nozzles=1, heater=None, chamber="sensor", a
     return {"product": product, "prefix": prefix, "format": fmt, "ams": ams, "nozzles": nozzles, "heater": heater,
             "chamber": chamber, "aux": aux, "chamber_fan": chamber_fan, "door": door, "lights": lights, "fun": fun,
             "sample": sample, "fans": fans}
+
+# H2D, H2D Pro, H2S and H2C: two chamber bars plus the toolhead light, as their reports send them.
+H2_LIGHTS = ("chamber_light", "work_light", "chamber_light2")
 
 MODELS = {
     "N7": model("P2S", "22E", "device", "pro2"),
@@ -85,10 +90,10 @@ MODELS = {
     "N1": model("A1 mini", "030", "legacy", "lite", chamber="placeholder", aux=False, chamber_fan=False, door=False,
                 lights=("chamber_light",), fun=False),
     "N9": model("A2L", "26A", "device", "lite_mixed", chamber=None, aux=False, chamber_fan=False, door=False, lights=("chamber_light",)),
-    "O1D": model("H2D", "094", "device", "pro2", nozzles=2, heater=65),
-    "O1E": model("H2D Pro", "239", "device", "pro2", nozzles=2, heater=65),
-    "O1S": model("H2S", "093", "device", "pro2", heater=65),
-    "O1C": model("H2C", "31B", "device", "pro2", nozzles=2, heater=65),
+    "O1D": model("H2D", "094", "device", "pro2", nozzles=2, heater=65, lights=H2_LIGHTS),
+    "O1E": model("H2D Pro", "239", "device", "pro2", nozzles=2, heater=65, lights=H2_LIGHTS),
+    "O1S": model("H2S", "093", "device", "pro2", heater=65, lights=H2_LIGHTS),
+    "O1C": model("H2C", "31B", "device", "pro2", nozzles=2, heater=65, lights=H2_LIGHTS),
     "N10": model("H3C", "32X", "device", "ams3h", heater=65, sample="h3c",
                  fans=[(16, 0, 90), (32, 6, 30), (160, 5, 25), (48, 2, 40), (240, 10, 35)]),
 }
@@ -453,8 +458,8 @@ class Printer:
         return r
 
     def lights(self, chamber_mode):
-        nodes = {"chamber_light": chamber_mode, "work_light": "flashing"}
-        return [{"node": n, "mode": nodes[n]} for n in self.m["lights"]]
+        modes = {"chamber_light": chamber_mode, "chamber_light2": chamber_mode, "work_light": "flashing"}
+        return [{"node": n, "mode": modes[n]} for n in self.m["lights"]]
 
     def legacy_fans(self, running=None):
         """The flat 0-15 fan fields every model sends, "0" for fans it doesn't have."""
@@ -499,9 +504,15 @@ class Printer:
                 self.delta({"spd_lvl": int(data["print"].get("param", "2"))})
             self.publish({"print": {"command": cmd, "sequence_id": seq, "result": "success", "reason": ""}})
         elif data.get("system", {}).get("command") == "ledctrl":
+            node = data["system"].get("led_node", "")
             mode = data["system"].get("led_mode", "on")
-            self.delta({"lights_report": self.lights(mode)})
-            self.publish({"system": {**data["system"], "result": "success"}})
+            # One command moves one bar. A node this model doesn't have is refused, as the firmware does.
+            if node not in self.m["lights"]:
+                self.publish({"system": {**data["system"], "result": "fail",
+                                          "reason": f"did not find the valid led: {node}"}})
+            else:
+                self.delta({"lights_report": [{"node": node, "mode": mode}]})
+                self.publish({"system": {**data["system"], "result": "success"}})
 
     def set_state(self, state, stage, **extra):
         self.state = state
@@ -567,13 +578,16 @@ class Printer:
 
 
 def merge(base, delta):
-    """Applies a delta the way clients do: nested objects merge, arrays of objects merge by id."""
+    """Applies a delta the way clients do: nested objects merge, arrays of objects merge by id
+    (lights_report by node)."""
     for k, v in delta.items():
+        id_key = "node" if k == "lights_report" else "id"
         if isinstance(v, dict) and isinstance(base.get(k), dict):
             merge(base[k], v)
-        elif isinstance(v, list) and isinstance(base.get(k), list) and v and all(isinstance(i, dict) and "id" in i for i in v):
+        elif (isinstance(v, list) and isinstance(base.get(k), list) and v
+              and all(isinstance(i, dict) and id_key in i for i in v)):
             for item in v:
-                match = next((b for b in base[k] if isinstance(b, dict) and b.get("id") == item["id"]), None)
+                match = next((b for b in base[k] if isinstance(b, dict) and b.get(id_key) == item[id_key]), None)
                 if match is None:
                     base[k].append(item)
                 else:

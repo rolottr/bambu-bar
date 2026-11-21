@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -19,6 +21,8 @@ public sealed partial class WidgetHost : IDisposable
 
     public sealed record Widget(string Config, Size Size, string? Serial);
 
+    private const string TransparencyKey = "WidgetBackgroundTransparency";
+    private static readonly string AppInclude = Path.Combine("@Resources", "App.inc");
     private readonly string _root;
     private readonly string _installedSkins;
     private readonly string _rainmeterExe;
@@ -45,9 +49,11 @@ public sealed partial class WidgetHost : IDisposable
     public WidgetStateWriter State { get; }
 
     public string StateFolder => Path.Combine(_root, "State");
+    public int BackgroundTransparency { get; private set; }
     private string SkinsFolder => Path.Combine(_root, "Skins");
     private string IniPath => Path.Combine(_root, "Rainmeter.ini");
     private string BambuBarSkins => Path.Combine(SkinsFolder, "BambuBar");
+    private string AppIncludePath => Path.Combine(BambuBarSkins, AppInclude);
 
     /// <summary>The widgets on the desktop, read from their stubs.</summary>
     public IReadOnlyList<Widget> Widgets
@@ -75,6 +81,7 @@ public sealed partial class WidgetHost : IDisposable
     public void Start()
     {
         Directory.CreateDirectory(StateFolder);
+        BackgroundTransparency = Math.Clamp(GetPrivateProfileInt("Variables", TransparencyKey, 0, AppIncludePath), 0, 100);
         SyncSkins();
         WriteSettings();
         Revive();
@@ -127,6 +134,18 @@ public sealed partial class WidgetHost : IDisposable
     /// <summary>Whether the widget stays above windows (Rainmeter.ini's AlwaysOnTop for its config).</summary>
     public bool IsOnTop(Widget widget) => File.Exists(IniPath) && GetPrivateProfileInt(widget.Config, "AlwaysOnTop", -2, IniPath) >= 1;
 
+    public void SetBackgroundTransparency(int percent)
+    {
+        percent = Math.Clamp(percent, 0, 100);
+        if (percent == BackgroundTransparency) return;
+        var value = percent.ToString(CultureInfo.InvariantCulture);
+        if (!WritePrivateProfileString("Variables", TransparencyKey, value, AppIncludePath))
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        BackgroundTransparency = percent;
+        // New and refreshed skins read App.inc. Active skins repaint only the background.
+        Bang($"!CommandMeasure MeasureScript \"SetBackgroundTransparency({value})\" *");
+    }
+
     /// <summary>The widget a right-click names: its config (<c>BambuBar\W3</c>, Rainmeter's #CURRENTCONFIG#).</summary>
     public Widget? Find(string config) =>
         Widgets.FirstOrDefault(w => string.Equals(w.Config, config.Trim().Trim('"'), StringComparison.OrdinalIgnoreCase));
@@ -174,10 +193,12 @@ public sealed partial class WidgetHost : IDisposable
         if (!Directory.Exists(_installedSkins)) return;
         var version = File.Exists(installedVersion) ? File.ReadAllText(installedVersion) : "dev";
         if (File.Exists(copiedVersion) && File.ReadAllText(copiedVersion) == version && Directory.Exists(BambuBarSkins)) return;
-        // Our files are replaced wholesale (users can't edit the skins, D3); the W<n> instance stubs stay.
+        // Keep the W<n> instance stubs and the app-written include, which holds the user's transparency setting.
         foreach (var source in Directory.EnumerateFiles(_installedSkins, "*", SearchOption.AllDirectories))
         {
-            var target = Path.Combine(BambuBarSkins, Path.GetRelativePath(_installedSkins, source));
+            var relative = Path.GetRelativePath(_installedSkins, source);
+            if (relative == AppInclude) continue;
+            var target = Path.Combine(BambuBarSkins, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(source, target, overwrite: true);
         }
@@ -187,8 +208,9 @@ public sealed partial class WidgetHost : IDisposable
     private void WriteSettings()
     {
         Directory.CreateDirectory(Path.Combine(BambuBarSkins, "@Resources"));
-        File.WriteAllText(Path.Combine(BambuBarSkins, "@Resources", "App.inc"),
-            $"; Written by Bambu Bar.\r\n[Variables]\r\nBambuBarExe={_bambuBarExe}\r\n", new UTF8Encoding(true));
+        File.WriteAllText(AppIncludePath, FormattableString.Invariant(
+            $"; Written by Bambu Bar.\r\n[Variables]\r\nBambuBarExe={_bambuBarExe}\r\n{TransparencyKey}={BackgroundTransparency}\r\n"),
+            Encoding.Unicode);
         if (File.Exists(IniPath)) return;
         File.WriteAllText(IniPath, string.Join("\r\n",
             "[Rainmeter]",
@@ -408,7 +430,7 @@ public sealed partial class WidgetHost : IDisposable
     [LibraryImport("user32.dll")]
     private static partial uint GetWindowThreadProcessId(nint window, out int processId);
 
-    [LibraryImport("kernel32.dll", EntryPoint = "WritePrivateProfileStringW", StringMarshalling = StringMarshalling.Utf16)]
+    [LibraryImport("kernel32.dll", EntryPoint = "WritePrivateProfileStringW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool WritePrivateProfileString(string section, string? key, string? value, string path);
 

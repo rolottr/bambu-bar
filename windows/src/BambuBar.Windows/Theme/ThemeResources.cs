@@ -8,8 +8,8 @@ namespace BambuBar.Theme;
 
 /// <summary>
 /// Builds the theme dictionaries: brushes for <see cref="ThemeVariant"/> under <see cref="ThemeKeys"/>, the fonts, and
-/// implicit styles for tooltips and scroll bars. Built in code rather than loose XAML so a typo fails the build, not a
-/// launch (nobody runs this app on a Mac). Dictionaries are rebuilt when the theme changes; brushes are frozen. The
+/// implicit styles for tooltips, sliders and scroll bars. Built in code rather than loose XAML so a typo fails the build,
+/// not a launch (nobody runs this app on a Mac). Dictionaries are rebuilt when the theme changes; brushes are frozen. The
 /// accent and the style are <see cref="AppTheme"/>'s: Fluent's flat tokens for the Windows style, with the Mac's
 /// gradients on top for Bambu Glass.
 /// </summary>
@@ -128,6 +128,7 @@ public static class ThemeResources
         d[ThemeKeys.FontMono] = new FontFamily("Cascadia Mono, Consolas");
 
         d[typeof(ToolTip)] = ToolTipStyle();
+        if (SliderStyle() is { } slider) d[typeof(Slider)] = slider;
         if (ScrollBarStyle() is { } scrollBar) d[typeof(ScrollBar)] = scrollBar;
         return d;
     }
@@ -178,6 +179,48 @@ public static class ThemeResources
         style.Setters.Add(new Setter(Control.FontSizeProperty, 12.0));
         style.Setters.Add(new Setter(ToolTip.HasDropShadowProperty, true));
         return style;
+    }
+
+    private static Style? SliderStyle()
+    {
+        const string xaml = """
+            <Style xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" TargetType="Slider">
+              <Setter Property="MinHeight" Value="24" />
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="Slider">
+                    <Grid Background="Transparent">
+                      <Border Height="4" Margin="8,0" CornerRadius="2" VerticalAlignment="Center"
+                              Background="{DynamicResource Bb.Text.Tertiary}" IsHitTestVisible="False" />
+                      <Track x:Name="PART_Track" IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                        <Track.Thumb>
+                          <Thumb Width="16" Height="16" Focusable="False">
+                            <Thumb.Template>
+                              <ControlTemplate TargetType="Thumb">
+                                <Border Background="{DynamicResource Bb.Accent.Fill}" CornerRadius="8" />
+                              </ControlTemplate>
+                            </Thumb.Template>
+                          </Thumb>
+                        </Track.Thumb>
+                      </Track>
+                    </Grid>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+            """;
+        try
+        {
+            var style = (Style)XamlReader.Parse(xaml);
+            style.Setters.Add(new Setter(FrameworkElement.FocusVisualStyleProperty, Chrome.FocusVisual(Metrics.Control)));
+            return style;
+        }
+        catch (Exception e) when (e is XamlParseException or InvalidCastException or InvalidOperationException)
+        {
+            Errors.Add("Slider style: " + e.Message);
+            return null;
+        }
     }
 
     /// <summary>A thin, rounded scroll bar like Windows 11's (the classic one looks out of place on glass). The

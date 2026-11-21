@@ -174,6 +174,7 @@ final class DemoDriver {
     func resume() { status.state = .printing; status.stageID = 0; emit() }
     func stop() { status.state = .failed; status.stageID = 255; status.issues = []; onStatus?(status, true) }
     func setLight(_ on: Bool) { status.chamberLightOn = on; emit() }
+    func setRightLight(_ on: Bool) { status.chamberLight2On = on; emit() }
     func setSpeed(_ level: SpeedLevel) { status.speed = level; emit() }
 
     static func sampleHistory(for serials: [String]) -> [JobRecord] {

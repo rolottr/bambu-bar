@@ -402,7 +402,8 @@ public sealed class PrinterStore : Observable, IDisposable
         PrinterSession session;
         if (Session(config.Serial) is { } existing)
         {
-            existing.Config = config;
+            // Setting a known printer up again keeps the codes ignored for it.
+            existing.Config = config with { IgnoredIssues = config.IgnoredIssues ?? existing.Config.IgnoredIssues };
             session = existing;
         }
         else
@@ -465,7 +466,25 @@ public sealed class PrinterStore : Observable, IDisposable
         WriteSnapshot(force: true);
     }
 
-    /// <summary>Turns one printer's camera on or off (Printers page).</summary>
+    /// <summary>Never shows this issue's code for the printer again, until it's removed on the Printer page settings.</summary>
+    public void Ignore(PrinterIssue issue, string serial)
+    {
+        if (Session(serial) is not { } session) return;
+        session.Ignore(issue);
+        SaveConfigs();
+        WriteSnapshot(force: true);
+    }
+
+    /// <summary>Shows an ignored code again (Printer page settings); it's back with the printer's next report.</summary>
+    public void Unignore(string id, string serial)
+    {
+        if (Session(serial) is not { } session) return;
+        session.Unignore(id);
+        SaveConfigs();
+        WriteSnapshot(force: true);
+    }
+
+    /// <summary>Turns one printer's camera on or off (Printer page settings).</summary>
     public void SetCameraEnabled(bool on, string serial)
     {
         if (Session(serial) is not { } session || session.Config.CameraEnabled == on) return;

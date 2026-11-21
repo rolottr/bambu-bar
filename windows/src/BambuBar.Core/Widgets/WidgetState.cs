@@ -92,6 +92,10 @@ public sealed record WidgetState
         /// <summary>The word under the Small widget's countdown ("left"); empty where the language has none.</summary>
         public string LeftWord { get; init; } = "";
         public string Last { get; init; } = "";
+        /// <summary>The Small dial's figure for a finished or stopped print with no record of its end (the app
+        /// started after it): "Done", "Stopped".</summary>
+        public string DoneWord { get; init; } = "";
+        public string StoppedWord { get; init; } = "";
     }
 
     public static readonly JsonSerializerOptions Json = new()
@@ -321,6 +325,8 @@ public sealed class WidgetStateWriter(string folder, Func<bool>? motion = null) 
                 Done = Loc.Apply(Loc.T("Done %@"), "{0}"),
                 LeftWord = Loc.T("left"),
                 Last = Loc.Apply(Loc.T("Last: %@"), "{0}"),
+                DoneWord = Loc.T("Done"),
+                StoppedWord = Loc.T("Stopped"),
             },
         };
     }

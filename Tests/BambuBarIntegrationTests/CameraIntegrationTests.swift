@@ -20,14 +20,14 @@ final class CameraIntegrationTests: XCTestCase {
 
     /// Streams from the mock camera in `scenario` until `done` says so (or `timeout`), then stops the client.
     private func record(_ scenario: String, transport: CameraTransport, code: String = Simulators.cameraCode,
-                        insecure: Bool = true, timeout: TimeInterval = 10,
+                        timeout: TimeInterval = 10,
                         until done: @escaping ([Event]) -> Bool) async throws -> [Event] {
         try await Simulators.setCameraScenario(scenario)
         let events = MainQueueBox<[Event]>([])
         let finished = expectation(description: "camera \(scenario)")
         var fulfilled = false
         let client = makeCameraClient(CameraConfig(host: Simulators.cameraHost, serial: Simulators.cameraSerial,
-                                                   accessCode: code, transport: transport, insecure: insecure))
+                                                   accessCode: code, transport: transport))
         client.onEvent = { event in
             let recorded: Event
             switch event {
@@ -147,23 +147,6 @@ final class CameraIntegrationTests: XCTestCase {
         let events = try await record("not-streaming", transport: .rtsps) { _ in false }
         guard case .unreachable(let reason)? = failure(in: events) else { return XCTFail("\(events)") }
         XCTAssertTrue(reason.contains("503"), reason)
-    }
-
-    /// The mock camera's certificate is self-signed: without `insecure` it must be refused before anything is sent.
-    func testUntrustedCertificateIsRefused() async throws {
-        let events = try await record("h264-digest", transport: .rtsps, insecure: false) { _ in false }
-        guard case .certificate? = failure(in: events) else { return XCTFail("\(events)") }
-        let describes = try await requests("DESCRIBE")
-        XCTAssertTrue(describes.isEmpty, "the access code never left")
-    }
-
-    /// A connection to the same camera a moment ago must not let the next one skip the certificate check (a resumed
-    /// TLS session has no certificate to check): the certificate is the only proof the camera is the expected printer.
-    func testCertificateIsCheckedOnEveryConnection() async throws {
-        let insecure = try await record("h264-digest", transport: .rtsps) { $0.filter(\.isVideo).count >= 2 }
-        XCTAssertNil(failure(in: insecure), "\(insecure)")
-        let secure = try await record("h264-digest", transport: .rtsps, insecure: false) { _ in false }
-        guard case .certificate? = failure(in: secure) else { return XCTFail("\(secure)") }
     }
 
     /// The handshake gets no answer: the client gives up after 20 seconds instead of waiting forever.

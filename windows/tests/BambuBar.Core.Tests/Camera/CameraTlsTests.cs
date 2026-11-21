@@ -3,21 +3,20 @@ using BambuBar.Core.Protocol;
 
 namespace BambuBar.Core.Tests.Camera;
 
-/// <summary>The camera's TLS rules against an in-process server, as <see cref="TlsAndMqttTests"/> checks them for MQTT:
-/// the camera connection is trusted the same way, so it must follow the same rules. The Docker camera tests cover the
-/// same against the mock camera.</summary>
+/// <summary>The camera's TLS rules against an in-process server, as <see cref="TlsAndMqttTests"/> checks them for MQTT.
+/// The Docker camera tests cover the same against the mock camera.</summary>
 public class CameraTlsTests
 {
     private const string Serial = "01P00CLOOPBACK1";
 
     /// <summary>Waits for the client's first event, or <paramref name="until"/>, then stops it.</summary>
-    private static async Task<CameraEvent?> RunAsync(int port, bool insecure, CameraTransport transport, Action<string?>? onCertificate = null,
+    private static async Task<CameraEvent?> RunAsync(int port, CameraTransport transport, Action<string?>? onCertificate = null,
         Task? until = null)
     {
         var done = new TaskCompletionSource<CameraEvent?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = CameraClient.Create(new CameraConfig
         {
-            Host = "127.0.0.1", Port = port, Serial = Serial, AccessCode = "12345678", Transport = transport, Insecure = insecure,
+            Host = "127.0.0.1", Port = port, Serial = Serial, AccessCode = "12345678", Transport = transport,
             OnCertificate = leaf => onCertificate?.Invoke(BambuTrust.CommonName(leaf)),
         });
         client.OnEvent = e => done.TrySetResult(e);
@@ -53,7 +52,7 @@ public class CameraTlsTests
         for (var i = 0; i < 3; i++)
         {
             describe = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            var failure = await RunAsync(server.Port, insecure: true, CameraTransport.Rtsps, name => { lock (names) names.Add(name); },
+            var failure = await RunAsync(server.Port, CameraTransport.Rtsps, name => { lock (names) names.Add(name); },
                 until: describe.Task);
             Assert.Null(failure);
         }
@@ -62,23 +61,20 @@ public class CameraTlsTests
         Assert.Equal(3, requests);
     }
 
-    /// <summary>A self-signed certificate isn't Bambu Lab's: refused before the access code leaves, on either port.</summary>
+    /// <summary>The camera accepts a certificate that doesn't chain to a Bambu root, as Bambu Studio does (an H3C's
+    /// camera presents one), on either port.</summary>
     [Theory]
     [InlineData(CameraTransport.Rtsps)]
     [InlineData(CameraTransport.Jpeg)]
-    public async Task UntrustedCertificateIsRefusedBeforeTheCode(CameraTransport transport)
+    public async Task UnverifiedCertificateIsAccepted(CameraTransport transport)
     {
-        var received = 0;
+        var request = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = new LoopbackTlsServer(Serial, async (tls, token) =>
         {
             var buffer = new byte[256];
-            while (await tls.ReadAsync(buffer, token) is > 0 and var n) Interlocked.Add(ref received, n);
+            while (await tls.ReadAsync(buffer, token) > 0) request.TrySetResult();
         });
-        var failed = Assert.IsType<CameraEvent.Failed>(await RunAsync(server.Port, insecure: false, transport));
-        var certificate = Assert.IsType<CameraFailure.Certificate>(failed.Failure);
-        Assert.True(certificate.IsPermanent);
-        Assert.StartsWith("The camera's certificate couldn't be verified: ", certificate.Message);
-        Assert.Equal(0, received);
+        Assert.Null(await RunAsync(server.Port, transport, until: request.Task));
     }
 
     [Fact]
@@ -88,7 +84,7 @@ public class CameraTlsTests
         probe.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, 0));
         var port = ((System.Net.IPEndPoint)probe.LocalEndPoint!).Port;
         probe.Dispose();
-        var failed = Assert.IsType<CameraEvent.Failed>(await RunAsync(port, insecure: true, CameraTransport.Rtsps));
+        var failed = Assert.IsType<CameraEvent.Failed>(await RunAsync(port, CameraTransport.Rtsps));
         var unreachable = Assert.IsType<CameraFailure.Unreachable>(failed.Failure);
         Assert.False(unreachable.IsPermanent);
     }

@@ -33,6 +33,7 @@ public sealed class WidgetCard : FrameworkElement
     private DateTimeOffset _now = DateTimeOffset.Now;
     private bool _hover;
     private double _ppd = 1;
+    private double _backgroundOpacity = 1;
 
     public WidgetCard(WidgetHost.Size size)
     {
@@ -45,6 +46,16 @@ public sealed class WidgetCard : FrameworkElement
     }
 
     public WidgetHost.Size Size { get; }
+
+    public double BackgroundOpacity
+    {
+        get => _backgroundOpacity;
+        set
+        {
+            _backgroundOpacity = value;
+            InvalidateVisual();
+        }
+    }
 
     /// <summary>The spinner's angle while connecting (degrees); the showcase turns it.</summary>
     public double SpinAngle { get; set; }
@@ -72,8 +83,10 @@ public sealed class WidgetCard : FrameworkElement
         var outline = new RectangleGeometry(new Rect(card), 14, 14);
         // The card (always dark, ledger O6): the skins' gradient, a white hairline, both lighter on hover.
         var fill = new LinearGradientBrush(_hover ? Rgb(0x31, 0x33, 0x37) : Rgb(0x29, 0x2B, 0x2E), _hover ? Rgb(0x19, 0x1B, 0x1E) : Rgb(0x14, 0x17, 0x19), 90);
+        fill.Opacity = BackgroundOpacity;
         dc.DrawGeometry(fill, null, outline);
-        dc.DrawRoundedRectangle(null, new Pen(new SolidColorBrush(Color.FromArgb((byte)(_hover ? 56 : 20), 255, 255, 255)), 1),
+        var border = Color.FromArgb((byte)Math.Round((_hover ? 56 : 20) * BackgroundOpacity), 255, 255, 255);
+        dc.DrawRoundedRectangle(null, new Pen(new SolidColorBrush(border), 1),
             new Rect(0.5, 0.5, card.Width - 1, card.Height - 1), 13.5, 13.5);
         if (_state is null) return;
         dc.PushClip(outline);
@@ -218,7 +231,9 @@ public sealed class WidgetCard : FrameworkElement
                     else if (m.State == "paused" && m.S.Layers is not null) y += Text(dc, m.DetailFirst, St.SubNum, colX, y, new() { W = colW }).Used + 1;
                     break;
                 case "finished" or "failed":
-                    y += Text(dc, m.S.LastJob?.Ago ?? "", St.BigAgo, colX, y, new() { W = colW, Fit = 0.7 }).Used + 1;
+                    // No record of the print's end (the app started after it): say it's done, as the Mac does.
+                    var ended = m.State == "finished" ? Or(m.S.Strings.DoneWord, "Done") : Or(m.S.Strings.StoppedWord, "Stopped");
+                    y += Text(dc, m.S.LastJob?.Ago is { Length: > 0 } ago ? ago : ended, St.BigAgo, colX, y, new() { W = colW, Fit = 0.7 }).Used + 1;
                     if (m.S.LastJob?.Took is { } took) y += Text(dc, took, St.Sub, colX, y, new() { W = colW }).Used + 1;
                     break;
                 case "idle":
@@ -243,17 +258,29 @@ public sealed class WidgetCard : FrameworkElement
 
         const double bottom = 180 - P;
         double footTop;
+        // The printer's name over the footer, so two Small widgets side by side tell their printers apart. Left out
+        // where the footer already says it, or where it would run into the text above.
+        double NameAbove(double top, string shown, double above)
+        {
+            if (m.S.Name.Length == 0 || m.S.Name == shown) return top;
+            var h = Text(null, m.S.Name, St.FootName, P, 0, new() { W = fullW }).Used;
+            if (top - h - 1 < above + 4) return top;
+            Text(dc, m.S.Name, St.FootName, P, top - h - 1, new() { W = fullW });
+            return top - h - 1;
+        }
         if (m.Live && m.State == "idle")
         {
             var hd = Text(null, m.StateLine, St.FootLine, P, 0, new() { W = fullW }).Used;
-            footTop = bottom - hd - 4 - 21;
             Text(dc, m.StateLine, St.FootLine, P, bottom - hd, new() { W = fullW });
+            var swatches = m.S.Spools.Where(sp => !sp.Empty).Take(5).ToList();
+            footTop = swatches.Count > 0 ? bottom - hd - 4 - 21 : bottom - hd;
             var x = P;
-            foreach (var sp in m.S.Spools.Where(sp => !sp.Empty).Take(5))
+            foreach (var sp in swatches)
             {
                 Spool(dc, x, footTop, 21, sp, active: false);
                 x += 26;
             }
+            footTop = NameAbove(swatches.Count > 0 ? footTop - 2 : footTop, m.StateLine, topBottom);
         }
         else if (m.Live)
         {
@@ -267,6 +294,8 @@ public sealed class WidgetCard : FrameworkElement
             var ht = Text(null, m.S.Headline, St.FootTitle, P, 0, new() { W = fullW }).Used;
             footTop = bottom - hd - ht;
             Text(dc, m.S.Headline, St.FootTitle, P, footTop, new() { W = fullW });
+            var above = reflow ? topBottom + 8 + Text(null, m.S.Reason ?? "", St.Reason, P, 0, new() { W = fullW, Lines = 3 }).Used : topBottom;
+            footTop = NameAbove(footTop, m.S.Headline, above);
         }
         else
         {
@@ -289,6 +318,8 @@ public sealed class WidgetCard : FrameworkElement
             Text(dc, line, St.SpoolLine, P + 21, ys + (16 - used) / 2, new() { W = fullW - 21 });
         }
     }
+
+    private static string Or(string text, string fallback) => text.Length > 0 ? text : fallback;
 
     private static (string Kind, double Size, Color Color)? DialGlyph(Model m) => m.State switch
     {
@@ -479,6 +510,7 @@ public sealed class WidgetCard : FrameworkElement
         public static readonly TextStyle TempRow = new(true, 14, 600);
         public static readonly TextStyle SpoolLine = new(false, 11, 500, Secondary: true);
         public static readonly TextStyle FootTitle = new(false, 13, 600);
+        public static readonly TextStyle FootName = new(false, 11, 600, Secondary: true);
         public static readonly TextStyle FootDetail = new(true, 11, 600, Secondary: true);
         public static readonly TextStyle FootLine = new(false, 11, 400, Secondary: true);
         public static readonly TextStyle DialPct = new(true, 18, 700, Lh: 1.1, PercentPx: 9.5);

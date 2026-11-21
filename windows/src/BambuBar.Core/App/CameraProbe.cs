@@ -9,7 +9,7 @@ namespace BambuBar.Core.App;
 
 /// <summary>
 /// <c>--probe-camera &lt;host&gt; &lt;serial&gt; &lt;access-code&gt; [seconds] [--jpeg|--rtsp] [--model &lt;name&gt;]
-/// [--insecure-tls] [--out &lt;file.png&gt;]</c>: opens the camera like the app does, logs the handshake (certificate,
+/// [--out &lt;file.png&gt;]</c>: opens the camera like the app does, logs the handshake (certificate,
 /// RTSP replies, SDP) and the frames, decodes them with FFmpeg as the app does and saves the first picture as a PNG
 /// (<c>bambubar-camera.png</c> in the temporary folder unless <c>--out</c> says otherwise). Without
 /// <c>--jpeg</c>/<c>--rtsp</c> the model decides (<c>--model</c> takes a name or a model code; else the serial says;
@@ -18,7 +18,7 @@ namespace BambuBar.Core.App;
 /// </summary>
 public static class CameraProbe
 {
-    public sealed record Arguments(string Host, string Serial, string Code, double Seconds, CameraTransport Transport, bool Insecure, string Output);
+    public sealed record Arguments(string Host, string Serial, string Code, double Seconds, CameraTransport Transport, string Output);
 
     /// <param name="codeFor">Looks up a saved code when the code given is "keychain" (as on the Mac).</param>
     public static Arguments? Parse(IReadOnlyList<string> args, Func<string, string?>? codeFor = null)
@@ -36,7 +36,7 @@ public static class CameraProbe
         var code = args[i + 3] == "keychain" ? codeFor?.Invoke(args[i + 2]) ?? "" : args[i + 3];
         var o = list.IndexOf("--out");
         var output = o >= 0 && o + 1 < args.Count ? args[o + 1] : Path.Combine(Path.GetTempPath(), "bambubar-camera.png");
-        return new(args[i + 1], args[i + 2], code, seconds, transport, args.Contains("--insecure-tls"), output);
+        return new(args[i + 1], args[i + 2], code, seconds, transport, output);
     }
 
     /// <summary>Runs the probe; returns the exit code (0 when a picture was decoded and saved).</summary>
@@ -62,7 +62,7 @@ public static class CameraProbe
         var saved = false;
         string? failure = null;
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var client = CameraClient.Create(new CameraConfig { Host = a.Host, Serial = a.Serial, AccessCode = a.Code, Transport = a.Transport, Insecure = a.Insecure });
+        var client = CameraClient.Create(new CameraConfig { Host = a.Host, Serial = a.Serial, AccessCode = a.Code, Transport = a.Transport });
         client.Log = Log;
         client.OnEvent = e =>
         {

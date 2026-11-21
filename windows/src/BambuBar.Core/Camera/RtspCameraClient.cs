@@ -57,7 +57,7 @@ internal sealed class RtspCameraClient : ICameraClient
     private void Open()
     {
         if (_finished || _socket is not null) return;
-        var socket = new CameraSocket(_config.Host, _port, _config.Serial, _config.Insecure, _queue, _config.OnCertificate)
+        var socket = new CameraSocket(_config.Host, _port, _config.Serial, _queue, _config.OnCertificate)
         {
             Log = Log,
         };

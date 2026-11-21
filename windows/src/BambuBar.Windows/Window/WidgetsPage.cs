@@ -29,7 +29,7 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
 
     public override FrameworkElement Build()
     {
-        _showcase = new Showcase(Ctx);
+        _showcase = new Showcase(Ctx, TransparencyControl());
         var page = new Stack
         {
             Spacing = 22,
@@ -89,6 +89,39 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
 
     private string PrinterTitle(string? serial) =>
         serial is null ? Loc.T("Printer in the tray") : Store.Session(serial)?.Config.Name ?? serial;
+
+    private FrameworkElement TransparencyControl()
+    {
+        var title = Loc.T("Widget background transparency");
+        var host = Host;
+        var slider = new Slider
+        {
+            Minimum = 0, Maximum = 100, TickFrequency = 1, IsSnapToTickEnabled = true,
+            SmallChange = 1, LargeChange = 10, IsMoveToPointEnabled = true, Value = host?.BackgroundTransparency ?? 0,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(slider, title);
+        static string Percent(double value) => (value / 100).ToString("P0", System.Globalization.CultureInfo.CurrentCulture);
+        var value = Ui.Text(Percent(slider.Value), WRamp.Body, null, ThemeKeys.TextSecondary);
+        value.VerticalAlignment = VerticalAlignment.Center;
+        slider.ValueChanged += (_, e) =>
+        {
+            var percent = (int)e.NewValue;
+            try { host?.SetBackgroundTransparency(percent); }
+            catch (System.ComponentModel.Win32Exception error) when (host is not null)
+            {
+                slider.Value = host.BackgroundTransparency;
+                Store.ShowToast(error.Message, error: true);
+                return;
+            }
+            value.Text = Percent(percent);
+            _showcase?.SetBackgroundTransparency(percent);
+        };
+        var heading = Ui.Columns("*", "Auto");
+        heading.Children.Add(Ui.At(Ui.Text(title, WRamp.Body, FontWeights.SemiBold), 0));
+        heading.Children.Add(Ui.At(value, 1));
+        return new Stack { Spacing = 4, Children = { heading, slider } };
+    }
 
     // MARK: Add a widget
 
@@ -235,6 +268,7 @@ internal sealed class Showcase : IDisposable
     private readonly Grid _layout = new();
     private readonly Border _stage;
     private readonly Border _widgetSlot = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly DropShadowEffect _widgetShadow = new() { BlurRadius = 24, ShadowDepth = 6, Direction = 270, Opacity = 0.45 };
     private readonly Grid _scenesRow = new();
     private readonly Border _highlight;
     private readonly StackPanel _sceneButtons = new() { Orientation = Orientation.Horizontal };
@@ -245,13 +279,15 @@ internal sealed class Showcase : IDisposable
     private readonly WrapPanel _features = new();
     private readonly DispatcherTimer? _timer;
     private WidgetCard _card = null!;
+    private int _backgroundTransparency;
     private WidgetHost.Size _size = WidgetHost.Size.Small;
     private ShowcaseScene _scene = ShowcaseScene.Printing;
     private DateTime _sceneStart = DateTime.UtcNow;
 
-    public Showcase(WindowContext ctx)
+    public Showcase(WindowContext ctx, FrameworkElement transparency)
     {
         _ctx = ctx;
+        _backgroundTransparency = ctx.Services.Widgets?.BackgroundTransparency ?? 0;
         _highlight = new Border
         {
             CornerRadius = new CornerRadius(999), HorizontalAlignment = HorizontalAlignment.Left, Background = Palette.Brush(Color.FromArgb(0x2E, 255, 255, 255)),
@@ -268,7 +304,7 @@ internal sealed class Showcase : IDisposable
         _layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        _layout.Children.Add(_stage);
+        _layout.Children.Add(new Stack { Spacing = 12, Children = { _stage, transparency } });
         _layout.Children.Add(_details);
         _layout.SizeChanged += (_, e) => Arrange(e.NewSize.Width);
         Arrange(800);
@@ -285,6 +321,13 @@ internal sealed class Showcase : IDisposable
     }
 
     public FrameworkElement Root => _layout;
+
+    public void SetBackgroundTransparency(int percent)
+    {
+        _backgroundTransparency = percent;
+        _card.BackgroundOpacity = 1 - percent / 100.0;
+        _widgetShadow.Opacity = 0.45 * _card.BackgroundOpacity;
+    }
 
     /// <summary>The store changed: the widget is dressed as the current printer, so draw it again.</summary>
     public void Refresh() => Draw();
@@ -311,7 +354,7 @@ internal sealed class Showcase : IDisposable
         backdrop.Children.Add(new Border { Background = Bloom(Color.FromArgb(0x99, 0x5B, 0x9B, 0xFF), new Point(0.18, 0.18), 0.7) });
         backdrop.Children.Add(new Border { Background = Bloom(Color.FromArgb(0x73, 0xB0, 0x5C, 0xE6), new Point(0.9, 0.95), 0.75) });
 
-        _widgetSlot.Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 6, Direction = 270, Opacity = 0.45 };
+        _widgetSlot.Effect = _widgetShadow;
         var content = new Grid();
         content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -321,7 +364,7 @@ internal sealed class Showcase : IDisposable
         // A group named "Widgets": the widget and the states the tour walks through.
         var stage = new AccessibleGroup
         {
-            CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Left,
+            CornerRadius = new CornerRadius(16), BorderThickness = new Thickness(1),
             VerticalAlignment = VerticalAlignment.Top, MinWidth = ScenesWidth, ClipToBounds = true,
             Child = new Grid { Children = { backdrop, content } },
             Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 6, Direction = 270, Opacity = 0.18 },
@@ -531,6 +574,7 @@ internal sealed class Showcase : IDisposable
     private void ShowSize(bool animate)
     {
         _card = new WidgetCard(_size);
+        SetBackgroundTransparency(_backgroundTransparency);
         var scale = _size switch { WidgetHost.Size.Small => 1.3, WidgetHost.Size.Medium => 1.1, _ => 1.0 };
         var card = WidgetCard.CardSize(_size);
         _widgetSlot.Child = _card;

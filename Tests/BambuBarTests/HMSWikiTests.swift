@@ -57,4 +57,48 @@ final class HMSWikiTests: XCTestCase {
         let error = try XCTUnwrap(issues.first { $0.id == "0700_8006" })
         XCTAssertEqual(error.wikiURL?.host, "wiki.bambulab.com")
     }
+
+    func testParserSkipsCodesBambuListsWithoutText() {
+        var doc = ReportDocument()
+        // HMS_0503_0000_0003_0027 and _0028, which the X2D reports while it runs, and internal print error 0C00_8002,
+        // next to a real code and one the catalogue doesn't know.
+        _ = doc.apply(["print": ["gcode_state": "RUNNING", "print_error": 0x0C00_8002,
+                                 "hms": [["attr": 0x0503_0000, "code": 0x0003_0027],
+                                         ["attr": 0x0503_0000, "code": 0x0003_0028],
+                                         ["attr": 0x0700_2100, "code": 0x0002_0019],
+                                         ["attr": 0x0F0F_0000, "code": 0x0002_0001]]] as [String: Any]])
+        let catalog = HMSCatalog(bundle: Bundle(for: Self.self))
+        XCTAssertNotNil(catalog.hmsText("0700210000020019"), "the test bundle carries the catalogue")
+        let ids = ReportParser.status(from: doc, hms: catalog).issues.map(\.id)
+        XCTAssertEqual(Set(ids), ["HMS_0700_2100_0002_0019", "HMS_0F0F_0000_0002_0001"])
+    }
+
+    func testIgnoredCodesReadTheirText() {
+        let catalog = HMSCatalog(bundle: Bundle(for: Self.self))
+        XCTAssertEqual(catalog.issueText("HMS_0700_2100_0002_0019"), catalog.hmsText("0700210000020019"))
+        XCTAssertEqual(catalog.issueText("0500_C011", model: "01S"), catalog.errorText("0500C011", model: "01S"))
+        XCTAssertNil(catalog.issueText("HMS_0F0F_0000_0002_0001"))
+    }
+
+    func testPrintersSavedBeforeIgnoringDecode() throws {
+        let old = Data(#"{"host":"10.0.0.2","serial":"01P00A000000000","name":"P1S","modelCode":"C12"}"#.utf8)
+        var config = try JSONDecoder().decode(PrinterConfig.self, from: old)
+        XCTAssertNil(config.ignoredIssues)
+        config.ignoredIssues = ["0500_C011"]
+        let again = try JSONDecoder().decode(PrinterConfig.self, from: JSONEncoder().encode(config))
+        XCTAssertEqual(again.ignoredIssues, ["0500_C011"])
+    }
+
+    func testTextsFollowThePrintersModel() {
+        let catalog = HMSCatalog(bundle: Bundle(for: Self.self))
+        // Print error 0500_C011 has text on the P1 series and none elsewhere.
+        XCTAssertEqual(catalog.errorText("0500C011", model: "00M"), "")
+        XCTAssertEqual(catalog.errorText("0500C011", model: "01S")?.isEmpty, false)
+        // H3C codes come from its own catalogue.
+        XCTAssertEqual(catalog.hmsText("1A00080000010051", model: "32X")?.isEmpty, false)
+        var doc = ReportDocument()
+        _ = doc.apply(["print": ["gcode_state": "RUNNING", "print_error": 0x0500_C011] as [String: Any]])
+        XCTAssertEqual(ReportParser.status(from: doc, hms: catalog, serial: "01S00A000000000").issues.map(\.id), ["0500_C011"])
+        XCTAssertEqual(ReportParser.status(from: doc, hms: catalog, serial: "00M00A000000000").issues, [])
+    }
 }

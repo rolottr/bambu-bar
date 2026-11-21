@@ -71,8 +71,9 @@ struct Entry: TimelineEntry {
     var snapshot: SharedSnapshot
 }
 
-/// Reads the app's snapshot. While a print runs, it lays out entries every few minutes until the
-/// estimated end, so progress and time left keep moving even when the app doesn't push an update.
+/// Reads the app's snapshot. While a print runs, it lays out entries every few minutes, so progress and time left
+/// keep moving when the app's reloads don't get through (macOS rations them), then every quarter hour once the
+/// projection window has closed, so "Updated … ago" stays true.
 struct Provider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> Entry {
         Entry(date: Date(), snapshot: .placeholder)
@@ -87,16 +88,23 @@ struct Provider: AppIntentTimelineProvider {
     func timeline(for configuration: SelectPrinterIntent, in context: Context) async -> Timeline<Entry> {
         let now = Date()
         let snapshot = current(configuration, now: now)
+        // Tells the app what this widget now shows, so it can tell a reload that got through from one macOS dropped.
+        WidgetReceipts.record(snapshot, at: now)
         var entries = [Entry(date: now, snapshot: snapshot)]
-        if let status = snapshot.status, status.state == .printing, let end = status.estimatedEnd, end > now {
+        let printing = snapshot.link == .online && snapshot.status?.state == .printing
+        let projecting = snapshot.savedAt.addingTimeInterval(WidgetState.projectionWindow)
+        if printing {
             var t = now
-            let step: TimeInterval = end.timeIntervalSince(now) > 4 * 3600 ? 600 : 300
-            while t < end && entries.count < 60 {
-                t = t.addingTimeInterval(step)
-                entries.append(Entry(date: min(t, end), snapshot: snapshot))
+            while entries.count < 40 {
+                t = t.addingTimeInterval(t < projecting ? 300 : 900)
+                entries.append(Entry(date: t, snapshot: snapshot))
             }
         }
-        return Timeline(entries: entries, policy: .after(now.addingTimeInterval(30 * 60)))
+        // The widget's own refreshes count against the same daily allowance as the app's requests, and the app asks
+        // when something changes. So this is the fallback: when a print's projection runs out, else every two hours
+        // (enough to turn an app that quit into "Offline").
+        let next = printing ? max(now.addingTimeInterval(30 * 60), projecting) : now.addingTimeInterval(2 * 3600)
+        return Timeline(entries: entries, policy: .after(next))
     }
 
     private func current(_ configuration: SelectPrinterIntent, now: Date) -> SharedSnapshot {
