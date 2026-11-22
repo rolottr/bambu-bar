@@ -1,0 +1,18 @@
+pkgname=bambu-bar-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='Bambu Lab printer monitor for the Omarchy desktop'
+arch=('x86_64')
+url='https://github.com/rolottr/bambu-bar'
+license=('MIT')
+provides=("bambu-bar=$pkgver")
+conflicts=('bambu-bar')
+depends=('libadwaita' 'gtk4' 'libsecret' 'icu' 'openssl' 'zlib' 'krb5' 'libglvnd'
+         'python-gobject' 'quickshell' 'qt6-quick3d')
+options=('!strip' '!debug')
+source=("$url/releases/download/linux-v$pkgver-$pkgrel/Bambu-Bar-$pkgver-omarchy-x86_64.tar.zst")
+sha256sums=('@SHA256@')
+
+package() {
+    cp -a "$srcdir/usr" "$pkgdir/"
+}

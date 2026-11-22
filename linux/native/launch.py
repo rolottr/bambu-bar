@@ -19,7 +19,7 @@ with open(folder / ('window' + suffix + '.lock'), 'a') as lock:
     except BlockingIOError:
         raise SystemExit(0)
     command = ['qs', '-p', str(root / 'omarchy/shell.qml')] if Path('/usr/share/omarchy/shell/shell.qml').exists() else ['/usr/bin/python3', str(root / 'kde/main.py')]
-    child = subprocess.Popen(command)
+    child = subprocess.Popen(command, env={**os.environ, 'BAMBUBAR_NATIVE_ROOT': str(root)})
     def stop(*_):
         child.terminate()
     signal.signal(signal.SIGTERM, stop)

@@ -2,12 +2,14 @@
 """D-Bus-activated launcher for native UI. No printer data or credentials pass here."""
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from gi.repository import Gio, GLib
 
 APP = 'dev.rolottr.BambuBar'
 ROOT = Path(__file__).resolve().parent
+backend = ['/usr/bin/bambu-bar'] if '--system-package' in sys.argv else ['flatpak', 'run', APP]
 XML = '''<node><interface name="dev.rolottr.BambuBar.Native">
 <method name="Open"><arg name="page" type="s" direction="in"/></method>
 <method name="Panel"/>
@@ -21,6 +23,8 @@ process = None
 shell_owner = 0
 panel_senders = set()
 demos = {}
+if '--system-package' in sys.argv:
+    os.environ['BAMBUBAR_SYSTEM_PACKAGE'] = '1'
 bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
 def call(connection, sender, path, interface, method, parameters, invocation):
@@ -29,7 +33,7 @@ def call(connection, sender, path, interface, method, parameters, invocation):
     if method == 'Open':
         owned = bus.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus', 'NameHasOwner', GLib.Variant('(s)', (APP + '.Desktop',)), None, Gio.DBusCallFlags.NONE, 1000, None).unpack()[0]
         if not owned:
-            subprocess.Popen(['flatpak', 'run', APP, '--background'], stdin=subprocess.DEVNULL)
+            subprocess.Popen([*backend, '--background'], stdin=subprocess.DEVNULL)
         page = parameters.unpack()[0]
         if page == "Printers":
             page = "Printer"
@@ -58,7 +62,7 @@ def call(connection, sender, path, interface, method, parameters, invocation):
     elif method == 'SetAutostart':
         path = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'autostart' / (APP + '.desktop')
         # Recognize the previous managed entry, but leave unrelated user entries alone.
-        entry = '[Desktop Entry]\nType=Application\nName=Bambu Bar\nExec=flatpak run dev.rolottr.BambuBar --background\nIcon=dev.rolottr.BambuBar\nX-BambuBar-Hyprland=true\n'
+        entry = f'[Desktop Entry]\nType=Application\nName=Bambu Bar\nExec={" ".join(backend)} --background\nIcon=dev.rolottr.BambuBar\nX-BambuBar-Hyprland=true\n'
         try:
             if path.exists() and path.read_text() != entry:
                 invocation.return_value(GLib.Variant('(b)', (False,)))

@@ -57,7 +57,7 @@ ShellRoot {
     }
     Process {
         id: bridge
-        command: ["python3", (Quickshell.env("XDG_DATA_HOME") || Quickshell.env("HOME") + "/.local/share") + "/bambu-bar-native/bridge.py"]
+        command: ["python3", Quickshell.env("BAMBUBAR_NATIVE_ROOT") + "/bridge.py"]
         running: true
         stdinEnabled: true
         stdout: SplitParser {

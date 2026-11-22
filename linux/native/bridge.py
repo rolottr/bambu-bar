@@ -121,6 +121,8 @@ def socket_ready(fd, condition):
             message = json.loads(line)
             if message.get('type') == 'capture':
                 folder = Path.home() / '.var/app' / APP / 'data'
+                if os.environ.get('BAMBUBAR_SYSTEM_PACKAGE') == '1':
+                    folder = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'bambu-bar'
                 path = str(message.get('path', ''))
                 if path.startswith('/var/data/'):
                     path = str(folder / path[len('/var/data/'):])

@@ -56,7 +56,15 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 
 ## Linux release assets
 
-Linux is distributed as a downloadable Flatpak, with optional companions for GNOME, Plasma and Hyprland. These assets are attached to the same versioned GitHub release; they do not add a Linux item to the Mac/Windows Sparkle appcast. Linux updates are manual downloads. User instructions are in [LINUX.md](../LINUX.md).
+The native Linux downloads have their own versioned preview tag. Keep the existing macOS and Windows release marked latest for their updaters. See [Linux installation](../LINUX.md) for desktop-specific downloads.
+
+### Native GitHub downloads
+
+Run `linux/scripts/build.sh` from the release source on x86_64 Linux, then `linux/scripts/package-native.sh gnome` or `linux/scripts/package-native.sh plasma` on Ubuntu 26.04 (`dpkg-deb`, `unzip`). On Omarchy run `linux/scripts/package-native.sh omarchy` as an ordinary user with `base-devel` installed. Collect the outputs under `build/linux/native-release/<version>/`.
+
+The Omarchy build uses the generated AUR recipe to produce the pacman package. Publish the matching source payload (`.tar.zst`) alongside the installable `.pkg.tar.zst` and both Ubuntu packages. The generated `aur/PKGBUILD` and `aur/.SRCINFO` reference release tag `linux-v<version>-<pkgrel>`. Include both in the recipe download. Compute checksums over the final artifacts. Rebuild with a new package revision when replacing a published payload. Test each installed package in its target desktop before publishing.
+
+### Flatpak and standalone companions
 
 On a Linux x86_64 builder with .NET 10, the dependencies in [linux.md](linux.md#build-locally-on-linux), and GNOME Platform/SDK 50:
 
@@ -68,7 +76,7 @@ sha256sum -c SHA256SUMS-linux.txt
 
 The build generates the Flatpak, GNOME extension, Plasma widget, native KDE/Omarchy UI package and standalone Hyprland helper archive on every builder, without requiring GNOME or Plasma packaging tools. `SOURCE-linux.txt` records the full source commit, version and runtime. The Flatpak contains FFmpeg/layer-shell licenses and source notices. Upload the complete contents of this release directory when publishing: `Bambu-Bar-<version>-linux-x64.flatpak`, `bambu-bar@rolottr.dev.shell-extension.zip`, `Bambu-Bar.plasmoid`, `Bambu-Bar-native-desktop.tar.gz`, `Bambu-Bar-hyprland.tar.gz`, `SHA256SUMS-linux.txt` and `SOURCE-linux.txt`.
 
-Before publication, build the tagged source on the GNOME, KDE and Omarchy hosts; run portable-core, tray, GNOME widget and relevant helper/theme checks; verify version identity and install/run the resulting packages. Desktop companion versions must match the app's release. Build and packaging scripts only write local artifacts: they never push, create a GitHub release or upload files. The existing CI workflow does not yet produce these Linux assets; use the validated Linux builders. ARM64 is supported by the build recipe but must not be advertised or attached as tested until built and run on ARM64 hardware. Separate deb/rpm/AppImage packages are not part of this release format.
+Before publication, build the tagged source on the GNOME, KDE and Omarchy hosts; run portable-core, tray, GNOME widget and relevant helper/theme checks; verify version identity and install/run the resulting packages. Desktop companion versions must match the app's release. Build and packaging scripts only write local artifacts: they never push, create a GitHub release or upload files. The existing CI workflow does not yet produce these Linux assets; use the validated Linux builders. ARM64 is supported by the build recipe but must not be advertised or attached as tested until built and run on ARM64 hardware.
 
 ## Release log
 
