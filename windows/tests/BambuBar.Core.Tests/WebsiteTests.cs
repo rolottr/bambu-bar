@@ -14,6 +14,15 @@ public class WebsiteTests
         Assert.Equal("?utm_source=bambu_bar&utm_medium=app_windows&utm_campaign=about&utm_content=release_notes", Website.Changelog.Query);
     }
 
+    [Theory]
+    [InlineData(PolarConfiguration.SupportPlacement.MainWindow, "main_window")]
+    [InlineData(PolarConfiguration.SupportPlacement.MenuPanel, "menu_panel")]
+    [InlineData(PolarConfiguration.SupportPlacement.AppMenu, "app_menu")]
+    [InlineData(PolarConfiguration.SupportPlacement.License, "license")]
+    public void LinuxSupportLinksIdentifyTheDesktopAndPlacement(PolarConfiguration.SupportPlacement placement, string content) =>
+        Assert.Equal($"https://bambubar.app/download?utm_source=bambu_bar&utm_medium=app_linux&utm_campaign=support_project&utm_content={content}",
+            PolarConfiguration.SupportUrl(placement, "app_linux").AbsoluteUri);
+
     [Fact]
     public void SupportLinkKeepsItsPlacement() =>
         Assert.Equal("https://bambubar.app/download?utm_source=bambu_bar&utm_medium=app_windows&utm_campaign=support_project&utm_content=menu_panel",

@@ -157,7 +157,6 @@ T.test("background transparency redraws immediately and survives hover", functio
 	local art = skin.options.ArtA.ImageAlpha
 	SetBackgroundTransparency(50)
 	T.ok(skin.options.Card.CardGradient:find("292B2E80", 1, true))
-	T.eq(skin.options.Shadow.ImageAlpha, "128")
 	T.eq(skin.bangs[#skin.bangs], "!Redraw")
 	Hover(1)
 	T.runFrames()
@@ -165,12 +164,10 @@ T.test("background transparency redraws immediately and survives hover", functio
 	SetBackgroundTransparency(100)
 	T.ok(skin.options.Card.CardGradient:find("31333701", 1, true), "transparent card still has a hit area")
 	T.ok(skin.options.Card.Shape2:find("FFFFFF00", 1, true))
-	T.eq(skin.options.Shadow.ImageAlpha, "0")
 	T.eq(skin.options.Content.Shape, content)
 	T.eq(skin.options.ArtA.ImageAlpha, art)
 	SetBackgroundTransparency(0)
 	T.ok(skin.options.Card.CardGradient:find("313337FF", 1, true))
-	T.eq(skin.options.Shadow.ImageAlpha, "255")
 end)
 
 T.test("a newly loaded widget uses the saved transparency", function()
@@ -180,7 +177,6 @@ T.test("a newly loaded widget uses the saved transparency", function()
 		local skin = T.boot(size, T.TMP, s.savedAt, "20")
 		Update()
 		T.ok(skin.options.Card.CardGradient:find("292B2ECC", 1, true))
-		T.eq(skin.options.Shadow.ImageAlpha, "204")
 	end
 end)
 

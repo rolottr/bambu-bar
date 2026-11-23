@@ -25,6 +25,7 @@ public static class PrinterArt
         public string? Filament { get; init; }
         public IReadOnlyList<string?> Spools { get; init; } = [];
         public bool LightOn { get; init; } = true;
+        public bool ContactShadow { get; init; } = true;
         /// <summary>Offline: the light off, then washed out (saturation 0.1, opacity 0.55) as the Mac's widgets show it.</summary>
         public bool Dimmed { get; init; }
     }
@@ -86,7 +87,7 @@ public static class PrinterArt
         var canvas = new Canvas(set.Width, set.Height);
         var spools = scene.Spools.Select(Color).ToList();
 
-        if (set.ModelBox is { } box)
+        if (scene.ContactShadow && set.ModelBox is { } box)
         {
             // Soft contact shadow where the printer meets the desk.
             canvas.Shadow(box.X - box.W * 0.025, box.Y + box.H - box.W * 0.11, box.W * 1.05, box.W * 0.16, box.W * 0.5);
@@ -122,7 +123,7 @@ public static class PrinterArt
     public static string? WritePng(Scene scene, int width, int height, string folder)
     {
         var key = string.Join('|', scene.Shape, scene.State, Math.Round(ShownFraction(scene.State, scene.Progress), 3),
-            scene.Filament, string.Join(',', scene.Spools), scene.LightOn, scene.Dimmed, width, height, Version);
+            scene.Filament, string.Join(',', scene.Spools), scene.LightOn, scene.Dimmed, scene.ContactShadow, width, height, Version);
         var name = $"art-{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key)))[..16]}.png";
         var path = Path.Combine(folder, name);
         if (File.Exists(path)) return name;

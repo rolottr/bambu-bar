@@ -110,13 +110,14 @@ struct PrinterRender: View {
     var spools: [Color?]
     var lightOn: Bool
     var dimmed: Bool
+    var contactShadow: Bool
 
     var body: some View {
         GeometryReader { geo in
             let scale = min(geo.size.width / renders.canvas.width, geo.size.height / renders.canvas.height)
             let size = CGSize(width: renders.canvas.width * scale, height: renders.canvas.height * scale)
             ZStack(alignment: .topLeading) {
-                if let box = renders.modelBox {
+                if contactShadow, let box = renders.modelBox {
                     // Soft contact shadow where the printer meets the desk.
                     Ellipse()
                         .fill(RadialGradient(colors: [.black.opacity(0.55), .black.opacity(0.2), .clear],

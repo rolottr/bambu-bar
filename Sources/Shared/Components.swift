@@ -77,6 +77,7 @@ struct FilamentProgressBar: View {
     var progress: Double
     var tint: Color
     var height: CGFloat = 8
+    var glow = true
 
     var body: some View {
         GeometryReader { geo in
@@ -90,7 +91,7 @@ struct FilamentProgressBar: View {
                         Capsule().fill(.white.opacity(0.28)).frame(height: height * 0.35).padding(.horizontal, height * 0.4).padding(.top, 1)
                             .frame(width: progress > 0 ? w : 0)
                     }
-                    .shadow(color: tint.opacity(0.45), radius: height * 0.6)
+                    .shadow(color: glow ? tint.opacity(0.45) : .clear, radius: height * 0.6)
             }
         }
         .frame(height: height)
@@ -102,6 +103,7 @@ struct ProgressRing: View {
     var progress: Double
     var tint: Color
     var lineWidth: CGFloat = 8
+    var glow = true
 
     var body: some View {
         ZStack {
@@ -112,7 +114,7 @@ struct ProgressRing: View {
                                         startAngle: .degrees(0), endAngle: .degrees(360 * max(0.01, progress))),
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .shadow(color: tint.opacity(0.35), radius: lineWidth * 0.5)
+                .shadow(color: glow ? tint.opacity(0.35) : .clear, radius: lineWidth * 0.5)
         }
     }
 }

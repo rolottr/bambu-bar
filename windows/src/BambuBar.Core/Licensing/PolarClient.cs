@@ -21,7 +21,7 @@ public static class PolarConfiguration
     public enum SupportPlacement { MainWindow, AppMenu, MenuPanel, License }
 
     /// <summary>The website's download page, tagged like the Mac's <c>Website.url("download", …)</c>.</summary>
-    public static Uri SupportUrl(SupportPlacement placement)
+    public static Uri SupportUrl(SupportPlacement placement, string medium = Website.Medium)
     {
         var content = placement switch
         {
@@ -30,7 +30,7 @@ public static class PolarConfiguration
             SupportPlacement.MenuPanel => "menu_panel",
             _ => "license",
         };
-        return Website.Url("download", "support_project", content);
+        return Website.Url("download", "support_project", content, medium);
     }
 }
 
@@ -94,7 +94,7 @@ public interface ILicenseApi
 }
 
 /// <summary>Polar's public customer-portal license-key endpoints, without any credentials.</summary>
-public sealed class PolarClient(HttpMessageHandler? handler = null) : ILicenseApi
+public sealed class PolarClient(HttpMessageHandler? handler = null, Func<string, string>? activationLabel = null) : ILicenseApi
 {
     public static readonly Uri Endpoint = new("https://api.polar.sh/v1/customer-portal/license-keys/");
 
@@ -112,7 +112,7 @@ public sealed class PolarClient(HttpMessageHandler? handler = null) : ILicenseAp
         var data = await RequestAsync("activate", new JsonObject
         {
             ["key"] = key,
-            ["label"] = ActivationLabel(installationId),
+            ["label"] = (activationLabel ?? ActivationLabel)(installationId),
             ["conditions"] = new JsonObject { ["installation_id"] = installationId },
         }, cancellation).ConfigureAwait(false);
         return PolarActivation.FromJson(data);

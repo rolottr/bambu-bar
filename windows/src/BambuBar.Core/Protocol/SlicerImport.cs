@@ -148,6 +148,12 @@ public static class SlicerImport
         string text;
         try { text = new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(File.ReadAllBytes(path)); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or DecoderFallbackException) { return []; }
+        return ReadText(text, source);
+    }
+
+    /// <summary>Parse settings received through a private file-picker transport without a plaintext temporary file.</summary>
+    public static List<SlicerPrinter> ReadText(string text, string source)
+    {
         // Drop anything after the JSON object (the "# MD5 checksum …" line some builds append).
         var end = text.LastIndexOf('}');
         if (end >= 0) text = text[..(end + 1)];

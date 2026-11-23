@@ -20,7 +20,7 @@ namespace BambuBar.Widgets;
 /// </summary>
 public sealed class WidgetCard : FrameworkElement
 {
-    /// <summary>The card in logical pixels (the skins' CardW × CardH, without the shadow margin).</summary>
+    /// <summary>The card in logical pixels (the skins' CardW × CardH, without the transparent margin).</summary>
     public static Size CardSize(WidgetHost.Size size) => size switch
     {
         WidgetHost.Size.Small => new Size(180, 180),
@@ -65,7 +65,7 @@ public sealed class WidgetCard : FrameworkElement
     public void Show(WidgetState state, PrinterArt.Scene? art, DateTimeOffset now)
     {
         _state = state;
-        _scene = art;
+        _scene = art is null ? null : art with { ContactShadow = false };
         _now = now;
         System.Windows.Automation.AutomationProperties.SetName(this, $"{state.Name}: {state.Caption}, {state.Headline}");
         InvalidateVisual();

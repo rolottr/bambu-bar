@@ -1,0 +1,10 @@
+{
+  "KPlugin": {
+    "Id": "dev.rolottr.BambuBar", "Name": "Bambu Bar",
+    "Description": "Live Bambu Lab printer status from Bambu Bar",
+    "Icon": "printer", "Version": "2.2.1", "License": "MIT",
+    "Authors": [{"Name": "Bambu Bar contributors"}], "Category": "System Information"
+  },
+  "KPackageStructure": "Plasma/Applet", "X-Plasma-API-Minimum-Version": "6.6",
+  "X-Plasma-FormFactors": ["desktop", "horizontal", "vertical"]
+}

@@ -14,6 +14,9 @@ Bambu Bar is a native macOS app that shows your 3D printer's progress, temperatu
 
 Built with Swift and SwiftUI. Printer data stays local, with no app analytics. The GitHub build is free to use. Optional supporter licenses enable automatic updates; the Mac App Store edition is independent.
 
+**Linux:** Download a native package for Ubuntu GNOME, Kubuntu or Omarchy from the [Linux installation guide](LINUX.md).
+
+
 **Now on Windows too:** the same app lives in the notification area on Windows 10 and 11. See [Windows](#windows).
 
 [Getting started](#getting-started) · [Windows](#windows) · [Features](#features) · [Widgets](#desktop-widgets) · [Compatibility](#compatibility) · [Building](#building-from-source)
@@ -76,9 +79,13 @@ Closing the window keeps Bambu Bar running in the menu bar without a Dock icon. 
 
 Building the Windows app is described in [docs/windows.md](docs/windows.md).
 
+### Linux
+
+Choose the Ubuntu GNOME or Plasma `.deb`, or the Omarchy Arch package, in the [Linux installation guide](LINUX.md). Each includes the matching desktop integration. The guide also covers Flatpak for other distros.
+
 ### About downloaded builds
 
-Direct distribution builds are **universal, Developer ID signed and notarized by Apple**, so they open normally after you download them. Builds you make yourself without a Developer ID certificate, and the artifacts of the [Actions](https://github.com/rolottr/bambu-bar/actions/workflows/build.yml) workflow, are ad-hoc signed: they run on the Mac that built them, but the desktop widget only loads in a Developer ID signed copy.
+Direct macOS distribution builds are **universal, Developer ID signed and notarized by Apple**, so they open normally after you download them. Builds you make yourself without a Developer ID certificate, and the artifacts of the [Actions](https://github.com/rolottr/bambu-bar/actions/workflows/build.yml) workflow, are ad-hoc signed: they run on the Mac that built them, but the desktop widget only loads in a Developer ID signed copy.
 
 ### Controlling prints
 

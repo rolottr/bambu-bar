@@ -583,7 +583,13 @@ public sealed class PrinterStore : Observable, IDisposable
     /// the computer that runs the slicer). Returns how many printers it knew; they're kept for this session only.</summary>
     public int ImportSlicerSettings(string path)
     {
-        var found = SlicerImport.ReadPicked(path);
+        return ImportSlicerPrinters(SlicerImport.ReadPicked(path));
+    }
+
+    public int ImportSlicerText(string text) => ImportSlicerPrinters(SlicerImport.ReadText(text, Loc.F("%@ settings file", "Bambu Studio / OrcaSlicer")));
+
+    private int ImportSlicerPrinters(List<SlicerPrinter> found)
+    {
         // The file just picked replaces what an earlier one said about the same printers.
         foreach (var printer in found)
         {

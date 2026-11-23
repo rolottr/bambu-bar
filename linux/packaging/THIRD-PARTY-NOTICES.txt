@@ -1,0 +1,41 @@
+Bambu Bar is Copyright 2026 NINA LABS, LLC, MIT licensed (BAMBU-BAR-LICENSE.txt).
+
+The Linux app uses:
+- .NET 10, Microsoft and .NET contributors, MIT. https://github.com/dotnet/runtime
+- GTK4 Layer Shell 1.3.0, William Wold and contributors, MIT. https://github.com/wmww/gtk4-layer-shell
+  License/source in layer-shell/; pinned SDK build recipe: linux/scripts/build-layer-shell.sh
+- GirCore 0.8.1, GirCore contributors, MIT. https://github.com/gircore/gir.core
+- Tmds.DBus 0.94.2, Tom Deseyn and contributors, MIT. https://github.com/tmds/Tmds.DBus
+- Silk.NET 2.23.0, .NET Foundation and contributors, MIT. https://github.com/dotnet/Silk.NET
+- Bouncy Castle Cryptography 2.7.0, Legion of the Bouncy Castle Inc., MIT. https://www.bouncycastle.org/licence.html
+
+MIT: Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions: The above copyright notice and this
+permission notice shall be included in all copies or substantial portions of
+the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+FFmpeg 9.0.2 is dynamically linked and unmodified, LGPL-2.1-or-later. Only the
+H.264, HEVC and MJPEG decoders, libavutil and libswscale are enabled. No GPL or
+nonfree components. Full license and source URL are in ffmpeg/LICENSE.txt and
+ffmpeg/SOURCE.txt; the reproducible recipe and source hash are in
+linux/scripts/build-ffmpeg.sh and windows/ffmpeg/version.txt. Users may replace
+these shared libraries with ABI-compatible builds; reverse engineering for
+that purpose is permitted under the LGPL. Source:
+https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+
+GTK, libadwaita, libsecret, GLib, Mesa and other GNOME Platform libraries are
+provided and updated separately by the org.gnome.Platform runtime. Their source,
+licenses and notices are available through that runtime and its SDK.
+
+Shared Bambu Lab certificates, HMS translations and filament profiles retain
+the attribution in the repository README and LICENSE.

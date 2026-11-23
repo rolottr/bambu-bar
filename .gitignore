@@ -11,6 +11,8 @@ xcuserdata/
 *.key
 Resources/AppIcon.icns
 Resources/Assets.xcassets/
-shared/scripts/emulator/certs/
-shared/scripts/fleet/out/
-shared/scripts/integration/out/
+**/scripts/emulator/certs/
+**/scripts/fleet/out/
+**/scripts/integration/out/
+linux/**/bin/
+linux/**/obj/

@@ -10,13 +10,12 @@ BambuBar/
     Variables.inc   StateFile default, margin; includes App.inc and Styles.inc
     App.inc         BambuBarExe: the app rewrites this file with its own path (P2.6)
     Styles.inc      the @Inherit sections every meter starts from (hidden, in the Content container)
-    Head.inc        script, animation timer, shadow, card, content container
+    Head.inc        script, animation timer, card, content container
     Tail.inc        finish pulse, text probes
     Scripts/widget.lua   all the logic: pure functions (BB.*) + the Rainmeter glue. UTF-8 with BOM (required)
     Scripts/json.lua     a small JSON decoder written for this
     Icons/*.svg     Fluent UI System Icons (MIT, LICENSE.txt) + heat, fan, printer (ours)
     Fonts/          Nunito SemiBold and Bold (SIL OFL 1.1, OFL.txt); Rainmeter loads @Resources\Fonts itself
-    Images/         shadow-<Size>.png, drawn by rainmeter/tests/make_shadows.py
 ```
 
 ## Instance stubs (written by the app)

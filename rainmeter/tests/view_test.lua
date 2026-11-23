@@ -30,7 +30,7 @@ end
 T.test("every meter the script sets is declared in the skin", function()
 	for _, size in ipairs(SIZES) do
 		local declared = sections(size)
-		for _, extra in ipairs({ "Card", "Content", "Pulse", "ProbeLine", "ProbeWrap", "Shadow", "MeasureScript",
+		for _, extra in ipairs({ "Card", "Content", "Pulse", "ProbeLine", "ProbeWrap", "MeasureScript",
 			"MeasureAnimation", "StyleText", "StyleShape", "StyleIcon", "StyleArt" }) do
 			T.ok(declared[extra], size .. ": missing [" .. extra .. "]")
 		end

@@ -46,6 +46,7 @@ struct PrinterArt: View {
     var filament: Color?
     var spools: [Color?] = []
     var activeSpool: Int?
+    var contactShadow = true
     var lightOn = true
     /// The right chamber bar, on a printer that has two. Nil when there is one bar.
     var rightLightOn: Bool? = nil
@@ -63,7 +64,7 @@ struct PrinterArt: View {
     var body: some View {
         if !monochrome, let renders = PrinterRenderSet.named(shape.assetName) {
             PrinterRender(renders: renders, state: state, progress: progress, filament: filament, spools: spools,
-                          lightOn: lightOn || rightLightOn == true, dimmed: dimmed)
+                          lightOn: lightOn || rightLightOn == true, dimmed: dimmed, contactShadow: contactShadow)
                 .saturation(dimmed ? 0.1 : 1)
                 .opacity(dimmed ? 0.55 : 1)
                 .accessibilityHidden(true)
@@ -110,9 +111,11 @@ struct PrinterArt: View {
         let top: CGFloat = ams ? 22 : 8
 
         // Soft floor shadow.
-        ctx.fill(Path(ellipseIn: CGRect(x: 10, y: 112, width: 80, height: 7)),
-                 with: .radialGradient(Gradient(colors: [.black.opacity(0.35), .clear]),
-                                       center: CGPoint(x: 50, y: 115.5), startRadius: 0, endRadius: 40))
+        if contactShadow {
+            ctx.fill(Path(ellipseIn: CGRect(x: 10, y: 112, width: 80, height: 7)),
+                     with: .radialGradient(Gradient(colors: [.black.opacity(0.35), .clear]),
+                                           center: CGPoint(x: 50, y: 115.5), startRadius: 0, endRadius: 40))
+        }
 
         if ams { drawAMS(&ctx, y: 6) }
 
@@ -395,9 +398,11 @@ struct PrinterArt: View {
         let metal = GraphicsContext.Shading.linearGradient(Gradient(colors: [Color(white: 0.36), Color(white: 0.18)]),
                                                            startPoint: CGPoint(x: 0, y: top), endPoint: CGPoint(x: 0, y: 112))
 
-        ctx.fill(Path(ellipseIn: CGRect(x: 8, y: 110, width: 84, height: 8)),
-                 with: .radialGradient(Gradient(colors: [.black.opacity(0.35), .clear]),
-                                       center: CGPoint(x: 50, y: 114), startRadius: 0, endRadius: 42))
+        if contactShadow {
+            ctx.fill(Path(ellipseIn: CGRect(x: 8, y: 110, width: 84, height: 8)),
+                     with: .radialGradient(Gradient(colors: [.black.opacity(0.35), .clear]),
+                                           center: CGPoint(x: 50, y: 114), startRadius: 0, endRadius: 42))
+        }
         if ams { drawAMSLite(&ctx, y: 4) }
 
         // Z: an arch on the A1, one column on the mini.
@@ -567,7 +572,7 @@ struct PrinterArt: View {
 extension PrinterArt {
     /// The drawing for a status, with the first AMS unit on top.
     init(status: PrinterStatus?, model: String? = nil, dimmed: Bool = false, animated: Bool = true, lightOverride: Bool? = nil,
-         monochrome: Bool = false) {
+         monochrome: Bool = false, contactShadow: Bool = true) {
         let s = status
         let unit = s?.ams.first
         let active = s?.activeSpool
@@ -576,6 +581,7 @@ extension PrinterArt {
                   filament: active.flatMap { Color(bambuHex: $0.color) },
                   spools: unit?.spools.map { $0.isLoaded ? Color(bambuHex: $0.color) : nil } ?? [],
                   activeSpool: unit.flatMap { u in u.spools.firstIndex { $0.id == s?.activeSpoolID } },
+                  contactShadow: contactShadow,
                   lightOn: lightOverride ?? s?.chamberLightOn ?? false,
                   rightLightOn: s?.chamberLight2On,
                   doorOpen: s?.doorOpen ?? false,
