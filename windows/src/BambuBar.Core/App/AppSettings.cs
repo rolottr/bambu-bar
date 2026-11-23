@@ -107,6 +107,12 @@ public sealed class AppSettings
         public const string PanelChamber = "panelShowsChamber";
         public const string PanelFans = "panelShowsFans";
         public const string PanelFilament = "panelShowsFilament";
+        /// <summary>Settings → Appearance (<see cref="Appearance"/>): "system", "light" or "dark".</summary>
+        public const string AppearanceMode = "appearanceMode";
+        /// <summary>"windows" or "glass".</summary>
+        public const string AppearanceStyle = "appearanceStyle";
+        /// <summary>"bambu", "system", or a preset's name ("blue", "purple", "pink", "orange", "graphite").</summary>
+        public const string AccentColor = "accentColor";
         public static string DismissedIssues(string serial) => $"dismissedIssues.{serial}";
     }
 }

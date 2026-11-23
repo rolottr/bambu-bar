@@ -272,11 +272,12 @@ internal static class W
     public static void Open(Uri url) => Open(url.AbsoluteUri);
 }
 
-/// <summary>A drop-down button (Windows' ComboBox look): the current choice and a chevron; a click opens a menu of the
-/// choices with a check beside the current one.</summary>
+/// <summary>A drop-down button (Windows' ComboBox look): the current choice (with its <see cref="Icon"/>, if it has
+/// one) and a chevron; a click opens a menu of the choices with a check beside the current one.</summary>
 internal sealed class Dropdown : ChromeButton
 {
     private readonly TextBlock _text = Ui.Text("", WRamp.Body);
+    private readonly Border _icon = new() { Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Collapsed };
     private readonly ResourceDictionary _theme;
     private readonly Func<IReadOnlyList<MenuEntry>> _entries;
 
@@ -289,11 +290,12 @@ internal sealed class Dropdown : ChromeButton
         Height = 32;
         Padding = new Thickness(11, 0, 10, 1);
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
-        var grid = Ui.Columns("*", "Auto");
-        grid.Children.Add(Ui.At(_text, 0));
+        var grid = Ui.Columns("Auto", "*", "Auto");
+        grid.Children.Add(Ui.At(_icon, 0));
+        grid.Children.Add(Ui.At(_text, 1));
         var chevron = Icons.Glyph(Icons.ChevronDown, 11);
         chevron.Margin = new Thickness(8, 1, 0, 0);
-        grid.Children.Add(Ui.At(chevron, 1));
+        grid.Children.Add(Ui.At(chevron, 2));
         Content = grid;
         Expanded = false;
         AutomationProperties.SetName(this, name);
@@ -307,6 +309,17 @@ internal sealed class Dropdown : ChromeButton
         {
             _text.Text = value;
             AutomationProperties.SetItemStatus(this, value);
+        }
+    }
+
+    /// <summary>A picture before the choice (the accent's swatch); null for none.</summary>
+    public UIElement? Icon
+    {
+        get => _icon.Child;
+        set
+        {
+            _icon.Child = value;
+            _icon.Visibility = value is null ? Visibility.Collapsed : Visibility.Visible;
         }
     }
 }

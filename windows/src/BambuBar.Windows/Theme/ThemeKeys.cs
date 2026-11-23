@@ -83,8 +83,10 @@ public static class Ramp
     public const double Hero = 34;
 }
 
-/// <summary>Sizes, gaps and corner radii. Windows 11 rounds overlays at 8 and controls at 4; the Mac's larger, softer
-/// radii (20 for the job card, 14 for tiles) are scaled toward those so the panel sits with the rest of Windows.</summary>
+/// <summary>Sizes, gaps and corner radii. The radii follow Settings → Appearance → Style: Windows 11's (ControlCornerRadius
+/// 4, OverlayCornerRadius 8, cards 8) in the Windows style; in Bambu Glass, the Mac's larger, softer radii (20 for the job
+/// card, 14 for tiles) scaled toward those so the panel still sits with the rest of Windows. Read when views are built:
+/// a change of style rebuilds them.</summary>
 public static class Metrics
 {
     /// <summary>The panel's width (Mac 372).</summary>
@@ -96,16 +98,18 @@ public static class Metrics
     /// <summary>From the work area's edge (Windows 11 flyouts sit 12 px off the taskbar).</summary>
     public const double ScreenMargin = 12;
 
+    private static CornerRadius Styled(double windows, double glass) => new(AppTheme.IsGlass ? glass : windows);
+
     /// <summary>The job card (Mac 20).</summary>
-    public static readonly CornerRadius Hero = new(20);
+    public static CornerRadius Hero => Styled(8, 20);
     /// <summary>Cards: connection, setup, filament (Mac 18–20).</summary>
-    public static readonly CornerRadius Card = new(18);
+    public static CornerRadius Card => Styled(8, 18);
     /// <summary>Tiles, issue, toast, update row, list rows (Mac 12–14).</summary>
-    public static readonly CornerRadius Tile = new(14);
-    /// <summary>Buttons in the window's forms (between Fluent's 4 and the Mac's 11).</summary>
-    public static readonly CornerRadius Control = new(8);
+    public static CornerRadius Tile => Styled(8, 14);
+    /// <summary>Buttons in the window's forms (Bambu Glass: between Fluent's 4 and the Mac's 11).</summary>
+    public static CornerRadius Control => Styled(4, 8);
     /// <summary>The panel's print controls and its prominent buttons (Mac ControlButtonStyle, 11).</summary>
-    public static readonly CornerRadius Button = new(11);
+    public static CornerRadius Button => Styled(4, 11);
     /// <summary>Menus and tooltips (Fluent OverlayCornerRadius).</summary>
     public static readonly CornerRadius Overlay = new(8);
     /// <summary>State pills, chips, the light switch: capsules, as on the Mac (StatePill, LightToggle). A starting radius;

@@ -68,13 +68,13 @@ private struct MainContentView: View {
                 Button { MainWindow.show(.about) } label: {
                     Label("Hero Supporter", systemImage: "star.circle.fill")
                 }
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.tint)
                 .help("Thanks for supporting Bambu Bar")
             } else {
                 Link(destination: PolarConfiguration.supportURL(from: .mainWindow)) {
                     Label("Support this project", systemImage: "heart")
                 }
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.tint)
             }
         }
         .buttonStyle(.plain)
@@ -141,7 +141,7 @@ struct PageBackground: View {
         ZStack {
             Color(nsColor: .windowBackgroundColor)
             RadialGradient(colors: [color.opacity(0.10), .clear], center: .topLeading, startRadius: 0, endRadius: 700)
-            RadialGradient(colors: [Palette.accent.opacity(0.05), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 600)
+            RadialGradient(colors: [Palette.tint.opacity(0.05), .clear], center: .bottomTrailing, startRadius: 0, endRadius: 600)
         }
         .ignoresSafeArea()
         .animation(.smooth(duration: 0.6), value: status?.state)

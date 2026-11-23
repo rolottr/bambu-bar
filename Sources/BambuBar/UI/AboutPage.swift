@@ -25,7 +25,7 @@ struct AboutPage: View {
                             Label("Get Bambu Bar \(release.version)", systemImage: "arrow.down.circle.fill")
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Palette.accentDeep)
+                        .tint(Palette.tintDeep)
                         .help("Shows what’s new in \(release.version) and installs it")
                         .padding(.top, 6)
                     }
@@ -42,7 +42,7 @@ struct AboutPage: View {
                     #else
                     if LicenseStore.shared.hasAccess {
                         Label("Hero Supporter · Thanks for supporting Bambu Bar", systemImage: "star.circle.fill")
-                            .font(.callout.weight(.semibold)).foregroundStyle(Palette.accent)
+                            .font(.callout.weight(.semibold)).foregroundStyle(Palette.tint)
                     } else {
                         DetailRow(title: "License", value: String(localized: "Free · Community edition"))
                     }
@@ -111,7 +111,7 @@ struct AboutPage: View {
             .font(.system(size: 12.5))
         }
         .buttonStyle(.borderless)
-        .foregroundStyle(Palette.accent)
+        .foregroundStyle(Palette.tint)
         .help(url.absoluteString)
     }
 

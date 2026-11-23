@@ -43,7 +43,7 @@ public sealed record ButtonLook(string? Rest, string? Hover, string? Pressed, st
 public class ChromeButton : Button
 {
     public static readonly DependencyProperty CornerRadiusProperty = DependencyProperty.Register(
-        nameof(CornerRadius), typeof(CornerRadius), typeof(ChromeButton), new FrameworkPropertyMetadata(Metrics.Control));
+        nameof(CornerRadius), typeof(CornerRadius), typeof(ChromeButton), new FrameworkPropertyMetadata(new CornerRadius(4)));
 
     private static readonly ControlTemplate SharedTemplate = Chrome.Template(typeof(ChromeButton), CornerRadiusProperty);
 
@@ -60,7 +60,8 @@ public class ChromeButton : Button
         SnapsToDevicePixels = true;
         UseLayoutRounding = true;
         SetResourceReference(ForegroundProperty, ThemeKeys.TextPrimary);
-        FocusVisualStyle = Chrome.FocusVisual(Metrics.Control);
+        // The style's control radius when built (a metadata default would keep the first style's for good).
+        CornerRadius = Metrics.Control;
         IsEnabledChanged += (_, _) => Opacity = IsEnabled ? 1 : 0.4;
         Chrome.Apply(this, _look, false, false);
     }
@@ -179,7 +180,7 @@ public class ChromeButton : Button
 public class ChromeToggle : ToggleButton
 {
     public static readonly DependencyProperty CornerRadiusProperty = DependencyProperty.Register(
-        nameof(CornerRadius), typeof(CornerRadius), typeof(ChromeToggle), new FrameworkPropertyMetadata(Metrics.Control));
+        nameof(CornerRadius), typeof(CornerRadius), typeof(ChromeToggle), new FrameworkPropertyMetadata(new CornerRadius(4)));
 
     private static readonly ControlTemplate SharedTemplate = Chrome.Template(typeof(ChromeToggle), CornerRadiusProperty);
 
@@ -194,7 +195,8 @@ public class ChromeToggle : ToggleButton
         SnapsToDevicePixels = true;
         UseLayoutRounding = true;
         SetResourceReference(ForegroundProperty, ThemeKeys.TextPrimary);
-        FocusVisualStyle = Chrome.FocusVisual(Metrics.Control);
+        // The style's control radius when built (a metadata default would keep the first style's for good).
+        CornerRadius = Metrics.Control;
         Checked += (_, _) => Refresh();
         Unchecked += (_, _) => Refresh();
         Refresh();
@@ -227,6 +229,28 @@ public class ChromeToggle : ToggleButton
     protected override void OnMouseLeave(MouseEventArgs e) { base.OnMouseLeave(e); Refresh(); }
 
     private void Refresh() => Chrome.Apply(this, IsChecked == true ? CheckedLook : Look, IsMouseOver, IsPressed);
+
+    /// <summary>Narrator and other UI Automation clients toggle a toggle button through its peer, which flips
+    /// <c>IsChecked</c> without raising <c>Click</c>. Every Click handler here (the style segments, the widget sizes,
+    /// all printers, the chamber light) would then see nothing: the button looks pressed, but nothing happens. The
+    /// peer toggles the way a click does instead.</summary>
+    protected override AutomationPeer OnCreateAutomationPeer() => new ClickingPeer(this);
+
+    private sealed class ClickingPeer(ChromeToggle owner) : ToggleButtonAutomationPeer(owner), IToggleProvider
+    {
+        void IToggleProvider.Toggle()
+        {
+            if (!IsEnabled()) throw new ElementNotEnabledException();
+            owner.OnClick();
+        }
+
+        ToggleState IToggleProvider.ToggleState => owner.IsChecked switch
+        {
+            true => ToggleState.On,
+            false => ToggleState.Off,
+            _ => ToggleState.Indeterminate,
+        };
+    }
 }
 
 /// <summary>The template and states shared by the chrome buttons.</summary>

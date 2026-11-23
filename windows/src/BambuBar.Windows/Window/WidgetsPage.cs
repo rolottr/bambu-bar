@@ -198,12 +198,12 @@ internal sealed class WidgetsPage(WindowContext ctx) : Page(ctx)
         var grid = Ui.Columns("Auto", "Auto", "*");
         var number = new Border
         {
-            Width = 22, Height = 22, CornerRadius = new CornerRadius(11), Background = Palette.Brush(Palette.WithAlpha(Palette.Accent, 0.15)),
+            Width = 22, Height = 22, CornerRadius = new CornerRadius(11), Background = Palette.Brush(Palette.WithAlpha(Palette.Tint, 0.15)),
             Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Top,
         };
         var digit = Ui.Text(n.ToString(System.Globalization.CultureInfo.CurrentCulture), 12, FontWeights.Bold);
         digit.HorizontalAlignment = HorizontalAlignment.Center;
-        digit.Foreground = Palette.Brush(Palette.AccentDeep);
+        digit.Foreground = Palette.Brush(Palette.TintDeep);
         number.Child = digit;
         grid.Children.Add(Ui.At(number, 0));
         var icon = Icons.Glyph(glyph, 14, ThemeKeys.TextSecondary);
@@ -490,7 +490,7 @@ internal sealed class Showcase : IDisposable
         foreach (var feature in Enum.GetValues<WidgetFeature>())
         {
             var on = feature.In(_size);
-            var color = on ? _ctx.Ink(Palette.Accent) : _ctx.Brush(ThemeKeys.TextTertiary);
+            var color = on ? _ctx.Ink(Palette.Tint) : _ctx.Brush(ThemeKeys.TextTertiary);
             var icon = feature.Icon(11, color);
             icon.Margin = new Thickness(0, 0, 6, 0);
             var label = Ui.Text(feature.Title(), 12, FontWeights.Medium);
@@ -501,7 +501,7 @@ internal sealed class Showcase : IDisposable
                 CornerRadius = Metrics.Pill, Padding = new Thickness(9, 3, 10, 4), Margin = new Thickness(0, 0, 6, 6),
             };
             Ui.Capsule(chip);
-            if (on) chip.Background = Palette.Brush(Palette.WithAlpha(Palette.Accent, 0.13));
+            if (on) chip.Background = Palette.Brush(Palette.WithAlpha(Palette.Tint, 0.13));
             else chip.SetResourceReference(Border.BackgroundProperty, ThemeKeys.SubtleHover);
             AutomationProperties.SetName(chip, feature.Title());
             AutomationProperties.SetItemStatus(chip, on ? Loc.T("Showing") : "");

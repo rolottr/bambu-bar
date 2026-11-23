@@ -14,7 +14,7 @@ struct SettingsPage: View {
             SettingsGroup("General", symbol: "gearshape") {
                 SettingsRow("Open at login") {
                     Toggle("", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) }))
-                        .toggleStyle(.switch).labelsHidden().tint(Palette.accentDeep)
+                        .toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
                 }
                 if loginItem.status == .requiresApproval {
                     HStack {
@@ -40,7 +40,7 @@ struct SettingsPage: View {
                         ForEach(AppLanguage.available, id: \.self) { Text(verbatim: AppLanguage.name(of: $0)).tag(Optional($0)) }
                     }
                     .labelsHidden()
-                    .frame(width: 220)
+                    .fixedSize()
                     .onChange(of: language) { AppLanguage.override = language }
                 }
                 if (language ?? AppLanguage.system) != AppLanguage.current {
@@ -56,6 +56,8 @@ struct SettingsPage: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            AppearanceGroup()
 
             SettingsGroup("Camera", symbol: "video.fill") {
                 SettingsToggle("Show the printer camera", isOn: $store.cameraEnabled)
@@ -84,6 +86,83 @@ struct SettingsPage: View {
     }
 }
 
+/// Light or dark, Liquid Glass or classic, and the accent colour.
+private struct AppearanceGroup: View {
+    @State private var appearance = Appearance.shared
+
+    var body: some View {
+        SettingsGroup("Appearance", symbol: "paintpalette") {
+            SettingsRow("Mode") {
+                Picker("", selection: $appearance.mode) {
+                    ForEach(Appearance.Mode.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+            SettingsRow("Style") {
+                Picker("", selection: $appearance.style) {
+                    ForEach(Appearance.Style.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .tint(Palette.tintDeep)
+            }
+            Text("Liquid Glass gives the menu bar panel, the window's cards and the round controls the glass of macOS Tahoe. Classic keeps the frosted look of earlier versions.")
+                .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Divider()
+            SettingsRow("Accent colour") {
+                AccentPicker(selection: $appearance.accent)
+            }
+            Text("The accent colour marks buttons, switches, links and selections. Printer states keep their own colours.")
+                .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// A row of colour dots like System Settings' accent colours, the choice's name before them. One line, so the row
+/// lines up with the others in the group and its dots end where their controls do.
+private struct AccentPicker: View {
+    @Binding var selection: Appearance.Accent
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(selection.title).font(.system(size: 11.5)).foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                ForEach(Appearance.Accent.allCases) { accent in
+                    Button { selection = accent } label: { dot(accent) }
+                        .buttonStyle(.plain)
+                        .help(Text(accent.title))
+                        .accessibilityLabel(Text(accent.title))
+                        .accessibilityAddTraits(selection == accent ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private func dot(_ accent: Appearance.Accent) -> some View {
+        let selected = selection == accent
+        return ZStack {
+            if accent == .system {
+                // The Mac's own accent, whatever it is, as System Settings draws "Multicolour".
+                Circle().fill(AngularGradient(colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink, .red], center: .center))
+            } else {
+                Circle().fill(accent.color.gradient)
+            }
+            Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5)
+            if selected {
+                Circle().fill(.white).frame(width: 6, height: 6).shadow(color: .black.opacity(0.3), radius: 1)
+            }
+        }
+        .frame(width: 18, height: 18)
+        .padding(2)
+        .overlay(Circle().strokeBorder(selected ? accent.color.opacity(0.6) : .clear, lineWidth: 1.5))
+        .contentShape(Circle())
+    }
+}
+
 /// Automatic update checks and downloads, the result of the last check and a manual one.
 private struct UpdatesGroup: View {
     @State private var updates = UpdateChecker.shared
@@ -105,13 +184,13 @@ private struct UpdatesGroup: View {
                 HStack {
                     Text("Check for updates automatically").font(.system(size: 12.5))
                     Spacer()
-                    Toggle("", isOn: $updates.checksAutomatically).toggleStyle(.switch).labelsHidden().tint(Palette.accentDeep)
+                    Toggle("", isOn: $updates.checksAutomatically).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
                 }
                 .disabled(!updates.supportsAutomaticUpdates)
                 HStack {
                     Text("Download and install updates automatically").font(.system(size: 12.5))
                     Spacer()
-                    Toggle("", isOn: $updates.downloadsAutomatically).toggleStyle(.switch).labelsHidden().tint(Palette.accentDeep)
+                    Toggle("", isOn: $updates.downloadsAutomatically).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
                 }
                 .disabled(!updates.checksAutomatically)
                 Divider()
@@ -124,7 +203,7 @@ private struct UpdatesGroup: View {
                     Spacer()
                     if updates.available != nil {
                         Button("Update…") { updates.showUpdate() }
-                            .buttonStyle(.borderedProminent).tint(Palette.accentDeep)
+                            .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
                     } else if updates.state == .checking {
                         ProgressView().controlSize(.small)
                     } else {
@@ -151,7 +230,7 @@ private struct UpdatesGroup: View {
 
     private var tint: Color {
         switch updates.state {
-        case .available, .upToDate: return Palette.accent
+        case .available, .upToDate: return Palette.tint
         case .failed: return Palette.paused
         default: return .secondary
         }

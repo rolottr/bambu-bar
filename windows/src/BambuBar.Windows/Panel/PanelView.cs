@@ -179,17 +179,22 @@ public sealed class PanelView : Border, IDisposable
         _filament.ScrollToActiveOnNextFill();
     }
 
-    /// <summary>Follows a change of the Windows theme: rebuilds everything with the new dictionary.</summary>
+    /// <summary>Follows a change of the Windows theme or of Settings → Appearance: rebuilds everything with the new
+    /// dictionary, radii and accent.</summary>
     public void ApplyTheme(ThemeVariant variant)
     {
-        if (variant == Variant) return;
+        if (AppTheme.Look with { Variant = variant } == _look) return;
         Variant = variant;
         Build();
         if (_live) Refresh();
     }
 
+    /// <summary>What the sections were built for.</summary>
+    private ThemeLook _look;
+
     private void Build()
     {
+        _look = AppTheme.Look with { Variant = Variant };
         // A rebuild (theme change) retires the old sections' timers.
         if (_header is not null) _header.Dispose();
         if (_issue is not null) _issue.Dispose();

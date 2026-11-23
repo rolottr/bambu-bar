@@ -22,7 +22,7 @@ struct PrinterSettingsGroup: View {
                                 Button("Save") { store.rename(config.serial, to: name) }
                                     .controlSize(.small)
                                     .buttonStyle(.borderedProminent)
-                                    .tint(Palette.accentDeep)
+                                    .tint(Palette.tintDeep)
                                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                             }
                             TextField("Name", text: $name)
@@ -61,7 +61,7 @@ struct PrinterSettingsGroup: View {
                             Button("Cancel") { editingConnection = false }
                             Button("Reconnect", action: applyConnection)
                                 .buttonStyle(.borderedProminent)
-                                .tint(Palette.accentDeep)
+                                .tint(Palette.tintDeep)
                                 .disabled(host.isEmpty || code.count < 4)
                         }
                     } else {

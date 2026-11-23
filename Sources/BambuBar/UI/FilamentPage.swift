@@ -103,7 +103,7 @@ struct SpoolCard: View {
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(Capsule().fill(Color.primary.opacity(0.08)))
                     if active {
-                        Text("In use").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Palette.accent)
+                        Text("In use").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Palette.tint)
                     }
                 }
             }
@@ -122,10 +122,10 @@ struct SpoolCard: View {
                 .opacity(spool.isLoaded && spool.remain != nil ? 1 : 0)
                 .accessibilityHidden(spool.remain == nil)
         }
-        .panel(radius: 18, padding: 14, tint: active ? Palette.accent : nil)
+        .panel(radius: 18, padding: 14, tint: active ? Palette.tint : nil)
         .overlay {
             if active {
-                RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Palette.accent.opacity(0.6), lineWidth: 1.2)
+                RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Palette.tint.opacity(0.6), lineWidth: 1.2)
             }
         }
         .help(help)

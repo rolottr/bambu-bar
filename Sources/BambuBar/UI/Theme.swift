@@ -1,24 +1,30 @@
 import SwiftUI
 
-/// A rounded module like Control Center's: a faint fill and hairline that sit well on glass in light and dark.
+/// A rounded module like Control Center's. With Liquid Glass (Settings → Appearance) it's a pane of Tahoe's glass,
+/// tinted for highlighted cards; in the classic style, a faint fill and hairline that sit well on the panel's frosted
+/// background in light and dark.
 struct PanelBackground: ViewModifier {
     var radius: CGFloat = 18
     var padding: CGFloat = 14
     var tint: Color?
 
     func body(content: Content) -> some View {
-        content
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let padded = content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
+        if Appearance.shared.usesGlass {
+            padded.glassEffect(.regular.tint(tint?.opacity(0.22)), in: shape)
+        } else {
+            padded.background {
+                shape
                     .fill(tint.map { $0.opacity(0.12) } ?? Color.primary.opacity(0.05))
                     .overlay(
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .strokeBorder(LinearGradient(colors: [Color.primary.opacity(0.10), Color.primary.opacity(0.03)],
-                                                         startPoint: .top, endPoint: .bottom), lineWidth: 0.75)
+                        shape.strokeBorder(LinearGradient(colors: [Color.primary.opacity(0.10), Color.primary.opacity(0.03)],
+                                                          startPoint: .top, endPoint: .bottom), lineWidth: 0.75)
                     )
             }
+        }
     }
 }
 
@@ -183,22 +189,36 @@ private struct ControlButtonBody: View {
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        configuration.label
+        let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+        let label = configuration.label
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(prominent ? Color.white : tint)
             .frame(maxWidth: .infinity, minHeight: 34)
-            .background {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(prominent ? AnyShapeStyle(tint.gradient)
-                          : tint == .primary ? AnyShapeStyle(Color.primary.opacity(configuration.isPressed ? 0.12 : 0.06))
-                          : AnyShapeStyle(tint.opacity(configuration.isPressed ? 0.22 : 0.12)))
-                    .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(prominent ? 0 : 0.07), lineWidth: 0.75))
+        Group {
+            if Appearance.shared.usesGlass {
+                // Interactive glass brightens and gives under the pointer as it's pressed, like Tahoe's own buttons.
+                label.glassEffect(glass.interactive(isEnabled), in: shape)
+            } else {
+                label
+                    .background {
+                        shape
+                            .fill(prominent ? AnyShapeStyle(tint.gradient)
+                                  : tint == .primary ? AnyShapeStyle(Color.primary.opacity(configuration.isPressed ? 0.12 : 0.06))
+                                  : AnyShapeStyle(tint.opacity(configuration.isPressed ? 0.22 : 0.12)))
+                            .overlay(shape.strokeBorder(Color.primary.opacity(prominent ? 0 : 0.07), lineWidth: 0.75))
+                    }
+                    .scaleEffect(configuration.isPressed ? 0.97 : 1)
+                    .animation(.spring(duration: 0.2), value: configuration.isPressed)
             }
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(isEnabled ? 1 : 0.45)
-            .animation(.spring(duration: 0.2), value: configuration.isPressed)
-            .contentShape(Rectangle())
+        }
+        .opacity(isEnabled ? 1 : 0.45)
+        .contentShape(Rectangle())
+    }
+
+    /// Prominent buttons are glass in the tint; the others a clear pane, faintly tinted when they have a colour.
+    private var glass: Glass {
+        if prominent { return .regular.tint(tint) }
+        return tint == .primary ? .regular : .regular.tint(tint.opacity(0.25))
     }
 }
 

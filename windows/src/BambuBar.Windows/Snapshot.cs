@@ -26,8 +26,9 @@ namespace BambuBar;
 /// <c>BambuBar.exe --snapshot &lt;dir&gt;</c> (P3.13): renders the app's pieces offscreen to PNGs, for CI artifacts
 /// and review without a screen: the tray glyphs, the panel in every demo state, light and dark
 /// (<c>panel-&lt;scene&gt;-&lt;light|dark&gt;.png</c> at 2×), and every page of the window over the demo fleet
-/// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×), and the widgets as the Widgets page draws them, every
-/// state in every size (<c>widgets-cards.png</c>), and the camera over a picture FFmpeg decoded (<c>camera.png</c>), and
+/// (<c>window-&lt;page&gt;-&lt;light|dark&gt;.png</c>, 1100 × 720 at 1×), a few of both again in Bambu Glass and in another
+/// accent (<c>…-glass.png</c>, <c>…-purple.png</c>; the rest are the defaults, Windows style and Bambu green), and the
+/// widgets as the Widgets page draws them, every state in every size (<c>widgets-cards.png</c>), and the camera over a picture FFmpeg decoded (<c>camera.png</c>), and
 /// the live 3D model of every shape (<c>model3d-&lt;shape&gt;.png</c>, with <c>model3d.txt</c> saying which renderer drew
 /// it, or why the drawing stood in). Problems are written to <c>panel-errors.txt</c> and <c>window-errors.txt</c> rather
 /// than failing the run, so the images that did render still reach the CI artifact. Panels and pages are drawn in no
@@ -154,8 +155,49 @@ public static class Snapshot
                 }
             }
         }
+        foreach (var look in Looks)
+        {
+            foreach (var scene in WindowScenes.Where(s => s.Name is "printer" or "settings" or "setup-picked"))
+            {
+                foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+                {
+                    var name = $"window-{scene.Name}-{(variant == ThemeVariant.Dark ? "dark" : "light")}-{look.Name}.png";
+                    try
+                    {
+                        Save(look.Render(() => RenderWindow(scene, variant)), Path.Combine(folder, name));
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add($"{name}: {e}");
+                    }
+                }
+            }
+        }
         return errors;
     }
+
+    /// <summary>Settings → Appearance besides the defaults: a style or an accent to draw some scenes in again.</summary>
+    private sealed record Look(string Name, AppearanceStyle Style, AccentChoice Accent)
+    {
+        /// <summary>Draws with this look, then puts the defaults back (snapshots never save the appearance).</summary>
+        public BitmapSource Render(Func<BitmapSource> draw)
+        {
+            AppTheme.Style = Style;
+            AppTheme.AccentChoice = Accent;
+            try { return draw(); }
+            finally
+            {
+                AppTheme.Style = AppearanceStyle.Windows;
+                AppTheme.AccentChoice = AccentChoice.Bambu;
+            }
+        }
+    }
+
+    private static readonly Look[] Looks =
+    [
+        new("glass", AppearanceStyle.Glass, AccentChoice.Bambu),
+        new("purple", AppearanceStyle.Windows, AccentChoice.Purple),
+    ];
 
     private static BitmapSource RenderWindow(WindowScene scene, ThemeVariant variant)
     {
@@ -315,6 +357,25 @@ public static class Snapshot
                 catch (Exception e)
                 {
                     errors.Add($"{name}: {e}");
+                }
+            }
+        }
+        // The job card, Resume and Set Up (accent buttons), and the list: where style and accent show.
+        foreach (var look in Looks)
+        {
+            foreach (var scene in Scenes.Where(s => s.Name is "printing" or "paused" or "unconfigured" or "fleet-all"))
+            {
+                foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+                {
+                    var name = $"panel-{scene.Name}-{(variant == ThemeVariant.Dark ? "dark" : "light")}-{look.Name}.png";
+                    try
+                    {
+                        Save(look.Render(() => RenderPanel(scene, variant)), Path.Combine(folder, name));
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add($"{name}: {e}");
+                    }
                 }
             }
         }

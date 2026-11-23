@@ -294,7 +294,7 @@ struct PrinterNameField: View {
                         .font(.system(size: 26, weight: .bold))
                         .padding(.horizontal, 8).padding(.vertical, 2)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.07)))
-                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Palette.accent.opacity(0.6), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Palette.tint.opacity(0.6), lineWidth: 1))
                         .frame(maxWidth: 420)
                         .focused($focused)
                         .onSubmit(save)
@@ -302,7 +302,7 @@ struct PrinterNameField: View {
                     Button("Cancel") { editing = false }
                     Button("Save", action: save)
                         .buttonStyle(.borderedProminent)
-                        .tint(Palette.accentDeep)
+                        .tint(Palette.tintDeep)
                         .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 Text(hint(config))
