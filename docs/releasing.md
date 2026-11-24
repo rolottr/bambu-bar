@@ -19,7 +19,7 @@ supporter-license rule and the same signing key.
 | Built by | `scripts/build.sh` + `scripts/package.sh` | `scripts/appstore.sh` |
 | Signing | Developer ID, Hardened Runtime, notarized by Apple | Apple Distribution (Xcode automatic signing), sandboxed |
 | Polar supporter license | Included: "Support this project", Manage License…, Hero Supporter badge | Compiled out (checked by `scripts/check-appstore-licensing.sh`) |
-| Updates | Sparkle, **only with an active supporter license**. Without one the app never checks; people download the next zip from GitHub themselves | The Mac App Store |
+| Updates | Sparkle via `https://bambubar.app/appcast.xml` (anonymous daily check) and `https://bambubar.app/api/updates/download?version=<version>` (requires an active supporter license; without one, people download the next zip from GitHub themselves) | The Mac App Store |
 | Settings, access codes | `~/Library/Preferences/dev.rolottr.BambuBar.plist`, login keychain | `~/Library/Containers/dev.rolottr.BambuBar`, data protection keychain (the two don't share codes) |
 | Bambu Studio's codes | Read directly | Read after the person picks its folder |
 
@@ -28,24 +28,45 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
 
 ## Cutting a release
 
-1. Raise `MARKETING_VERSION` in `project.yml`. Run `scripts/test.sh` and `scripts/integration-test.sh` (Docker).
-   Run `scripts/check-translations.sh`: command-line builds don't update `shared/Localizable.xcstrings`, so new
-   text would otherwise ship in English. It fails on strings missing from the catalog, unused, or not in every
-   language. Text built as a plain `String` doesn't reach it; give it `String(localized:)`.
-2. **GitHub:**
-   - `NOTARY_PROFILE=notary scripts/package.sh` writes `build/Bambu-Bar-<version>-macos.zip` and its `.sha256`.
+1. Raise `MARKETING_VERSION` in `project.yml`. Run `python3 scripts/secret-scan.py`, `swift test`, `scripts/test.sh`,
+   `scripts/test-direct-licensing.sh`, and `scripts/integration-test.sh` (Docker). Run `scripts/check-translations.sh`:
+   command-line builds don't update `shared/Localizable.xcstrings`, so new text would otherwise ship in English. It
+   fails on strings missing from the catalog, unused, or not in every language. Text built as a plain `String` doesn't
+   reach it; give it `String(localized:)`.
+2. **Direct macOS (Polar + Sparkle + GitHub):**
+   - `NOTARY_PROFILE=notary scripts/package.sh` builds a universal Release bundle signed with Developer ID
+     (`PCZ6F8Q9DZ`), runs `strip -S` and release guards (`check-updater.sh`, `check-direct-licensing.sh`,
+     `check-release-harness.sh`), notarizes and staples it, writes `build/Bambu-Bar-<version>-macos.zip` and its
+     `.sha256`, verifies the extracted ZIP with `scripts/verify-zip.sh` (stapler, Gatekeeper `Notarized Developer ID`,
+     `codesign --verify --deep --strict`, universal app & widget slices, `≥ 18` `.lproj`, and all release guards),
+     signs the exact ZIP with Sparkle's shared EdDSA key (no `--account`), writes
+     `build/Bambu-Bar-<version>-macos.release.txt` (version, build, absolute ZIP path, size bytes, SHA-256, EdDSA
+     signature, `https://bambubar.app/appcast.xml`, and `https://bambubar.app/api/updates/download?version=<version>`),
+     and reveals the ZIP in Finder (`NO_REVEAL=1` disables Finder reveal in headless/CI runs).
+   - Install the notarized ZIP locally with `scripts/install.sh --zip build/Bambu-Bar-<version>-macos.zip` (atomic
+     `/Applications`-only install with single-copy verification via `scripts/check-one-copy.sh`).
+   - Measure CPU, RSS, and idle wakeups on the installed Release build with `scripts/perf.sh cycle` (or individual modes
+     `idle`, `panel`, `panel-closed`, `window`, `after-close`, `page <name>`, `soak`). Results append as JSONL to
+     `build/perf/<date>.jsonl` and fail non-zero if over budget (idle / panel-closed / after-close ≤ `1.0%`, panel ≤ `3.0%`).
+   - **Polar File Downloads sync:** upload the exact `Bambu-Bar-<version>-macos.zip` (matching the exact filename and
+     bytes recorded in `.release.txt`, never re-zipped) to the Bambu Bar Polar product's File Downloads benefit and
+     keep earlier versions enabled.
+   - **Website & Sparkle feed:** add the release metadata from `build/Bambu-Bar-<version>-macos.release.txt` to the
+     website's `releases.ts` so `https://bambubar.app/appcast.xml` publishes the update item and
+     `https://bambubar.app/api/updates/download?version=<version>` serves the Polar-backed download to active
+     supporters. Verify `curl -s https://bambubar.app/appcast.xml` lists the new version and
+     `curl -si "https://bambubar.app/api/updates/download?version=<version>"` returns `401` without license headers.
    - Push the commit and wait for CI to pass on it. `scripts/windows-artifacts.sh` downloads that run's Windows
      installers (`build/Bambu-Bar-<version>-windows-x64.exe`, `-arm64.exe`, their `.sha256`) and the Rainmeter
      source zip; it refuses a failed run or another version. When code signing exists (ledger §9), sign both
      installers with Authenticode here, and write their `.sha256` again.
    - `gh release create v<version> --latest=false` with the Mac zip, both installers, the three checksums and
      `rainmeter-<ver>-source.zip` (the GPL source offer for the Rainmeter the Windows app bundles), then
-     `UPLOAD=1 scripts/appcast.sh` to sign the zip and the installers for the updaters and attach `appcast.xml`
-     (it adds the Windows items when both installers are in `build/`).
-   - `scripts/check-release.sh v<version> && gh release edit v<version> --latest`. Supporters on both platforms
-     get the update from there.
+     `UPLOAD=1 scripts/appcast.sh` if publishing the GitHub mirror feed as well.
+   - `scripts/check-release.sh v<version> && gh release edit v<version> --latest`.
    - Tag the commit (`v<version>`, annotated) and push the tag.
 3. **App Store:**
+   - Ensure the pre-push guard is installed (`scripts/install-hooks.sh`) so `main-appstore` can never be pushed.
    - `scripts/appstore.sh` retains the archive in `build/AppStore/Archives.noindex/` and exports the installer
      to `build/AppStore/Export/`, checking that the app is sandboxed and has no Sparkle. Run
      `scripts/check-appstore-licensing.sh` on the archived app. `UPLOAD=1 scripts/appstore.sh` uploads to App

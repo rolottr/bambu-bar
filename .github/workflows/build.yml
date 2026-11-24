@@ -19,8 +19,19 @@ jobs:
           persist-credentials: false
       - name: Install XcodeGen
         run: brew install xcodegen
+      - name: Secret scan
+        run: python3 scripts/secret-scan.py
+      - name: SwiftPM tests
+        run: swift test
+      - name: Unit tests
+        run: ./scripts/test.sh
       - name: Build and package (ad-hoc signed)
+        env:
+          ALLOW_ADHOC: "1"
+          NO_REVEAL: "1"
         run: ./scripts/package.sh
+      - name: Licensing guard self-test
+        run: ./scripts/test-direct-licensing.sh
       - name: Verify checksum
         working-directory: build
         run: shasum -a 256 -c Bambu-Bar-*-macos.zip.sha256

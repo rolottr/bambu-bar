@@ -48,8 +48,8 @@ It talks to the printer directly over your network, the same way Bambu Studio do
 | **Easy setup** | Finds printers on your network and reads the access codes from Bambu Studio or OrcaSlicer, on this Mac or from a settings file copied from another one. When the slicer knows several printers, **Add All** sets them all up at once. |
 | **Appearance** | **Settings → Appearance** picks light, dark or the system's mode, the style (on the Mac Liquid Glass, Tahoe's glass on the panel's modules, the window's cards and the round controls, or Classic, the frosted look of earlier versions; on Windows the look of Windows 11's own apps, with Mica and flat cards, or Bambu Glass, the Mac's soft gradients) and the accent colour of buttons, switches, links and selections: Bambu green, the system's accent, blue, purple, pink, orange or graphite. Printer states keep their own colours. |
 | **Mac integration** | Open at Login, no Dock icon while it lives in the menu bar (the icon and menus appear while its window is open), keyboard shortcuts, and it follows the printer when DHCP gives it a new address. |
-| **17 languages** | English, Čeština, Deutsch, Español, Français, Italiano, Magyar, Nederlands, Polski, Português (Brasil), Svenska, Türkçe, Русский, Українська, 日本語, 한국어, 简体中文 and 繁體中文. It follows your Mac's language, or the one picked in **Settings → Language**. Printer terms follow Bambu Studio's translations, and printer errors use Bambu Lab's own texts where Bambu publishes them (all but Czech, Turkish and Ukrainian, which show them in English, and Traditional Chinese, which shows the Simplified ones). |
-| **Updates** | The App Store version updates through the App Store. Direct copies with an active website supporter license check GitHub once a day for a new release (turn it off in Settings) and show what's new with **Install Update**, **Skip This Version** or **Remind Me Later**; installing downloads it, verifies its signature and restarts the app. **Check for Updates…** in the app menu asks right away, and Settings can install updates automatically. |
+| **18 languages** | English, Čeština, Deutsch, Español, Français, Italiano, Magyar, Nederlands, Polski, Português (Brasil), Svenska, Türkçe, Русский, Українська, 日本語, 한국어, 简体中文 and 繁體中文. It follows your Mac's language, or the one picked in **Settings → Language**. Printer terms follow Bambu Studio's translations, and printer errors use Bambu Lab's own texts where Bambu publishes them (all but Czech, Turkish and Ukrainian, which show them in English, and Traditional Chinese, which shows the Simplified ones). |
+| **Updates** | The App Store version updates through the App Store. Direct copies check the Sparkle feed at `https://bambubar.app/appcast.xml` anonymously once a day (`SUScheduledCheckInterval` 86400; turn it off in Settings) and show what's new with **Install Update**, **Skip This Version** or **Remind Me Later**; installing with an active website supporter license downloads from `https://bambubar.app/api/updates/download?version=X.Y.Z`, verifies the EdDSA and Developer ID signatures, and restarts the app. **Check for Updates…** in the app menu asks right away, and Settings can install updates automatically. |
 
 ## Getting started
 
@@ -178,15 +178,14 @@ shasum -a 256 -c Bambu-Bar-1.0.0-macos.zip.sha256
 
 ### Publish an update
 
-In-app updates use [Sparkle](https://sparkle-project.org). After `gh release create v<version>` with the notarized zip, run:
+In-app updates use [Sparkle](https://sparkle-project.org):
 
-```sh
-UPLOAD=1 ./scripts/appcast.sh
-```
+- **Appcast feed:** `https://bambubar.app/appcast.xml` (anonymous, daily, `SUScheduledCheckInterval` 86400)
+- **Download endpoint:** `https://bambubar.app/api/updates/download?version=X.Y.Z` (license-gated by the website with supporter license headers)
 
-It signs the zip with the EdDSA key in the login keychain (`SUPublicEDKey` in `Resources/Sparkle-Info.plist` is its public half; build.sh adds that file to the GitHub build only), turns the release's text into the release notes shown in the update window, and attaches `appcast.xml` to the release. The app checks GitHub’s latest release metadata first, then reads `releases/latest/download/appcast.xml` when a newer version is available. Both checks require an active website supporter license. The newest release must include the ZIP and its matching signed appcast. Back the key up with Sparkle's `generate_keys -x <file>` (in `build/DerivedData.noindex/SourcePackages/artifacts/sparkle/Sparkle/bin`): without it, installed copies can't be updated.
+Running `NOTARY_PROFILE=notary ./scripts/package.sh` builds, notarizes, verifies the extracted ZIP (`scripts/verify-zip.sh`), signs the exact ZIP with the shared EdDSA key in the login keychain (`SUPublicEDKey` in `Resources/Sparkle-Info.plist`), and writes `build/Bambu-Bar-<version>-macos.release.txt` with the version, build, absolute ZIP path, byte length, SHA-256, EdDSA signature, feed URL, and download URL. Upload that exact ZIP (`Bambu-Bar-<version>-macos.zip`) to Polar File Downloads and update the website's `releases.ts` entry; see [docs/releasing.md](docs/releasing.md) for the full release runbook.
 
-The [GitHub Actions workflow](.github/workflows/build.yml) builds and uploads an ad-hoc signed ZIP on pushes and pull requests. It does not sign, notarize or publish a release.
+The [GitHub Actions workflow](.github/workflows/build.yml) runs secret scanning, unit and SwiftPM tests, licensing guard self-tests, and builds an ad-hoc signed ZIP on pushes and pull requests. It does not sign, notarize or publish a release.
 
 ### Mac App Store build
 
@@ -215,7 +214,11 @@ The **AppStore** configuration (scheme **BambuBar App Store**, also for Product 
 
 | Shortcut | Action |
 | --- | --- |
+| `⌘0` | All Printers. |
 | `⌘1` – `⌘5` | Printer, Filament, Widgets, Settings, About. |
+| `⌘7` | Menu Bar. |
+| `⌘8` | Notifications. |
+| `⌘9` | Activity. |
 | `⌘R` | Ask the printer for a full report. |
 | `⌘L` | Turn the chamber light on or off. |
 | `⌘K` | Open the camera window. |
@@ -225,7 +228,7 @@ The **Printer** menu also switches printers, adds one, and pauses, resumes or st
 
 ## Credits and license
 
-Created by [NINA LABS, LLC](https://www.ninalabs.ai). Released under the [MIT License](LICENSE).
+Created by [Clever Mechanisms](https://clevermechanisms.dev). Released under the [MIT License](LICENSE).
 
 Protocol details, a real P2S report and the HMS error texts Bambu Lab's service no longer lists come from [ha-bambulab](https://github.com/greghesp/ha-bambulab) (MIT), which also provided Bambu Lab's certificate authorities that ship with the app. [Bambuddy](https://github.com/maziggy/bambuddy) and [bambu-cli](https://github.com/tobiasbischoff/bambu-cli) helped map the newer printers, and the access-code import follows [Bambu Studio](https://github.com/bambulab/BambuStudio)'s settings format. Each model's capabilities and build volume follow the printer profiles in Bambu Studio's `resources/printers` and `resources/profiles/BBL/machine`, and filament makers and colour names come from its `resources/profiles/BBL/filament`. In-app updates use [Sparkle](https://sparkle-project.org) (MIT).
 
