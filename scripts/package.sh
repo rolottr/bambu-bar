@@ -44,6 +44,7 @@ fi
 
 CONFIG=Release ARCH=universal "$ROOT/scripts/build.sh"
 APP="$ROOT/build/App.noindex/Bambu Bar.app"
+trap '"$ROOT/scripts/unregister-build-apps.sh" "$APP" || true' EXIT
 VERSION=$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")
 BUILD=$(plutil -extract CFBundleVersion raw "$APP/Contents/Info.plist")
 ARCHIVE="Bambu-Bar-$VERSION-macos.zip"
@@ -135,4 +136,6 @@ if [[ "${NO_REVEAL:-0}" != 1 && -z "${CI:-}" ]]; then
   open -R "$ZIP" || true
 fi
 
+"$ROOT/scripts/unregister-build-apps.sh" "$APP"
+trap - EXIT
 "$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

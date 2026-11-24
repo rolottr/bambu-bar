@@ -123,8 +123,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             LicenseStore.shared.onAccessChange = { _ in
                 UpdateChecker.shared.supporterStatusChanged()
             }
-            LicenseStore.shared.start()
         }
+        LicenseStore.shared.start()
         #endif
         UpdateChecker.shared.start()
         observeAppWindows()
