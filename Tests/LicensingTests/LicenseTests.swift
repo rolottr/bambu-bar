@@ -10,9 +10,11 @@ private func granted(activation: String? = activationID, benefit: String = Polar
     PolarLicense(organizationId: PolarConfiguration.organizationID, benefitId: benefit, status: "granted",
                  expiresAt: expiry, activation: activation.map { .init(id: $0) })
 }
-private func saved(at date: Date? = fixedNow) -> LicenseRecord {
-    LicenseRecord(key: "test-key", activationID: activationID, installationID: "installation", validatedAt: date)
+
+private func saved(at date: Date? = fixedNow, expiry: Date? = nil) -> LicenseRecord {
+    LicenseRecord(key: "test-key", activationID: activationID, installationID: "installation", validatedAt: date, expiresAt: expiry)
 }
+
 private final class MemoryLicense: LicensePersistence {
     var record: LicenseRecord?
     var failsWrites = false
@@ -23,7 +25,8 @@ private final class MemoryLicense: LicensePersistence {
         self.record = record
     }
 }
-private final class FakePolar: LicenseAPI {
+
+private final class FakePolar: LicenseAPI, @unchecked Sendable {
     var validation: Result<PolarLicense, Error> = .success(granted())
     var activation: Result<PolarActivation, Error> = .success(.init(id: activationID, licenseKey: granted(activation: nil)))
     var deactivationError: Error?
@@ -33,10 +36,12 @@ private final class FakePolar: LicenseAPI {
     var suspendValidation = false
     var pendingValidation: CheckedContinuation<PolarLicense, Error>?
     var validationStarted: (() -> Void)?
+
     func activate(key: String, installationID: String) async throws -> PolarActivation {
         activations += 1
         return try activation.get()
     }
+
     func validate(_ record: LicenseRecord) async throws -> PolarLicense {
         validatedRecord = record
         if suspendValidation {
@@ -47,21 +52,37 @@ private final class FakePolar: LicenseAPI {
         }
         return try validation.get()
     }
+
     func deactivate(_ record: LicenseRecord) async throws {
         deactivations += 1
         if let deactivationError { throw deactivationError }
     }
 }
 
-
 private final class PolarHTTPFixture: URLProtocol {
     static var status = 200
+    static var headers: [String: String]?
     static var response = Data()
+    static var responseURL: URL?
+    static var requestCount = 0
     static var lastRequest: URLRequest?
     static var lastBody: [String: Any]?
+
+    static func reset() {
+        status = 200
+        headers = nil
+        response = Data()
+        responseURL = nil
+        requestCount = 0
+        lastRequest = nil
+        lastBody = nil
+    }
+
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
     override func startLoading() {
+        Self.requestCount += 1
         Self.lastRequest = request
         var data = request.httpBody ?? Data()
         if let stream = request.httpBodyStream {
@@ -75,15 +96,73 @@ private final class PolarHTTPFixture: URLProtocol {
             }
         }
         Self.lastBody = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-        let response = HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: nil, headerFields: nil)!
+        let url = Self.responseURL ?? request.url!
+        let response = HTTPURLResponse(url: url, statusCode: Self.status, httpVersion: "HTTP/1.1", headerFields: Self.headers)!
+        if (300..<400).contains(Self.status), let location = Self.headers?["Location"], let next = URL(string: location) {
+            client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: next), redirectResponse: response)
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocolDidFinishLoading(self)
+            return
+        }
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Self.response)
         client?.urlProtocolDidFinishLoading(self)
     }
+
     override func stopLoading() {}
 }
 
+private final class FakeKeychainBackend: Keychain.Backend, @unchecked Sendable {
+    private let lock = NSLock()
+    var dpItems: [String: Data] = [:]
+    var legacyItems: [String: Data] = [:]
+    var dpEntitled = true
+    var readCalls = 0
+    var writeCalls = 0
+    var deleteCalls = 0
+
+    private func id(_ service: String, _ account: String) -> String { "\(service)::\(account)" }
+
+    func read(service: String, account: String, dataProtection: Bool) -> (OSStatus, Data?) {
+        lock.lock(); defer { lock.unlock() }
+        readCalls += 1
+        if dataProtection {
+            guard dpEntitled else { return (errSecMissingEntitlement, nil) }
+            guard let data = dpItems[id(service, account)] else { return (errSecItemNotFound, nil) }
+            return (errSecSuccess, data)
+        } else {
+            guard let data = legacyItems[id(service, account)] else { return (errSecItemNotFound, nil) }
+            return (errSecSuccess, data)
+        }
+    }
+
+    func write(_ data: Data, service: String, account: String, label: String?, dataProtection: Bool) -> OSStatus {
+        lock.lock(); defer { lock.unlock() }
+        writeCalls += 1
+        if dataProtection {
+            guard dpEntitled else { return errSecMissingEntitlement }
+            dpItems[id(service, account)] = data
+            return errSecSuccess
+        } else {
+            legacyItems[id(service, account)] = data
+            return errSecSuccess
+        }
+    }
+
+    func delete(service: String, account: String, dataProtection: Bool) -> OSStatus {
+        lock.lock(); defer { lock.unlock() }
+        deleteCalls += 1
+        if dataProtection {
+            guard dpEntitled else { return errSecMissingEntitlement }
+            return dpItems.removeValue(forKey: id(service, account)) != nil ? errSecSuccess : errSecItemNotFound
+        } else {
+            return legacyItems.removeValue(forKey: id(service, account)) != nil ? errSecSuccess : errSecItemNotFound
+        }
+    }
+}
+
 @MainActor
+@Suite(.serialized)
 struct LicenseTests {
     @Test(arguments: [false, true])
     func startupWaitsForValidationBeforeShowingAccessOrActivation(rejected: Bool) async {
@@ -97,7 +176,6 @@ struct LicenseTests {
             let task = Task { await store.refresh() }
             api.validationStarted = { started.resume(returning: task) }
         }
-        // Polar has received the check but has not answered yet.
         #expect(store.isInitializing)
         #expect(store.isBusy)
         #expect(!store.hasAccess)
@@ -188,7 +266,56 @@ struct LicenseTests {
         clock = fixedNow.addingTimeInterval(7 * 86400)
         await store.refresh()
         #expect(!store.hasAccess)
-        #expect(storage.record?.validatedAt == fixedNow) // Offline retries never extend grace.
+        #expect(storage.record?.validatedAt == fixedNow)
+    }
+
+    @Test func malformed200JSONPreservesOfflineGraceWithoutWipingValidatedAt() async {
+        let api = FakePolar(), storage = MemoryLicense(saved())
+        api.validation = .failure(LicenseError.invalidResponse)
+        let store = LicenseStore(api: api, persistence: storage, now: { fixedNow.addingTimeInterval(3600) })
+        await store.refresh()
+        #expect(store.hasAccess)
+        #expect(storage.record?.validatedAt == fixedNow)
+        #expect(store.record?.validatedAt == fixedNow)
+    }
+
+    @Test func keychainSaveFailureDuringRefreshPreservesPreviousOfflineGrace() async {
+        let api = FakePolar(), storage = MemoryLicense(saved(at: fixedNow))
+        var clock = fixedNow.addingTimeInterval(3600)
+        let store = LicenseStore(api: api, persistence: storage, now: { clock })
+        await store.refresh()
+        #expect(store.hasAccess)
+
+        storage.failsWrites = true
+        clock = fixedNow.addingTimeInterval(7200)
+        await store.refresh()
+        #expect(store.hasAccess)
+        #expect(store.record?.validatedAt == fixedNow.addingTimeInterval(3600))
+        #expect(storage.record?.validatedAt == fixedNow.addingTimeInterval(3600))
+        #expect(store.message != nil)
+    }
+
+    @Test func localGraceDeadlineExpiresSynchronouslyOnBecomeActiveAndClockRollback() async {
+        let api = FakePolar(), storage = MemoryLicense(saved(at: fixedNow))
+        var clock = fixedNow
+        let center = NotificationCenter()
+        let store = LicenseStore(api: api, persistence: storage, now: { clock }, notificationCenter: center)
+        await store.refresh()
+        #expect(store.hasAccess)
+
+        // Advance past 7-day offline grace without any network refresh.
+        clock = fixedNow.addingTimeInterval(LicenseRecord.offlineGrace + 1)
+        store.enforceAccessDeadline()
+        #expect(!store.hasAccess)
+
+        // Re-grant and test clock rollback before validatedAt.
+        clock = fixedNow
+        await store.refresh()
+        #expect(store.hasAccess)
+        clock = fixedNow.addingTimeInterval(-10)
+        store.enforceAccessDeadline()
+        #expect(!store.hasAccess)
+        store.stop()
     }
 
     @Test func expiryAndClockRollbackCannotExtendOfflineUse() {
@@ -196,11 +323,12 @@ struct LicenseTests {
         var record = saved()
         record.expiresAt = fixedNow.addingTimeInterval(30)
         #expect(!record.permitsOfflineUse(at: fixedNow.addingTimeInterval(31)))
+        #expect(record.accessDeadline == fixedNow.addingTimeInterval(30))
         #expect(!saved(at: nil).permitsOfflineUse(at: fixedNow))
     }
 
     @Test func otherProductAndMissingActivationAreRejected() async {
-        for license in [granted(benefit: "other-product"), granted(activation: nil), granted(activation: "another-install") , granted(expiry: fixedNow)] {
+        for license in [granted(benefit: "other-product"), granted(activation: nil), granted(activation: "another-install"), granted(expiry: fixedNow)] {
             let api = FakePolar(), storage = MemoryLicense(saved())
             api.validation = .success(license)
             let store = LicenseStore(api: api, persistence: storage, now: { fixedNow })
@@ -254,11 +382,23 @@ struct LicenseTests {
         #expect(store.record?.validatedAt == nil)
     }
 
+    @Test func polarConfigurationIsValidAndRecordRedactsSecrets() {
+        #expect(PolarConfiguration.isConfigured)
+        #expect(PolarConfiguration.benefitID.lowercased() != PolarConfiguration.productID.lowercased())
+        #expect(!PolarConfiguration.validBenefit(PolarConfiguration.productID))
+        #expect(!PolarConfiguration.validBenefit("not-a-uuid"))
+        #expect(PolarConfiguration.checkoutURL.host == "buy.polar.sh")
+        #expect(PolarConfiguration.supportURL(from: .license) == PolarConfiguration.checkoutURL)
+
+        let record = saved()
+        #expect(!String(describing: record).contains("test-key"))
+        #expect(!String(reflecting: record).contains("test-key"))
+        #expect(Mirror(reflecting: record).children.isEmpty)
+    }
 
     @Test func publicClientSendsScopedActivationAndHandlesHTTPFailures() async throws {
-        let config = URLSessionConfiguration.ephemeral
-        config.protocolClasses = [PolarHTTPFixture.self]
-        let session = URLSession(configuration: config)
+        PolarHTTPFixture.reset()
+        let session = PolarClient.makeSession(protocolClasses: [PolarHTTPFixture.self])
         defer { session.invalidateAndCancel() }
         let api = PolarClient(session: session)
         let json = """
@@ -278,17 +418,80 @@ struct LicenseTests {
         #expect(PolarHTTPFixture.lastBody?["increment_usage"] == nil)
 
         PolarHTTPFixture.status = 404
-        try await api.deactivate(saved()) // Portal already removed it.
-        do { _ = try await api.validate(saved()); Issue.record("404 must reject validation") }
+        PolarHTTPFixture.response = Data(#"{"detail":"not found"}"#.utf8)
+        try await api.deactivate(saved())
+        do { _ = try await api.validate(saved()); Issue.record("404 JSON must reject validation") }
         catch LicenseError.rejected {} catch { Issue.record("Unexpected error: \(error)") }
+        do { _ = try await api.activate(key: "bad", installationID: "installation"); Issue.record("404 JSON on activate must be invalidKey") }
+        catch LicenseError.invalidKey {} catch { Issue.record("Unexpected error: \(error)") }
+
+        PolarHTTPFixture.status = 422
+        PolarHTTPFixture.response = Data(#"{"detail":"unprocessable"}"#.utf8)
+        do { _ = try await api.activate(key: "bad", installationID: "installation"); Issue.record("422 JSON on activate must be invalidKey") }
+        catch LicenseError.invalidKey {} catch { Issue.record("Unexpected error: \(error)") }
+
         PolarHTTPFixture.status = 403
-        do { try await api.deactivate(saved()); Issue.record("403 must not clear a local activation") }
+        PolarHTTPFixture.response = Data(#"{"detail":"limit reached"}"#.utf8)
+        do { try await api.deactivate(saved()); Issue.record("403 JSON must not clear a local activation") }
         catch LicenseError.rejected {} catch { Issue.record("Unexpected error: \(error)") }
-        do { _ = try await api.activate(key: "test-key", installationID: "installation"); Issue.record("403 must reject activation") }
+        do { _ = try await api.activate(key: "test-key", installationID: "installation"); Issue.record("403 JSON on activate must be activationLimit") }
         catch LicenseError.activationLimit {} catch { Issue.record("Unexpected error: \(error)") }
+
         PolarHTTPFixture.status = 503
+        PolarHTTPFixture.response = Data()
         do { _ = try await api.validate(saved()); Issue.record("503 must be an outage") }
         catch LicenseError.unavailable {} catch { Issue.record("Unexpected error: \(error)") }
+    }
+
+    @Test func captivePortalNonJSONAndMalformed200AreNeverRefusals() async throws {
+        PolarHTTPFixture.reset()
+        let session = PolarClient.makeSession(protocolClasses: [PolarHTTPFixture.self])
+        defer { session.invalidateAndCancel() }
+        let api = PolarClient(session: session)
+
+        // Captive portal HTML with 403 -> .unavailable (not .rejected!)
+        PolarHTTPFixture.status = 403
+        PolarHTTPFixture.response = Data("<html><body>Sign in to Wi-Fi</body></html>".utf8)
+        do { _ = try await api.validate(saved()); Issue.record("HTML 403 must be unavailable") }
+        catch LicenseError.unavailable {} catch { Issue.record("Unexpected error: \(error)") }
+
+        // Captive portal HTML with 200 -> .unavailable
+        PolarHTTPFixture.status = 200
+        PolarHTTPFixture.response = Data("<html><body>Portal</body></html>".utf8)
+        do { _ = try await api.validate(saved()); Issue.record("HTML 200 must be unavailable") }
+        catch LicenseError.unavailable {} catch { Issue.record("Unexpected error: \(error)") }
+
+        // Malformed 200 JSON object -> .invalidResponse (not a refusal!)
+        PolarHTTPFixture.status = 200
+        PolarHTTPFixture.response = Data(#"{"unexpected":true}"#.utf8)
+        do { _ = try await api.validate(saved()); Issue.record("Malformed 200 JSON must be invalidResponse") }
+        catch LicenseError.invalidResponse {} catch { Issue.record("Unexpected error: \(error)") }
+    }
+
+    @Test func redirectsAreRefusedAndNeverFollowed() async throws {
+        PolarHTTPFixture.reset()
+        let session = PolarClient.makeSession(protocolClasses: [PolarHTTPFixture.self])
+        defer { session.invalidateAndCancel() }
+        let api = PolarClient(session: session)
+
+        PolarHTTPFixture.status = 302
+        PolarHTTPFixture.headers = ["Location": "https://evil.example/steal"]
+        PolarHTTPFixture.response = Data()
+        do { _ = try await api.validate(saved()); Issue.record("Redirect must return unavailable") }
+        catch LicenseError.unavailable {} catch { Issue.record("Unexpected error: \(error)") }
+        #expect(PolarHTTPFixture.requestCount == 1)
+    }
+
+    @Test func responseOver128KiBIsRejectedAsInvalidResponse() async throws {
+        PolarHTTPFixture.reset()
+        let session = PolarClient.makeSession(protocolClasses: [PolarHTTPFixture.self])
+        defer { session.invalidateAndCancel() }
+        let api = PolarClient(session: session)
+
+        PolarHTTPFixture.status = 200
+        PolarHTTPFixture.response = Data(repeating: UInt8(ascii: " "), count: PolarClient.maxResponseBytes + 1)
+        do { _ = try await api.validate(saved()); Issue.record("Body > 128 KiB must throw invalidResponse") }
+        catch LicenseError.invalidResponse {} catch { Issue.record("Unexpected error: \(error)") }
     }
 
     @Test func actualWireResponseDecodesAndChecksScope() throws {
@@ -300,6 +503,57 @@ struct LicenseTests {
         try license.verify(activationID: activationID, now: fixedNow)
         #expect(license.expiresAt != nil)
         #expect(throws: (any Error).self) { try license.verify(activationID: "wrong", now: fixedNow) }
+    }
+
+    @Test func keychainMigratesLegacyCachesReadsAndSkipsNoopWrites() throws {
+        let backend = FakeKeychainBackend()
+        backend.legacyItems["\(Keychain.accessCodeService)::SN123"] = Data("12345678".utf8)
+        Keychain.resetForTesting(backend: backend, memoryOnly: false)
+        defer { Keychain.resetForTesting() }
+
+        // First read migrates legacy item to data-protection keychain and removes legacy copy.
+        #expect(Keychain.accessCode(for: "SN123") == "12345678")
+        #expect(backend.dpItems["\(Keychain.accessCodeService)::SN123"] == Data("12345678".utf8))
+        #expect(backend.legacyItems["\(Keychain.accessCodeService)::SN123"] == nil)
+
+        // Second read hits in-memory cache with zero additional backend reads.
+        let readsAfterFirst = backend.readCalls
+        #expect(Keychain.accessCode(for: "SN123") == "12345678")
+        #expect(backend.readCalls == readsAfterFirst)
+
+        // Writing the identical code performs zero backend writes.
+        let writesBefore = backend.writeCalls
+        Keychain.setAccessCode("12345678", for: "SN123")
+        #expect(backend.writeCalls == writesBefore)
+
+        // Writing a new code updates data-protection keychain.
+        Keychain.setAccessCode("87654321", for: "SN123")
+        #expect(backend.writeCalls == writesBefore + 1)
+        #expect(backend.dpItems["\(Keychain.accessCodeService)::SN123"] == Data("87654321".utf8))
+    }
+
+    @Test func keychainFallsBackWhenUnentitledAndDeveloperModeNeverTouchesBackend() throws {
+        let backend = FakeKeychainBackend()
+        backend.dpEntitled = false
+        backend.legacyItems["\(LicenseKeychain.service)::\(LicenseKeychain.account)"] = try JSONEncoder().encode(saved())
+        Keychain.resetForTesting(backend: backend, memoryOnly: false)
+        defer { Keychain.resetForTesting() }
+
+        let loaded = try LicenseKeychain().load()
+        #expect(loaded?.key == "test-key")
+        // Unentitled build must NOT delete the legacy item.
+        #expect(backend.legacyItems["\(LicenseKeychain.service)::\(LicenseKeychain.account)"] != nil)
+
+        // Memory-only developer mode never touches the backend at all.
+        let devBackend = FakeKeychainBackend()
+        Keychain.resetForTesting(backend: devBackend, memoryOnly: true)
+        Keychain.setAccessCode("99999999", for: "DEV1")
+        #expect(Keychain.accessCode(for: "DEV1") == "99999999")
+        Keychain.removeAccessCode(for: "DEV1")
+        #expect(Keychain.accessCode(for: "DEV1") == nil)
+        #expect(devBackend.readCalls == 0)
+        #expect(devBackend.writeCalls == 0)
+        #expect(devBackend.deleteCalls == 0)
     }
 }
 #endif

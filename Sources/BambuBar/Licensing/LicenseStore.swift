@@ -1,20 +1,45 @@
 #if !APP_STORE
 import Foundation
 import Observation
-import Security
 
-struct LicenseRecord: Codable {
-    let key: String
-    let activationID: String
-    let installationID: String
-    var validatedAt: Date?
-    var expiresAt: Date?
+public struct LicenseRecord: Codable, Equatable, Sendable, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    public let key: String
+    public let activationID: String
+    public let installationID: String
+    public var validatedAt: Date?
+    public var expiresAt: Date?
 
-    func permitsOfflineUse(at now: Date) -> Bool {
+    public static let offlineGrace: TimeInterval = 7 * 24 * 60 * 60
+
+    public init(key: String, activationID: String, installationID: String,
+                validatedAt: Date? = nil, expiresAt: Date? = nil) {
+        self.key = key
+        self.activationID = activationID
+        self.installationID = installationID
+        self.validatedAt = validatedAt
+        self.expiresAt = expiresAt
+    }
+
+    public func permitsOfflineUse(at now: Date) -> Bool {
         guard let validatedAt, now >= validatedAt,
-              now.timeIntervalSince(validatedAt) < 7 * 24 * 60 * 60 else { return false }
+              now.timeIntervalSince(validatedAt) < Self.offlineGrace else { return false }
         return expiresAt.map { $0 > now } ?? true
     }
+
+    /// Local entitlement deadline, independent of the next network revalidation.
+    public var accessDeadline: Date? {
+        guard let validatedAt, validatedAt.timeIntervalSince1970.isFinite else { return nil }
+        let graceEnd = validatedAt.addingTimeInterval(Self.offlineGrace)
+        guard let expiresAt else { return graceEnd }
+        guard expiresAt.timeIntervalSince1970.isFinite else { return nil }
+        return min(expiresAt, graceEnd)
+    }
+
+    public var installationLabel: String { "Mac · \(installationID.prefix(8))" }
+
+    public var description: String { "LicenseRecord(redacted)" }
+    public var debugDescription: String { description }
+    public var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
 }
 
 protocol LicensePersistence {
@@ -22,75 +47,154 @@ protocol LicensePersistence {
     func save(_ record: LicenseRecord?) throws
 }
 
-/// A local, non-synchronizing Keychain item survives upgrades without consuming another activation.
+/// Delegates all Keychain I/O to `Keychain` (the single Keychain owner).
 struct LicenseKeychain: LicensePersistence {
-    private var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "dev.rolottr.BambuBar.polar",
-         kSecAttrAccount as String: "license", kSecAttrSynchronizable as String: false]
-    }
+    static let service = "dev.rolottr.BambuBar.polar"
+    static let account = "license"
+
     func load() throws -> LicenseRecord? {
-        var query = query
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess, let data = result as? Data else { throw LicenseError.storage(status) }
-        return try JSONDecoder().decode(LicenseRecord.self, from: data)
-    }
-    func save(_ record: LicenseRecord?) throws {
-        guard let record else {
-            let status = SecItemDelete(query as CFDictionary)
-            guard status == errSecSuccess || status == errSecItemNotFound else { throw LicenseError.storage(status) }
-            return
+        do {
+            guard let data = try Keychain.readData(service: Self.service, account: Self.account) else { return nil }
+            do {
+                return try JSONDecoder().decode(LicenseRecord.self, from: data)
+            } catch {
+                throw LicenseError.storage(errSecDecode)
+            }
+        } catch let error as KeychainStorageError {
+            throw LicenseError.storage(error.status)
         }
-        let data = try JSONEncoder().encode(record)
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        if status == errSecItemNotFound {
-            var item = query
-            item[kSecValueData as String] = data
-            item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-            let added = SecItemAdd(item as CFDictionary, nil)
-            guard added == errSecSuccess else { throw LicenseError.storage(added) }
-        } else if status != errSecSuccess { throw LicenseError.storage(status) }
     }
+
+    func save(_ record: LicenseRecord?) throws {
+        do {
+            guard let record else {
+                try Keychain.deleteData(service: Self.service, account: Self.account)
+                return
+            }
+            let data = try JSONEncoder().encode(record)
+            try Keychain.writeData(data, service: Self.service, account: Self.account, label: "Bambu Bar license")
+        } catch let error as KeychainStorageError {
+            throw LicenseError.storage(error.status)
+        }
+    }
+}
+
+/// In-memory license persistence for developer runs (`D-09`) and unit tests.
+final class MemoryLicensePersistence: LicensePersistence {
+    var record: LicenseRecord?
+    init(_ record: LicenseRecord? = nil) { self.record = record }
+    func load() throws -> LicenseRecord? { record }
+    func save(_ record: LicenseRecord?) throws { self.record = record }
 }
 
 @MainActor @Observable
 final class LicenseStore {
-    static let shared = LicenseStore()
+    static let shared = LicenseStore(persistence: Keychain.isDeveloperRun ? MemoryLicensePersistence() : LicenseKeychain())
+
+    static let revalidationInterval: TimeInterval = 15 * 60
+    private static let didBecomeActiveNotification = Notification.Name("NSApplicationDidBecomeActiveNotification")
+
     private(set) var hasAccess = false
     private(set) var isInitializing = true
     private(set) var isBusy = false
     private(set) var message: String?
     private(set) var record: LicenseRecord?
-    var onAccessChange: ((Bool) -> Void)?
-    private let api: any LicenseAPI
-    private let persistence: any LicensePersistence
-    private let now: () -> Date
-    private var schedule: Task<Void, Never>?
-    private var storageReady = false
+    @ObservationIgnored var onAccessChange: ((Bool) -> Void)?
 
-    init(api: any LicenseAPI = PolarClient(), persistence: any LicensePersistence = LicenseKeychain(), now: @escaping () -> Date = Date.init) {
+    @ObservationIgnored private let api: any LicenseAPI
+    @ObservationIgnored private let persistence: any LicensePersistence
+    @ObservationIgnored private let benefitID: String
+    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let notificationCenter: NotificationCenter
+    @ObservationIgnored private var schedule: Task<Void, Never>?
+    @ObservationIgnored private var accessDeadlineTask: Task<Void, Never>?
+    @ObservationIgnored private var activeObserver: NSObjectProtocol?
+    @ObservationIgnored private var storageReady = false
+
+    init(api: any LicenseAPI = PolarClient(),
+         persistence: any LicensePersistence = LicenseKeychain(),
+         benefitID: String = PolarConfiguration.benefitID,
+         now: @escaping () -> Date = Date.init,
+         notificationCenter: NotificationCenter = .default) {
         self.api = api
         self.persistence = persistence
+        self.benefitID = benefitID
         self.now = now
+        self.notificationCenter = notificationCenter
     }
 
+    var isConfigured: Bool { PolarConfiguration.validBenefit(benefitID) }
+
     func start() {
+        // Developer runs never touch the real Keychain or Polar.
+        if Keychain.isDeveloperRun {
+            isInitializing = false
+            return
+        }
         guard schedule == nil else { return }
+        activeObserver = notificationCenter.addObserver(
+            forName: Self.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.enforceAccessDeadline()
+                Task { await self.refresh() }
+            }
+        }
         schedule = Task { [weak self] in
             await self?.refresh()
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(15 * 60)) } catch { return }
+                do { try await Task.sleep(for: .seconds(Self.revalidationInterval)) } catch { return }
                 await self?.refresh()
             }
         }
     }
 
+    func stop() {
+        schedule?.cancel()
+        schedule = nil
+        accessDeadlineTask?.cancel()
+        accessDeadlineTask = nil
+        if let activeObserver {
+            notificationCenter.removeObserver(activeObserver)
+            self.activeObserver = nil
+        }
+    }
+
+    /// Synchronous local offline-grace check on `didBecomeActive` and when the deadline timer fires.
+    /// Catches expired grace or a rolled-back clock immediately without waiting for network.
+    func enforceAccessDeadline() {
+        guard hasAccess else { return }
+        guard let record, record.permitsOfflineUse(at: now()) else {
+            setAccess(false)
+            message = String(localized: "Connect to the internet to restore supporter benefits. Printer monitoring remains available.")
+            return
+        }
+        scheduleAccessDeadline()
+    }
+
+    private func scheduleAccessDeadline() {
+        accessDeadlineTask?.cancel()
+        accessDeadlineTask = nil
+        guard let deadline = record?.accessDeadline else { return }
+        let delay = max(0, deadline.timeIntervalSince(now()))
+        accessDeadlineTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+            guard !Task.isCancelled else { return }
+            self?.enforceAccessDeadline()
+        }
+    }
+
     func refresh() async {
         guard !isBusy else { return }
+        guard isConfigured else {
+            message = LicenseError.notConfigured.localizedDescription
+            setAccess(false)
+            isInitializing = false
+            return
+        }
         isBusy = true
         defer {
             isBusy = false
@@ -101,30 +205,44 @@ final class LicenseStore {
                 record = try persistence.load()
                 storageReady = true
             }
-            guard var saved = record else { setAccess(false); return }
+            guard var saved = record else {
+                setAccess(false)
+                return
+            }
             do {
                 let license = try await api.validate(saved)
-                try license.verify(activationID: saved.activationID, now: now())
+                try license.verify(activationID: saved.activationID, now: now(), benefitID: benefitID)
                 saved.validatedAt = now()
                 saved.expiresAt = license.expiresAt
-                // Persist before enabling: a failed Keychain write is not an offline network failure.
-                try persistence.save(saved)
-                record = saved
-                message = nil
-                setAccess(true)
-            } catch LicenseError.unavailable {
-                setAccess(saved.permitsOfflineUse(at: now()))
-                message = hasAccess
-                    ? String(localized: "The licensing service is temporarily unreachable. Supporter benefits remain active for up to seven days after your last successful license check.")
-                    : String(localized: "Connect to the internet to restore supporter benefits. Printer monitoring remains available.")
-            } catch {
+            } catch let error as LicenseError where error.isRefusal {
                 // Retain the activation so a refusal never silently claims a new slot.
                 saved.validatedAt = nil
                 record = saved
                 setAccess(false)
-                try persistence.save(saved)
-                throw error
+                try? persistence.save(saved)
+                message = error.localizedDescription
+                return
+            } catch {
+                // Outage, captive portal, or unexpected/malformed 200 JSON: preserve bounded offline grace.
+                setAccess(saved.permitsOfflineUse(at: now()))
+                message = hasAccess
+                    ? String(localized: "The licensing service is temporarily unreachable. Supporter benefits remain active for up to seven days after your last successful license check.")
+                    : String(localized: "Connect to the internet to restore supporter benefits. Printer monitoring remains available.")
+                return
             }
+
+            // Persist before extending grace. A transient Keychain write failure is not a refusal:
+            // preserve the previous record's bounded offline grace and let the next check retry.
+            do {
+                try persistence.save(saved)
+            } catch {
+                setAccess(record?.permitsOfflineUse(at: now()) ?? false)
+                message = error.localizedDescription
+                return
+            }
+            record = saved
+            message = nil
+            setAccess(true)
         } catch {
             setAccess(false)
             message = error.localizedDescription
@@ -133,15 +251,27 @@ final class LicenseStore {
 
     func activate(key: String) async {
         guard !isBusy else { return }
+        guard isConfigured else {
+            message = LicenseError.notConfigured.localizedDescription
+            return
+        }
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { return }
+        guard key.utf8.count <= 4096,
+              !key.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
+            message = LicenseError.invalidKey.localizedDescription
+            return
+        }
         isBusy = true
         defer {
             isBusy = false
             isInitializing = false
         }
         do {
-            if !storageReady { record = try persistence.load(); storageReady = true }
+            if !storageReady {
+                record = try persistence.load()
+                storageReady = true
+            }
             guard record == nil else {
                 message = String(localized: "Deactivate this installation before entering a different license. Use Check License to retry your saved activation.")
                 return
@@ -152,16 +282,20 @@ final class LicenseStore {
                                       validatedAt: now(), expiresAt: activation.licenseKey.expiresAt)
             do {
                 guard UUID(uuidString: activation.id) != nil else { throw LicenseError.invalidResponse }
-                try activation.licenseKey.verify(now: now())
+                try activation.licenseKey.verify(now: now(), benefitID: benefitID)
                 try persistence.save(saved)
             } catch {
-                // If local storage fails, release the newly claimed slot when possible.
+                // If verification or local storage fails, release the newly claimed slot when possible.
                 try? await api.deactivate(saved)
                 throw error
             }
             record = saved
             message = nil
             setAccess(true)
+        } catch LicenseError.invalidKey {
+            message = LicenseError.invalidKey.localizedDescription
+        } catch LicenseError.activationLimit {
+            message = LicenseError.activationLimit.localizedDescription
         } catch {
             message = String(localized: "\(error.localizedDescription) If an activation appeared in your account, remove it there before retrying.", comment: "A licensing error message, then advice")
         }
@@ -180,10 +314,19 @@ final class LicenseStore {
             try persistence.save(nil)
             record = nil
             message = nil
-        } catch { message = error.localizedDescription }
+        } catch {
+            message = error.localizedDescription
+        }
     }
 
-    private func setAccess(_ value: Bool) {
+    private func setAccess(_ requested: Bool) {
+        let value = requested && (record?.permitsOfflineUse(at: now()) == true)
+        if value {
+            scheduleAccessDeadline()
+        } else {
+            accessDeadlineTask?.cancel()
+            accessDeadlineTask = nil
+        }
         guard value != hasAccess || isInitializing else { return }
         hasAccess = value
         onAccessChange?(value)

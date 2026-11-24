@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Developer ID build entitlements.
+     Note: keychain-access-groups is intentionally omitted while scripts/build.sh signs without an embedded
+     Developer ID provisioning profile; on macOS 26 AMFI terminates Developer ID binaries carrying
+     keychain-access-groups without a matching profile (SIGKILL, exit 137). Keychain.swift attempts the
+     data-protection keychain first and transparently falls back until a Developer ID profile is embedded. -->
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.application-groups</key>
