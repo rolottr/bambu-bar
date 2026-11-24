@@ -139,6 +139,8 @@ targets:
       - path: Sources/BambuBar/Printer/FilamentCatalog.swift
       - path: Sources/BambuBar/Services/AppLanguage.swift
       - path: Sources/BambuBar/Services/LoginItem.swift
+      - path: Sources/BambuBar/Services/RelaunchTicketStore.swift
+      - path: Sources/BambuBar/Services/SingleInstance.swift
       - path: Sources/BambuBar/Services/Website.swift
       - path: Sources/BambuBar/Printer/CameraProtocol.swift
       - path: Sources/BambuBar/Printer/VideoDepacketizer.swift

@@ -90,15 +90,25 @@ final class Appearance {
     private let defaults = UserDefaults.standard
 
     var mode: Mode {
-        didSet { defaults.set(mode.rawValue, forKey: Key.mode); applyMode() }
+        didSet {
+            guard mode != oldValue else { return }
+            defaults.set(mode.rawValue, forKey: Key.mode)
+            applyMode()
+        }
     }
 
     var style: Style {
-        didSet { defaults.set(style.rawValue, forKey: Key.style) }
+        didSet {
+            guard style != oldValue else { return }
+            defaults.set(style.rawValue, forKey: Key.style)
+        }
     }
 
     var accent: Accent {
-        didSet { defaults.set(accent.rawValue, forKey: Key.accent) }
+        didSet {
+            guard accent != oldValue else { return }
+            defaults.set(accent.rawValue, forKey: Key.accent)
+        }
     }
 
     /// Bumped when the accent colour in System Settings changes, so views using `.system` redraw.
@@ -108,9 +118,9 @@ final class Appearance {
     private let rendersToBitmaps = ReadmeFrames.directory != nil || StoreMedia.directory != nil
 
     private init() {
-        mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .system
-        style = Style(rawValue: defaults.string(forKey: Key.style) ?? "") ?? .glass
-        accent = Accent(rawValue: defaults.string(forKey: Key.accent) ?? "") ?? .bambu
+        _mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .system
+        _style = Style(rawValue: defaults.string(forKey: Key.style) ?? "") ?? .glass
+        _accent = Accent(rawValue: defaults.string(forKey: Key.accent) ?? "") ?? .bambu
         NotificationCenter.default.addObserver(forName: NSColor.systemColorsDidChangeNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { Appearance.shared.systemColorsRevision += 1 }
         }

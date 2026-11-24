@@ -447,7 +447,7 @@ struct LightToggle: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .onHoverChange { hovering = $0 }
         .animation(.smooth(duration: 0.25), value: on)
         .help(on ? turnOff : turnOn)
         .accessibilityLabel(accessibility)
@@ -833,7 +833,7 @@ struct FooterStyle: ButtonStyle {
             .padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : hovering ? 0.07 : 0)))
-            .onHover { hovering = $0 }
+            .onHoverChange { hovering = $0 }
             .contentShape(Rectangle())
     }
 }

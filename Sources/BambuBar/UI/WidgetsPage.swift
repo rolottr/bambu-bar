@@ -7,7 +7,7 @@ struct WidgetsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            PageHeader(title: "Widgets", subtitle: String(localized: "Your printers on the desktop and in Notification Center, in three sizes."))
+            PageHeader(title: "Widgets")
             WidgetShowcase()
             howTo
         }
@@ -391,12 +391,6 @@ struct WidgetShowcase: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(size.title).font(.system(size: 17, weight: .semibold))
                 .id("title-\(size.rawValue)")
-                .transition(.opacity)
-            Text(size.summary)
-                .font(.system(size: 12.5))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .id(size)
                 .transition(.opacity)
             FlowLayout(spacing: 6) {
                 ForEach(WidgetFeature.allCases) { feature in

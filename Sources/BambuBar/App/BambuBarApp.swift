@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-@main
 struct BambuBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     private let store = PrinterStore.shared
@@ -34,6 +33,7 @@ struct AppCommands: Commands {
                 Button("Check for Updates…") { UpdateChecker.shared.showUpdate() }
                     .disabled(!UpdateChecker.shared.canCheckForUpdates)
             }
+            Button("Setup Guide…") { MainWindow.showSetupGuide() }
         }
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { MainWindow.show(.settings) }
@@ -113,15 +113,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         Appearance.shared.applyMode()
-        SingleInstance.handOverIfRunning(background: background)
-        SingleInstance.listen()
+        Navigation.shared.launchedInBackground = background
+        let queuedURLs = SingleInstance.handOverIfRunning(background: background)
+        SingleInstance.listen { MainWindow.show() }
         WidgetUpdate.refreshIfUpdated()
         PrinterStore.shared.start()
         #if !APP_STORE
-        LicenseStore.shared.onAccessChange = { _ in
-            UpdateChecker.shared.supporterStatusChanged()
+        if !LaunchContext.isDeveloperRun {
+            LicenseStore.shared.onAccessChange = { _ in
+                UpdateChecker.shared.supporterStatusChanged()
+            }
+            LicenseStore.shared.start()
         }
-        LicenseStore.shared.start()
         #endif
         UpdateChecker.shared.start()
         observeAppWindows()
@@ -136,6 +139,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let dir = SnapshotRunner.directory {
             MainWindow.show()
             SnapshotRunner.run(into: dir)
+            return
+        }
+        if !queuedURLs.isEmpty {
+            application(NSApp, open: queuedURLs)
             return
         }
         if !background { MainWindow.show() }
@@ -164,6 +171,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated {
                 LoginItem.shared.refresh()
                 PrinterStore.shared.appOpened()
+            }
+        }
+        center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                MainWindow.clampIfOpen()
+                CameraWindow.clampAll()
             }
         }
     }
@@ -195,7 +208,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 enum AppSection: String, CaseIterable, Identifiable {
-    case fleet, overview, filament, menuBar, notifications, widgets, settings, about
+    case fleet, overview, filament, menuBar, notifications, widgets, settings, activity, about
     var id: String { rawValue }
 
     var title: String {
@@ -207,6 +220,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .menuBar: return String(localized: "Menu Bar", comment: "Sidebar page")
         case .notifications: return String(localized: "Notifications")
         case .settings: return String(localized: "Settings")
+        case .activity: return String(localized: "Activity")
         case .about: return String(localized: "About")
         }
     }
@@ -222,6 +236,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .about: return "5"
         case .menuBar: return "7"
         case .notifications: return "8"
+        case .activity: return "9"
         }
     }
 
@@ -234,6 +249,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .menuBar: return "menubar.rectangle"
         case .notifications: return "bell.badge.fill"
         case .settings: return "gearshape.fill"
+        case .activity: return "waveform.path.ecg"
         case .about: return "info.circle.fill"
         }
     }
@@ -244,11 +260,43 @@ enum AppSection: String, CaseIterable, Identifiable {
 @Observable
 final class Navigation {
     static let shared = Navigation()
+    private static let onboardingShownKey = "onboardingSplashShown"
+
     var section: AppSection = .overview
     /// A discovered printer picked in the menu bar panel, to prefill the setup form.
     var setupCandidate: DiscoveredPrinter?
     /// The Printer page shows the setup form for another printer.
     var addingPrinter = false
+    /// Re-openable Setup Guide sheet.
+    var showOnboardingSplash = false
+    var onboardingFirstRun = false
+    @ObservationIgnored var launchedInBackground = false
+
+    private(set) var onboardingShown: Bool
+
+    private init() {
+        _onboardingShown = UserDefaults.standard.bool(forKey: Self.onboardingShownKey)
+    }
+
+    func openOnboardingSplash(firstRun: Bool = false) {
+        onboardingFirstRun = firstRun
+        showOnboardingSplash = true
+    }
+
+    func markOnboardingShown() {
+        guard !onboardingShown else { return }
+        onboardingShown = true
+        if !LaunchContext.isDeveloperRun {
+            UserDefaults.standard.set(true, forKey: Self.onboardingShownKey)
+        }
+    }
+
+    /// Shows the Setup Guide once after the user finishes setting up their first printer
+    /// (never on login/background launches or developer runs).
+    func presentFirstRunOnboardingIfNeeded() {
+        guard !onboardingShown, !launchedInBackground, !LaunchContext.isDeveloperRun, !PrinterStore.shared.isDemo else { return }
+        openOnboardingSplash(firstRun: true)
+    }
 }
 
 /// The main window, hosted in AppKit so the Dock icon, menus and the panel can all reopen it.
@@ -285,6 +333,7 @@ enum MainWindow {
             let restoredSize = w.contentRect(forFrameRect: w.frame).size
             w.setContentSize(NSSize(width: max(restoredSize.width, minimumContentSize.width),
                                     height: max(restoredSize.height, minimumContentSize.height)))
+            WindowFrameClamp.clamp(w, minSize: minimumContentSize)
             window = w
             // A closed window would keep its views updating with every report (and the printer model
             // animating), so it's let go and built again on the next open.
@@ -297,10 +346,22 @@ enum MainWindow {
                     DispatchQueue.main.async { w.contentViewController = nil }
                 }
             }
+        } else if let w = window {
+            WindowFrameClamp.clamp(w, minSize: minimumContentSize)
         }
         NSApp.setActivationPolicy(.regular)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    static func clampIfOpen() {
+        guard let window else { return }
+        WindowFrameClamp.clamp(window, minSize: minimumContentSize)
+    }
+
+    static func showSetupGuide() {
+        show()
+        Navigation.shared.openOnboardingSplash(firstRun: false)
     }
 
     static var current: NSWindow? { window }

@@ -10,7 +10,7 @@ struct NotificationsPage: View {
     var body: some View {
         @Bindable var store = store
         VStack(alignment: .leading, spacing: 22) {
-            PageHeader(title: "Notifications", subtitle: String(localized: "Bambu Bar tells you when a print needs you, even while its window is closed."))
+            PageHeader(title: "Notifications")
 
             if turnedOff {
                 HStack(spacing: 10) {
@@ -21,7 +21,9 @@ struct NotificationsPage: View {
                         .font(.system(size: 12, weight: .medium))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 8)
-                    Button("Open System Settings", action: openSystemSettings).controlSize(.small)
+                    Button("Open System Settings", action: openSystemSettings)
+                        .controlSize(.small)
+                        .fixedSize()
                 }
                 .panel(radius: 14, padding: 12, tint: Palette.paused)
             }
@@ -29,11 +31,13 @@ struct NotificationsPage: View {
             SettingsGroup("Notify me when", symbol: "bell.badge.fill") {
                 SettingsToggle("Print finished", isOn: $store.notifyFinished)
                 SettingsToggle("Print failed, canceled or an error", isOn: $store.notifyFailed)
-                SettingsToggle("Print paused (filament runout, user)", isOn: $store.notifyPaused)
+                SettingsToggle("Print paused", help: "Triggers on filament runout or manual pause.", isOn: $store.notifyPaused)
                 SettingsToggle("Print started", isOn: $store.notifyStarted)
                 Divider()
-                SettingsRow("Send a sample notification to see how it looks.") {
-                    Button("Send Test Notification") { store.sendTestNotification() }.controlSize(.small)
+                SettingsRow("Test notification") {
+                    Button("Send Test Notification") { store.sendTestNotification() }
+                        .controlSize(.small)
+                        .fixedSize()
                 }
             }
         }

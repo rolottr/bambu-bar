@@ -202,6 +202,7 @@ struct CameraPlayer: View {
             .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.75))
         .onChange(of: session.isOnline) { feed.update() }
         .onChange(of: session.status?.liveViewEnabled) { feed.update() }
+        .onChange(of: feed.state) { _, next in PrinterStore.shared.recordCameraState(next, for: session) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(session.config.name) camera")
     }
@@ -350,8 +351,11 @@ enum CameraWindow {
     private static var windows: [String: NSWindow] = [:]
     private static var observers: [String: NSObjectProtocol] = [:]
 
+    static let minimumContentSize = NSSize(width: 320, height: 180)
+
     static func show(_ session: PrinterSession) {
         if let window = windows[session.id] {
+            WindowFrameClamp.clamp(window, minSize: minimumContentSize)
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -368,7 +372,7 @@ enum CameraWindow {
         // A picture-in-picture window: it stays above other windows while you work elsewhere.
         window.level = .floating
         window.backgroundColor = .black
-        window.contentMinSize = NSSize(width: 320, height: 180)
+        window.contentMinSize = minimumContentSize
         window.contentAspectRatio = NSSize(width: session.camera.aspectRatio, height: 1)
         window.contentViewController = NSHostingController(
             rootView: CameraWindowView(session: session)
@@ -376,6 +380,7 @@ enum CameraWindow {
         window.setContentSize(NSSize(width: 800, height: (800 / session.camera.aspectRatio).rounded()))
         window.center()
         window.setFrameAutosaveName("BambuBarCamera-\(session.id)")
+        WindowFrameClamp.clamp(window, minSize: minimumContentSize)
         let serial = session.id
         windows[serial] = window
         observers[serial] = NotificationCenter.default.addObserver(
@@ -386,6 +391,13 @@ enum CameraWindow {
         NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Re-clamps all open camera windows after displays connect, disconnect, or rearrange.
+    static func clampAll() {
+        for window in windows.values {
+            WindowFrameClamp.clamp(window, minSize: minimumContentSize)
+        }
     }
 
     /// Closes the printer's camera window, if it's open (its camera was turned off).
@@ -426,7 +438,7 @@ struct CameraWindowView: View {
         }
         .ignoresSafeArea()
         .background(.black)
-        .onHover { inside in withAnimation(.smooth(duration: 0.2)) { hovering = inside } }
+        .onHoverChange { inside in withAnimation(.smooth(duration: 0.2)) { hovering = inside } }
         .onChange(of: session.camera.aspectRatio) { _, ratio in CameraWindow.setAspectRatio(ratio, for: session.id) }
     }
 

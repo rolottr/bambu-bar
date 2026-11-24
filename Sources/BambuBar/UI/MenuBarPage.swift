@@ -11,9 +11,8 @@ struct MenuBarPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            PageHeader(title: "Menu Bar", subtitle: String(localized: "What the menu bar shows while you print, and what you see when you click it."))
+            PageHeader(title: "Menu Bar")
             // Side by side when the window is wide enough, so each change shows next to the switch that made it.
-            // The settings' ideal width is pinned, or their long notes would ask for a single line and never fit.
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 16) {
                     settings.frame(minWidth: 250, idealWidth: 250, maxWidth: .infinity, alignment: .topLeading)
@@ -38,18 +37,16 @@ struct MenuBarPage: View {
             SettingsGroup("Menu bar", symbol: "menubar.rectangle") {
                 if store.hasMultiplePrinters {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Printer in the menu bar").font(.system(size: 12.5))
+                        HStack(spacing: 6) {
+                            Text("Printer in the menu bar").font(.system(size: 12.5))
+                            SettingsHelpButton("Automatic shows whichever printer is busy (paused first, then printing), otherwise the last selected printer.")
+                        }
                         Picker("Printer in the menu bar", selection: $store.menuBarSerial) {
                             Text("Automatic").tag(String?.none)
                             Divider()
                             ForEach(store.sessions) { Text($0.config.name).tag(Optional($0.id)) }
                         }
                         .labelsHidden()
-                    }
-                    if store.menuBarSerial == nil {
-                        Text("Automatic shows whichever printer is busy (paused first, then printing), otherwise the one you last looked at.")
-                            .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Divider()
                 }
@@ -66,19 +63,20 @@ struct MenuBarPage: View {
 
             SettingsGroup("What to show", symbol: "list.bullet.rectangle") {
                 SettingsToggle("Temperatures", isOn: $temperatures)
-                SettingsToggle("Chamber temperature", isOn: $chamber)
-                    .disabled(!temperatures)
+                SettingsToggle(
+                    "Chamber temperature",
+                    help: "Shown only for printers with a chamber sensor (not the P1 and A series).",
+                    isOn: $chamber
+                )
+                .disabled(!temperatures)
                 SettingsToggle("Fans", isOn: $fans)
                 SettingsToggle("Filament", isOn: $filament)
-                Text("What the panel under the menu bar icon shows below the print. The chamber temperature appears only for printers with a chamber sensor (not the P1 and A series).")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
                 Divider()
-                // One switch for every print control, so it's here rather than in Settings: the panel is where they're used most.
-                SettingsToggle("Pause, stop and speed", isOn: $store.showPrinterActions)
-                Text("Show pause, resume, stop and print speed controls in the menu bar panel and main window, and print actions in the Printer menu.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                SettingsToggle(
+                    "Pause, stop and speed",
+                    help: "Show pause, resume, stop and speed controls in the panel, window and Printer menu.",
+                    isOn: $store.showPrinterActions
+                )
             }
         }
     }
@@ -120,8 +118,6 @@ struct MenuBarPreview: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Preview of the menu bar and its panel"))
-            Text("Sample print. Changes show here as you make them.")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
         }
         .fixedSize(horizontal: true, vertical: false)
         .onChange(of: style) { light(.statusItem) }

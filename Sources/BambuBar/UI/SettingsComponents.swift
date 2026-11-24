@@ -22,18 +22,50 @@ struct SettingsGroup<Content: View>: View {
     }
 }
 
+/// Compact "?" control beside a setting: hovering shows a tooltip, clicking opens a concise popover.
+struct SettingsHelpButton: View {
+    let text: LocalizedStringKey
+    @State private var shown = false
+
+    init(_ text: LocalizedStringKey) {
+        self.text = text
+    }
+
+    var body: some View {
+        Button { shown.toggle() } label: {
+            Image(systemName: "questionmark.circle")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(text)
+        .accessibilityLabel(Text("Help"))
+        .popover(isPresented: $shown, arrowEdge: .bottom) {
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 280, alignment: .leading)
+                .padding(12)
+        }
+    }
+}
+
 struct SettingsRow<Content: View>: View {
     let title: LocalizedStringKey
+    let help: LocalizedStringKey?
     @ViewBuilder var content: () -> Content
 
-    init(_ title: LocalizedStringKey, @ViewBuilder content: @escaping () -> Content) {
+    init(_ title: LocalizedStringKey, help: LocalizedStringKey? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.title = title
+        self.help = help
         self.content = content
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 6) {
             Text(title).font(.system(size: 12.5))
+            if let help { SettingsHelpButton(help) }
             Spacer(minLength: 12)
             content().font(.system(size: 12.5))
         }
@@ -42,18 +74,21 @@ struct SettingsRow<Content: View>: View {
 
 struct SettingsToggle: View {
     let title: LocalizedStringKey
+    let help: LocalizedStringKey?
     @Binding var isOn: Bool
 
-    init(_ title: LocalizedStringKey, isOn: Binding<Bool>) {
+    init(_ title: LocalizedStringKey, help: LocalizedStringKey? = nil, isOn: Binding<Bool>) {
         self.title = title
+        self.help = help
         self._isOn = isOn
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 6) {
             Text(title).font(.system(size: 12.5))
+            if let help { SettingsHelpButton(help) }
             Spacer()
-            Toggle("", isOn: $isOn).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
+            Toggle(title, isOn: $isOn).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
         }
     }
 }

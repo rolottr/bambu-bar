@@ -58,6 +58,22 @@ private struct MainContentView: View {
                 .ignoresSafeArea(.container, edges: .top)
         }
         #endif
+        .overlay(alignment: .bottomTrailing) {
+            OfferStack()
+        }
+        .sheet(isPresented: $navigation.showOnboardingSplash, onDismiss: {
+            if navigation.onboardingFirstRun { navigation.markOnboardingShown() }
+        }) {
+            OnboardingSplash(
+                settings: store.onboardingSettings(),
+                capabilities: store.onboardingCapabilities,
+                firstRun: navigation.onboardingFirstRun
+            ) {
+                if navigation.onboardingFirstRun { navigation.markOnboardingShown() }
+                navigation.showOnboardingSplash = false
+            }
+            .environment(store)
+        }
     }
 
     #if !APP_STORE
@@ -100,6 +116,7 @@ private struct MainContentView: View {
         case .menuBar: MenuBarPage()
         case .notifications: NotificationsPage()
         case .settings: SettingsPage()
+        case .activity: ActivityPage()
         case .about: AboutPage()
         }
     }

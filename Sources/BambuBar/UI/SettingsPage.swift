@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsPage: View {
     @Environment(PrinterStore.self) private var store
     @Environment(LoginItem.self) private var loginItem
+    @Environment(Navigation.self) private var navigation
 
     @State private var language = AppLanguage.override
 
@@ -12,7 +13,10 @@ struct SettingsPage: View {
             PageHeader(title: "Settings")
 
             SettingsGroup("General", symbol: "gearshape") {
-                SettingsRow("Open at login") {
+                SettingsRow(
+                    "Open at login",
+                    help: "At login Bambu Bar starts in the menu bar only, without a Dock icon."
+                ) {
                     Toggle("Open at login", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) }))
                         .toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
                 }
@@ -31,9 +35,12 @@ struct SettingsPage: View {
                     }
                     .font(.system(size: 11.5))
                 }
-                Text("At login Bambu Bar starts in the menu bar only, without a Dock icon. Open it from the menu bar or Spotlight to see this window.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Divider()
+                SettingsRow("Setup guide") {
+                    Button("Setup Guide…") { navigation.openOnboardingSplash(firstRun: false) }
+                        .controlSize(.small)
+                        .fixedSize()
+                }
             }
 
             SettingsGroup("Language", symbol: "globe") {
@@ -49,38 +56,39 @@ struct SettingsPage: View {
                 }
                 if (language ?? AppLanguage.system) != AppLanguage.current {
                     HStack {
-                        Text("Bambu Bar switches to \(AppLanguage.name(of: language ?? AppLanguage.system)) when it restarts.")
+                        Text("Switches to \(AppLanguage.name(of: language ?? AppLanguage.system)) on restart.")
                             .font(.system(size: 11.5)).foregroundStyle(.secondary)
                         Spacer()
-                        Button("Restart Now") { AppLanguage.relaunch() }.controlSize(.small)
+                        Button("Restart Now") { AppLanguage.relaunch() }
+                            .controlSize(.small)
+                            .fixedSize()
                     }
-                } else {
-                    Text("Bambu Bar follows the language of your Mac unless you pick another one here.")
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
             AppearanceGroup()
 
             SettingsGroup("Camera", symbol: "video.fill") {
-                SettingsToggle("Show the printer camera", isOn: $store.cameraEnabled)
-                Text("Turn the camera on for each printer too, at the bottom of its Printer page. While it's off, the camera is hidden everywhere: the Printer page, the menu bar panel and the menus.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                SettingsToggle(
+                    "Show the printer camera",
+                    help: "Turn the camera on for each printer at the bottom of its Printer page. While off, the camera is hidden everywhere.",
+                    isOn: $store.cameraEnabled
+                )
                 if store.cameraEnabled {
-                    SettingsToggle("Keep the camera connected during prints", isOn: $store.cameraStaysOnWhilePrinting)
-                    Text("The picture shows at once when you open it, but the stream runs for the whole print and uses one of the printer's few camera connections, so Bambu Handy or Bambu Studio may not get the camera meanwhile.")
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    SettingsToggle(
+                        "Keep the camera connected during prints",
+                        help: "Shows immediately when opened, while using one of the printer's camera connections during prints.",
+                        isOn: $store.cameraStaysOnWhilePrinting
+                    )
                 }
             }
 
             SettingsGroup("Controls", symbol: "slider.horizontal.3") {
-                SettingsToggle("Ask before stopping a print", isOn: $store.confirmStop)
-                Text("Pause, stop and speed changes need **LAN Only** mode with **Developer Mode** on the printer (Settings → Network on its screen). Reading status and the chamber light work in any mode.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                SettingsToggle(
+                    "Ask before stopping a print",
+                    help: "Pause, stop and speed changes require LAN Only mode with Developer Mode on the printer.",
+                    isOn: $store.confirmStop
+                )
             }
 
             if UpdateChecker.isAvailable {
@@ -103,7 +111,10 @@ private struct AppearanceGroup: View {
                 .labelsHidden()
                 .fixedSize()
             }
-            SettingsRow("Style") {
+            SettingsRow(
+                "Style",
+                help: "Liquid Glass uses macOS Tahoe glass panels; Classic keeps the frosted look."
+            ) {
                 Picker("", selection: $appearance.style) {
                     ForEach(Appearance.Style.allCases) { Text($0.title).tag($0) }
                 }
@@ -112,22 +123,18 @@ private struct AppearanceGroup: View {
                 .fixedSize()
                 .tint(Palette.tintDeep)
             }
-            Text("Liquid Glass gives the menu bar panel, the window's cards and the round controls the glass of macOS Tahoe. Classic keeps the frosted look of earlier versions.")
-                .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             Divider()
-            SettingsRow("Accent colour") {
+            SettingsRow(
+                "Accent colour",
+                help: "Applies to buttons, switches, links and selections. Printer states keep their own colours."
+            ) {
                 AccentPicker(selection: $appearance.accent)
             }
-            Text("The accent colour marks buttons, switches, links and selections. Printer states keep their own colours.")
-                .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-/// A row of colour dots like System Settings' accent colours, the choice's name before them. One line, so the row
-/// lines up with the others in the group and its dots end where their controls do.
+/// A row of colour dots like System Settings' accent colours, the choice's name before them.
 private struct AccentPicker: View {
     @Binding var selection: Appearance.Accent
 
@@ -150,7 +157,6 @@ private struct AccentPicker: View {
         let selected = selection == accent
         return ZStack {
             if accent == .system {
-                // The Mac's own accent, whatever it is, as System Settings draws "Multicolour".
                 Circle().fill(AngularGradient(colors: [.red, .orange, .yellow, .green, .blue, .purple, .pink, .red], center: .center))
             } else {
                 Circle().fill(accent.color.gradient)
@@ -172,54 +178,47 @@ private struct UpdatesGroup: View {
     @State private var updates = UpdateChecker.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Updates", systemImage: "arrow.down.circle.fill")
-                .font(.system(size: 13, weight: .semibold))
-            VStack(alignment: .leading, spacing: 12) {
-                #if !APP_STORE
-                if !updates.supportsAutomaticUpdates {
-                    Text("Activate your website supporter license to check GitHub for updates and enable automatic updates.")
-                        .font(.system(size: 12.5)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("Activate Supporter License…") { MainWindow.show(.about) }
-                        .controlSize(.small)
-                }
-                #endif
-                HStack {
-                    Text("Check for updates automatically").font(.system(size: 12.5))
-                    Spacer()
-                    Toggle("", isOn: $updates.checksAutomatically).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
-                }
-                .disabled(!updates.supportsAutomaticUpdates)
-                HStack {
-                    Text("Download and install updates automatically").font(.system(size: 12.5))
-                    Spacer()
-                    Toggle("", isOn: $updates.downloadsAutomatically).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
-                }
-                .disabled(!updates.checksAutomatically)
-                Divider()
+        SettingsGroup("Updates", symbol: "arrow.down.circle.fill") {
+            #if !APP_STORE
+            if !updates.supportsAutomaticUpdates {
                 HStack(spacing: 10) {
-                    Image(systemName: symbol).foregroundStyle(tint).font(.system(size: 13, weight: .semibold))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title).font(.system(size: 12.5, weight: .medium))
-                        Text(detail).font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    }
+                    Text("Supporter license required for automatic updates.")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
                     Spacer()
-                    if updates.available != nil {
-                        Button("Update…") { updates.showUpdate() }
-                            .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
-                    } else if updates.state == .checking {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Button("Check Now") { updates.check() }
-                            .disabled(!updates.canCheckForUpdates)
-                    }
+                    Button("Activate License…") { MainWindow.show(.about) }
+                        .controlSize(.small)
+                        .fixedSize()
                 }
-                Text("When enabled, automatic checks run once a day. Updates show what’s new and install in place after their signature is verified.")
-                    .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            .panel(radius: 16, padding: 16)
+            #endif
+            SettingsToggle(
+                "Check for updates automatically",
+                help: "Checks once a day and verifies the update signature before installing.",
+                isOn: $updates.checksAutomatically
+            )
+            .disabled(!updates.supportsAutomaticUpdates)
+            SettingsToggle("Download and install updates automatically", isOn: $updates.downloadsAutomatically)
+                .disabled(!updates.checksAutomatically)
+            Divider()
+            HStack(spacing: 10) {
+                Image(systemName: symbol).foregroundStyle(tint).font(.system(size: 13, weight: .semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 12.5, weight: .medium))
+                    Text(detail).font(.system(size: 11.5)).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if updates.available != nil {
+                    Button("Update…") { updates.showUpdate() }
+                        .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
+                        .fixedSize()
+                } else if updates.state == .checking {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Check Now") { updates.check() }
+                        .disabled(!updates.canCheckForUpdates)
+                        .fixedSize()
+                }
+            }
         }
     }
 
@@ -252,8 +251,8 @@ private struct UpdatesGroup: View {
 
     private var detail: String {
         if case .failed(let message) = updates.state { return message }
-        if case .available = updates.state { return String(localized: "You have \(updates.currentVersion). Bambu Bar installs the update and restarts.") }
+        if case .available = updates.state { return String(localized: "Current: \(updates.currentVersion)") }
         guard let last = updates.lastChecked else { return String(localized: "Not checked yet") }
-        return String(localized: "Version \(updates.currentVersion) · last checked \(last.formatted(.relative(presentation: .named)))")
+        return String(localized: "Version \(updates.currentVersion) · checked \(last.formatted(.relative(presentation: .named)))")
     }
 }
