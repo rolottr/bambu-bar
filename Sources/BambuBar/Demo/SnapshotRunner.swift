@@ -19,6 +19,8 @@ enum SnapshotRunner {
         if let i = args.firstIndex(of: "--page"), i + 1 < args.count {
             if args[i + 1] == "add" {
                 MainWindow.addPrinter()
+            } else if args[i + 1] == "onboarding" {
+                MainWindow.showSetupGuide()
             } else if let section = AppSection(rawValue: args[i + 1]) {
                 MainWindow.show(section)
             }

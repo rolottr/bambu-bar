@@ -207,7 +207,7 @@ struct OnboardingSplash: View {
                     Image(nsImage: MenuBarIcon.image(state: .printing, progress: Double(pct) / 100, alert: false, offline: false))
                         .renderingMode(.template)
                     if draft.showProgressInMenuBar {
-                        Text("\(pct)% · \(mins[step])")
+                        Text(verbatim: "\(pct)% · \(mins[step])")
                             .font(.system(size: 12.5, weight: .semibold))
                             .monospacedDigit()
                             .contentTransition(.numericText())
@@ -233,7 +233,7 @@ struct OnboardingSplash: View {
                 HStack {
                     Label("\(mins[step]) left", systemImage: "clock")
                     Spacer()
-                    Text("220° · 60°")
+                    Text(verbatim: "220° · 60°")
                 }
                 .font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
             }
@@ -261,7 +261,7 @@ struct OnboardingSplash: View {
                                 Image(systemName: size == .small ? "circle.dashed" : size == .medium ? "rectangle.split.2x1" : "rectangle.grid.2x2")
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundStyle(highlighted ? Palette.accent : .white.opacity(0.6))
-                                Text("64%").font(.system(size: 13, weight: .bold, design: .rounded)).monospacedDigit()
+                                Text(verbatim: "64%").font(.system(size: 13, weight: .bold, design: .rounded)).monospacedDigit()
                             }
                         )
                         .overlay(
@@ -403,7 +403,7 @@ struct OnboardingSplash: View {
                     Image(nsImage: MenuBarIcon.image(state: .printing, progress: 0.64, alert: false, offline: false))
                         .renderingMode(.template)
                     if draft.showProgressInMenuBar {
-                        Text("64% · 32m").font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                        Text(verbatim: "64% · 32m").font(.system(size: 12, weight: .semibold)).monospacedDigit()
                     }
                 }
                 .padding(.horizontal, 10)

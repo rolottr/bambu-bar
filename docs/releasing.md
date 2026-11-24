@@ -20,7 +20,7 @@ supporter-license rule and the same signing key.
 | Signing | Developer ID, Hardened Runtime, notarized by Apple | Apple Distribution (Xcode automatic signing), sandboxed |
 | Polar supporter license | Included: "Support this project", Manage License…, Hero Supporter badge | Compiled out (checked by `scripts/check-appstore-licensing.sh`) |
 | Updates | Sparkle via `https://bambubar.app/appcast.xml` (anonymous daily check) and `https://bambubar.app/api/updates/download?version=<version>` (requires an active supporter license; without one, people download the next zip from GitHub themselves) | The Mac App Store |
-| Settings, access codes | `~/Library/Preferences/dev.rolottr.BambuBar.plist`, login keychain | `~/Library/Containers/dev.rolottr.BambuBar`, data protection keychain (the two don't share codes) |
+| Settings, access codes | `~/Library/Preferences/dev.rolottr.BambuBar.plist`; data-protection keychain when a Developer ID provisioning profile is embedded, otherwise transparent fallback to login keychain (read-once in-process cache) | `~/Library/Containers/dev.rolottr.BambuBar`, data protection keychain (the two don't share codes) |
 | Bambu Studio's codes | Read directly | Read after the person picks its folder |
 
 Printer monitoring, controls, widgets and the camera are the same on both and never need a license. The license
@@ -48,6 +48,14 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
    - Measure CPU, RSS, and idle wakeups on the installed Release build with `scripts/perf.sh cycle` (or individual modes
      `idle`, `panel`, `panel-closed`, `window`, `after-close`, `page <name>`, `soak`). Results append as JSONL to
      `build/perf/<date>.jsonl` and fail non-zero if over budget (idle / panel-closed / after-close ≤ `1.0%`, panel ≤ `3.0%`).
+   - **Developer ID provisioning profile (optional upgrade for data-protection Keychain):** `Keychain.swift`
+     attempts `kSecUseDataProtectionKeychain: true` first on every build and silently migrates legacy login-keychain
+     items once entitled. Adding `keychain-access-groups` to `Resources/Signing/BambuBar.entitlements` *without* a
+     matching embedded Developer ID provisioning profile causes macOS 26 AMFI to SIGKILL the binary on launch; until
+     a Developer ID Direct Distribution profile for `dev.rolottr.BambuBar` is exported from Apple Developer Portal,
+     embedded as `Contents/embedded.provisionprofile` in `scripts/build.sh`, and paired with `keychain-access-groups`,
+     `BambuBar.entitlements` intentionally omits `keychain-access-groups` and `Keychain.swift` falls back to the
+     login keychain with a read-once in-process cache.
    - **Polar File Downloads sync:** upload the exact `Bambu-Bar-<version>-macos.zip` (matching the exact filename and
      bytes recorded in `.release.txt`, never re-zipped) to the Bambu Bar Polar product's File Downloads benefit and
      keep earlier versions enabled.

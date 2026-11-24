@@ -195,9 +195,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        // bambubar://printer/<serial> from a widget: show that printer.
-        if let url = urls.first, url.host == "printer", let serial = url.pathComponents.dropFirst().first {
-            PrinterStore.shared.select(serial)
+        // bambubar://printer/<serial> from a widget, or bambubar://open/<section> to show a page.
+        if let url = urls.first {
+            if url.host == "printer", let serial = url.pathComponents.dropFirst().first {
+                PrinterStore.shared.select(serial)
+                MainWindow.show(.overview)
+                return
+            }
+            if url.host == "open", let page = url.pathComponents.dropFirst().first {
+                if let section = AppSection(rawValue: page) {
+                    MainWindow.show(section)
+                } else {
+                    MainWindow.show()
+                }
+                return
+            }
         }
         MainWindow.show(.overview)
     }

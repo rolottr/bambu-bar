@@ -25,7 +25,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "3.0.1"
+    MARKETING_VERSION: "3.1.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: PCZ6F8Q9DZ
     APP_GROUP: "$(DEVELOPMENT_TEAM).dev.rolottr.BambuBar"
@@ -70,6 +70,9 @@ targetTemplates:
           - "*.glb" # the Windows app's 3D models
       - path: Resources/Assets.xcassets
       - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+      - path: Resources/ThirdParty
+        type: folder
         buildPhase: resources
       - path: LICENSE
         buildPhase: resources
