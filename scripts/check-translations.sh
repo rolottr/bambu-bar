@@ -24,6 +24,7 @@ for scheme config in BambuBar Debug "BambuBar App Store" AppStore; do
     -derivedDataPath "$DERIVED" -destination 'generic/platform=macOS' ARCHS=arm64 \
     CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet build >/dev/null 2>&1 \
     || { echo "xcodebuild failed for $scheme; run it without -quiet to see why" >&2; exit 1; }
+  "$ROOT/scripts/unregister-build-apps.sh" "$DERIVED/Build/Products/$config/Bambu Bar.app"
 done
 
 # The catalog's file name is its table name, so the copy keeps it.
@@ -74,3 +75,4 @@ if missing or unused or mac_used or partial:
 print(f"All {len(catalog)} strings are in the catalog, used ({len(windows)} by Windows/Linux only), "
       f"and translated into {len(langs)} languages")
 EOF
+"$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

@@ -10,3 +10,4 @@ if strings "$BINARY" | grep -E 'api\.polar\.sh|buy\.polar\.sh|nina-labs-ai-llc/p
 fi
 [[ ! -e "$APP/Contents/Frameworks/Sparkle.framework" ]] || { print -u2 'App Store bundle contains Sparkle'; exit 1; }
 print 'App Store binary contains no Polar integration or Sparkle framework'
+"${0:A:h}/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

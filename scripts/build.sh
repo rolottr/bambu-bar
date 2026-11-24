@@ -27,6 +27,8 @@ fi
 "$ROOT/scripts/generate.sh"
 
 echo "==> xcodebuild ($CONFIG)"
+build_apps=("$DERIVED/Build/Products/$CONFIG/Bambu Bar.app" "$APP")
+trap '"$ROOT/scripts/unregister-build-apps.sh" "${build_apps[@]}"' EXIT
 xcodebuild -project BambuBar.xcodeproj -scheme BambuBar -configuration "$CONFIG" \
   -derivedDataPath "$DERIVED" -destination 'generic/platform=macOS' \
   DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
@@ -67,4 +69,7 @@ codesign "${SIGN[@]}" "$SPARKLE"
 codesign "${SIGN[@]}" --entitlements "$ENT/BambuBarWidget.entitlements" "$WIDGET"
 codesign "${SIGN[@]}" --entitlements "$ENT/BambuBar.entitlements" "$APP"
 codesign --verify --strict --deep "$APP"
+"$ROOT/scripts/unregister-build-apps.sh" "${build_apps[@]}"
+trap - EXIT
 echo "==> Built $APP"
+"$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

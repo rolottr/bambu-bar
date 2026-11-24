@@ -46,7 +46,8 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
      get the update from there.
    - Tag the commit (`v<version>`, annotated) and push the tag.
 3. **App Store:**
-   - `scripts/appstore.sh` archives and exports, checking that the app is sandboxed and has no Sparkle; run
+   - `scripts/appstore.sh` retains the archive in `build/AppStore/Archives.noindex/` and exports the installer
+     to `build/AppStore/Export/`, checking that the app is sandboxed and has no Sparkle. Run
      `scripts/check-appstore-licensing.sh` on the archived app. `UPLOAD=1 scripts/appstore.sh` uploads to App
      Store Connect. The build number is the date and time.
    - In App Store Connect: wait for processing (TestFlight shows the build), add the version under macOS App,

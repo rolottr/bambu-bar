@@ -37,3 +37,4 @@ fi
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ARCHIVE"
 shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
 echo "==> Packaged $ROOT/build/$ARCHIVE"
+"$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

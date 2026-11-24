@@ -11,7 +11,8 @@ ROOT=${0:A:h:h}
 OUT="$ROOT/build/AppStore/Media"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
-BIN="$ROOT/build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar"
+APP="$ROOT/build/App.noindex/Bambu Bar.app"
+BIN="$APP/Contents/MacOS/Bambu Bar"
 
 [[ -x "$BIN" ]] || "$ROOT/scripts/build.sh"
 echo "==> Rendering"
@@ -30,3 +31,5 @@ if [[ -d "$WORK/preview" ]]; then
 fi
 echo "==> $OUT"
 ls -1 "$OUT" "$OUT/Screenshots"
+"$ROOT/scripts/unregister-build-apps.sh" "$APP"
+"$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

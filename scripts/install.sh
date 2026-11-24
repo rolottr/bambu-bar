@@ -19,3 +19,4 @@ ditto "$APP" "$DEST"
 pkill -f "Bambu Bar.app/Contents/PlugIns/BambuBarWidget.appex" 2>/dev/null || true
 open "$DEST"
 echo "==> Installed $DEST"
+"$ROOT/scripts/check-one-copy.sh" dev.rolottr.BambuBar
