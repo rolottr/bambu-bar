@@ -1,10 +1,14 @@
-# docker compose -f shared/scripts/fleet/compose.yaml up --build
+# docker compose -f shared/scripts/fleet/compose.yaml up -d --no-recreate
 # Then: "build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --emulator shared/scripts/fleet/out/BambuStudio.conf
 services:
   fleet:
     build:
       context: ..
       dockerfile: fleet/Dockerfile
+    init: true
+    cpus: 0.5
+    mem_limit: 256m
+    restart: unless-stopped
     environment:
       PUBLISHED_HOST: 127.0.0.1
       SSDP_TARGET: ${SSDP_TARGET:-}

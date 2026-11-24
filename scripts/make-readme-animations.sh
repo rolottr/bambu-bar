@@ -8,10 +8,12 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 cd "$ROOT"
 
-[[ -x "build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" && "${1:-}" != "--build" ]] || CONFIG=Release "$ROOT/scripts/build.sh"
+APP="$ROOT/build/App.noindex/Bambu Bar.app"
+BIN="$APP/Contents/MacOS/Bambu Bar"
+[[ -x "$BIN" && "${1:-}" != "--build" ]] || CONFIG=Release "$ROOT/scripts/build.sh"
 mkdir -p "$ROOT/.github/assets"
 echo "==> Rendering frames"
-"build/App.noindex/Bambu Bar.app/Contents/MacOS/Bambu Bar" --demo printing --fleet --readme-frames "$WORK/frames" >/dev/null
+"$BIN" --demo printing --fleet --readme-frames "$WORK/frames" >/dev/null
 
 for name in showcase menubar widgets; do
   frames=("$WORK/frames/$name"/frame-*.png)
@@ -26,3 +28,5 @@ for name in showcase menubar widgets; do
   img2webp -loop 0 -lossy -q 78 -m 4 -kmax 1 "${args[@]}" -o "$ROOT/.github/assets/$name.webp" >/dev/null
   ls -lh "$ROOT/.github/assets/$name.webp" | awk '{print "    " $5}'
 done
+"$ROOT/scripts/unregister-build-apps.sh" "$APP"
+"$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

@@ -16,7 +16,8 @@ ROOT=${0:A:h:h}
 TEAM_ID=${TEAM_ID:-PCZ6F8Q9DZ}
 BUILD_NUMBER=${BUILD_NUMBER:-$(date +%Y%m%d.%H%M)}
 OUT="$ROOT/build/AppStore"
-ARCHIVE="$OUT/Bambu Bar.xcarchive"
+ARCHIVE="$OUT/Archives.noindex/Bambu Bar.xcarchive"
+APP="$ARCHIVE/Products/Applications/Bambu Bar.app"
 DERIVED="$ROOT/build/DerivedData.noindex"
 cd "$ROOT"
 
@@ -24,8 +25,21 @@ if [[ -z "${DEVELOPER_DIR:-}" ]] && ! xcodebuild -version >/dev/null 2>&1; then
   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 "$ROOT/scripts/generate.sh"
+mkdir -p "${ARCHIVE:h}"
+legacy="$OUT/Bambu Bar.xcarchive"
+if [[ -d "$legacy" ]]; then
+  "$ROOT/scripts/unregister-build-apps.sh" "$legacy/Products/Applications/Bambu Bar.app"
+  legacy_dir=$(mktemp -d "${ARCHIVE:h}/previous.XXXXXX")
+  mv "$legacy" "$legacy_dir/"
+fi
 rm -rf "$ARCHIVE"
-mkdir -p "$OUT"
+unregister_archive_apps() {
+  local intermediates="$DERIVED/Build/Intermediates.noindex/ArchiveIntermediates/BambuBar App Store"
+  "$ROOT/scripts/unregister-build-apps.sh" "$APP" \
+    "$intermediates/InstallationBuildProductsLocation/Applications/Bambu Bar.app" \
+    "$intermediates/BuildProductsPath/AppStore/Bambu Bar.app"
+}
+trap unregister_archive_apps EXIT
 
 echo "==> Archiving (AppStore, build $BUILD_NUMBER)"
 xcodebuild -project BambuBar.xcodeproj -scheme "BambuBar App Store" -configuration AppStore \
@@ -35,7 +49,6 @@ xcodebuild -project BambuBar.xcodeproj -scheme "BambuBar App Store" -configurati
 [[ ${pipestatus[1]} -eq 0 && -d "$ARCHIVE" ]] || { echo "Archiving failed" >&2; exit 1; }
 
 # App Review rejects a build whose app or extension isn't sandboxed; catch that before uploading.
-APP="$ARCHIVE/Products/Applications/Bambu Bar.app"
 for bundle in "$APP" "$APP/Contents/PlugIns/BambuBarWidget.appex"; do
   entitlements=$(codesign -d --entitlements - --xml "$bundle" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null || true)
   [[ "$entitlements" == *"com.apple.security.app-sandbox</key>"$'\n'*"<true/>"* ]] \
@@ -79,9 +92,12 @@ else
 fi
 xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath "$OUT/Export" \
   -exportOptionsPlist "$OUT/ExportOptions.plist" -allowProvisioningUpdates -quiet
+unregister_archive_apps
+trap - EXIT
 if [[ $DESTINATION == upload ]]; then
   echo "==> Uploaded $VERSION ($BUILD_NUMBER). It shows up in App Store Connect → TestFlight once processed."
 else
   echo "==> Exported $(ls "$OUT/Export"/*.pkg)"
   echo "    Upload it with UPLOAD=1 scripts/appstore.sh, the Organizer, or the Transporter app."
 fi
+"$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar

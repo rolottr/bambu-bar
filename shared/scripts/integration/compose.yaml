@@ -10,6 +10,10 @@ services:
     build:
       context: ..
       dockerfile: fleet/Dockerfile
+    init: true
+    cpus: 0.5
+    mem_limit: 256m
+    restart: unless-stopped
     environment:
       PUBLISHED_HOST: 127.0.0.1
       SSDP_TARGET: host.docker.internal
@@ -24,6 +28,10 @@ services:
     build:
       context: ..
       dockerfile: camera/Dockerfile
+    init: true
+    cpus: 0.5
+    mem_limit: 256m
+    restart: unless-stopped
     environment:
       ACCESS_CODE: "12345678"
       CAMERA_SERIAL: 01P00C000000001
