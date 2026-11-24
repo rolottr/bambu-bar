@@ -1,0 +1,19 @@
+Bambu Bar — Third-Party Open-Source Notices
+=============================================
+
+1. Sparkle (Direct macOS edition)
+   URL: https://sparkle-project.org
+   License: MIT License (full text in Sparkle-LICENSE.txt)
+   Used for signed, EdDSA-verified in-app updates in the direct Developer ID edition.
+
+2. ha-bambulab (Protocol & HMS catalog reference)
+   URL: https://github.com/greghesp/ha-bambulab
+   License: MIT License
+   Protocol documentation and HMS error message references informed Bambu Bar's
+   local-network printer report parsing and HMS error catalog.
+
+3. Community Protocol Documentation
+   - Bambuddy: community documentation of newer printer telemetry fields.
+   - bambu-cli: community documentation of LAN printer commands and model fields.
+   - Bambu Studio printer profiles: publicly distributed capability definitions
+     (chamber sensors, fans, heated chambers, nozzles, and build volumes).

@@ -16,19 +16,22 @@ struct LicenseView: View {
     }
 
     private var form: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label(license.hasAccess ? "Hero Supporter · Thank you for your support!" : "Support Bambu Bar", systemImage: license.hasAccess ? "star.circle.fill" : "key.fill")
-                .font(.title2.weight(.semibold))
+        VStack(alignment: .leading, spacing: 14) {
+            Label(license.hasAccess ? "Hero Supporter · Thank you for your support!" : "Bambu Bar License",
+                  systemImage: license.hasAccess ? "star.circle.fill" : "key.fill")
+                .font(.title3.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
-            Text(license.hasAccess ? "Your supporter license enables automatic updates on this Mac." : "Bambu Bar is free to use. Activate a supporter license to enable automatic updates and receive the Hero Supporter badge.")
+            Text(license.hasAccess
+                 ? "This installation is activated and receives automatic updates."
+                 : "Activate a supporter license to enable automatic updates and receive the Hero Supporter badge.")
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Manage your active installations in your account. Deactivate an old installation to make room for another.")
+            Text("Your license allows two active installations. Deactivate an old installation in Manage Purchase to make room for another.")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             if let saved = license.record {
                 SavedLicenseKeyView(key: saved.key)
                     .id(saved.activationID)
-                Text("Installation: Mac · \(saved.installationID.prefix(8))")
+                Text("Installation: \(saved.installationLabel)")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack {
@@ -45,6 +48,8 @@ struct LicenseView: View {
                         .buttonStyle(.borderedProminent)
                         .fixedSize()
                         .disabled(license.isBusy || key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Link("Get a License", destination: PolarConfiguration.checkoutURL)
+                        .fixedSize()
                 }
             }
             if license.isBusy { ProgressView().controlSize(.small) }
@@ -53,23 +58,18 @@ struct LicenseView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack {
-                Link("Support for $9.99", destination: PolarConfiguration.supportURL(from: .license))
+                Text("© 2026 Clever Mechanisms").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Link("Manage Purchase", destination: PolarConfiguration.portalURL)
+                    .font(.callout)
             }
-            Text("NINA LABS, LLC").font(.caption).foregroundStyle(.secondary)
-            Text("Supporter activation needs an internet connection. Supporter benefits stay active for up to seven days offline after validation. Printer monitoring always remains available.")
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .lineLimit(nil)
-        .padding(24)
-        .frame(minWidth: 360, idealWidth: 440, maxWidth: 520)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .confirmationDialog("Deactivate this installation?", isPresented: $confirmDeactivation) {
             Button("Deactivate", role: .destructive) { Task { await license.deactivate() } }
         } message: {
-            Text("This frees an activation for another installation and turns off automatic updates. You can keep using Bambu Bar.")
+            Text("Frees one of your 2 activations and turns off automatic updates. You can keep using Bambu Bar.")
         }
     }
 
@@ -87,10 +87,9 @@ struct LicenseView: View {
 
 private struct LicenseLoadingView: View {
     var body: some View {
-        ProgressView("Opening Bambu Bar…")
-            .padding(24)
-            .frame(width: 360, height: 180)
-            .preferredColorScheme(.dark)
+        ProgressView("Checking license…")
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -112,7 +111,7 @@ private struct SavedLicenseKeyView: View {
                     copied = NSPasteboard.general.setString(key, forType: .string)
                 }
             }
-            Text(verbatim: isRevealed ? key : "•••• •••• \(key.suffix(4))")
+            Text(verbatim: isRevealed ? key : "••••-••••-••••-\(key.suffix(4))")
                 .font(.system(.callout, design: .monospaced))
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)

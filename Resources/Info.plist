@@ -50,7 +50,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 NINA LABS, LLC. MIT License.</string>
+	<string>Copyright © 2026 Clever Mechanisms.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Bambu Bar finds your Bambu Lab printer on your network and reads its status directly from it, without any cloud service.</string>
 	<key>NSPrincipalClass</key>
