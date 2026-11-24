@@ -69,30 +69,76 @@ final class PrinterStore {
     private(set) var toast: Toast?
     private(set) var isDemo = false
 
+    /// Bounded diagnostics event buffer (updates live UI only while ActivityPage is visible).
+    let activity = ActivityLog()
+
     /// `nil` = automatic.
     var menuBarSerial: String? {
-        didSet { defaults.set(menuBarSerial, forKey: Keys.menuBarPrinter); writeSnapshot(force: true) }
+        didSet {
+            guard menuBarSerial != oldValue else { return }
+            if !isDemo { defaults.set(menuBarSerial, forKey: Keys.menuBarPrinter) }
+            writeSnapshot(force: true)
+        }
     }
     var menuBarStyle: MenuBarStyle {
-        didSet { defaults.set(menuBarStyle.rawValue, forKey: Keys.menuBarStyle) }
+        didSet {
+            guard menuBarStyle != oldValue else { return }
+            if !isDemo { defaults.set(menuBarStyle.rawValue, forKey: Keys.menuBarStyle) }
+        }
     }
-    var notifyFinished: Bool { didSet { defaults.set(notifyFinished, forKey: Keys.notifyFinished); requestNotificationsIfNeeded() } }
-    var notifyFailed: Bool { didSet { defaults.set(notifyFailed, forKey: Keys.notifyFailed); requestNotificationsIfNeeded() } }
-    var notifyPaused: Bool { didSet { defaults.set(notifyPaused, forKey: Keys.notifyPaused); requestNotificationsIfNeeded() } }
-    var notifyStarted: Bool { didSet { defaults.set(notifyStarted, forKey: Keys.notifyStarted); requestNotificationsIfNeeded() } }
-    var confirmStop: Bool { didSet { defaults.set(confirmStop, forKey: Keys.confirmStop) } }
-    var showPrinterActions: Bool { didSet { defaults.set(showPrinterActions, forKey: Keys.showPrinterActions) } }
+    var notifyFinished: Bool {
+        didSet {
+            guard notifyFinished != oldValue else { return }
+            if !isDemo { defaults.set(notifyFinished, forKey: Keys.notifyFinished) }
+            requestNotificationsIfNeeded()
+        }
+    }
+    var notifyFailed: Bool {
+        didSet {
+            guard notifyFailed != oldValue else { return }
+            if !isDemo { defaults.set(notifyFailed, forKey: Keys.notifyFailed) }
+            requestNotificationsIfNeeded()
+        }
+    }
+    var notifyPaused: Bool {
+        didSet {
+            guard notifyPaused != oldValue else { return }
+            if !isDemo { defaults.set(notifyPaused, forKey: Keys.notifyPaused) }
+            requestNotificationsIfNeeded()
+        }
+    }
+    var notifyStarted: Bool {
+        didSet {
+            guard notifyStarted != oldValue else { return }
+            if !isDemo { defaults.set(notifyStarted, forKey: Keys.notifyStarted) }
+            requestNotificationsIfNeeded()
+        }
+    }
+    var confirmStop: Bool {
+        didSet {
+            guard confirmStop != oldValue else { return }
+            if !isDemo { defaults.set(confirmStop, forKey: Keys.confirmStop) }
+        }
+    }
+    var showPrinterActions: Bool {
+        didSet {
+            guard showPrinterActions != oldValue else { return }
+            if !isDemo { defaults.set(showPrinterActions, forKey: Keys.showPrinterActions) }
+        }
+    }
     /// The camera, for every printer (Settings → Camera); each printer has its own switch too. Off by default.
     var cameraEnabled: Bool {
         didSet {
-            defaults.set(cameraEnabled, forKey: Keys.cameraEnabled)
+            guard cameraEnabled != oldValue else { return }
+            if !isDemo { defaults.set(cameraEnabled, forKey: Keys.cameraEnabled) }
             cameraSettingsChanged()
         }
     }
     /// Keep the camera streaming for the whole of a print, so it shows at once. Off: only while it's on screen.
     var cameraStaysOnWhilePrinting: Bool {
         didSet {
-            defaults.set(cameraStaysOnWhilePrinting, forKey: Keys.cameraStaysOnWhilePrinting)
+            guard cameraStaysOnWhilePrinting != oldValue else { return }
+            if !isDemo { defaults.set(cameraStaysOnWhilePrinting, forKey: Keys.cameraStaysOnWhilePrinting) }
             for session in sessions { session.camera.viewersChanged() }
         }
     }
@@ -159,18 +205,23 @@ final class PrinterStore {
         static let cameraEnabled = "cameraEnabled"
     }
 
+    private var lastRecordedPhase: [String: PrinterConnection.Phase] = [:]
+    private var lastRecordedCameraState: [String: CameraFeed.State] = [:]
+
     private init() {
-        menuBarStyle = MenuBarStyle(rawValue: defaults.string(forKey: Keys.menuBarStyle) ?? "") ?? .both
-        notifyFinished = defaults.object(forKey: Keys.notifyFinished) as? Bool ?? true
-        notifyFailed = defaults.object(forKey: Keys.notifyFailed) as? Bool ?? true
-        notifyPaused = defaults.object(forKey: Keys.notifyPaused) as? Bool ?? true
-        notifyStarted = defaults.object(forKey: Keys.notifyStarted) as? Bool ?? false
-        confirmStop = defaults.object(forKey: Keys.confirmStop) as? Bool ?? true
-        showPrinterActions = defaults.object(forKey: Keys.showPrinterActions) as? Bool ?? true
-        cameraStaysOnWhilePrinting = defaults.bool(forKey: Keys.cameraStaysOnWhilePrinting)
-        cameraEnabled = defaults.bool(forKey: Keys.cameraEnabled)
-        menuBarSerial = defaults.string(forKey: Keys.menuBarPrinter)
-        selectedSerial = defaults.string(forKey: Keys.selected)
+        // Assign @Observable backing storage directly so init() fires zero didSet side effects
+        // (zero UserDefaults writes, zero notification prompts, zero widget snapshot writes).
+        _menuBarStyle = MenuBarStyle(rawValue: defaults.string(forKey: Keys.menuBarStyle) ?? "") ?? .both
+        _notifyFinished = defaults.object(forKey: Keys.notifyFinished) as? Bool ?? true
+        _notifyFailed = defaults.object(forKey: Keys.notifyFailed) as? Bool ?? true
+        _notifyPaused = defaults.object(forKey: Keys.notifyPaused) as? Bool ?? true
+        _notifyStarted = defaults.object(forKey: Keys.notifyStarted) as? Bool ?? false
+        _confirmStop = defaults.object(forKey: Keys.confirmStop) as? Bool ?? true
+        _showPrinterActions = defaults.object(forKey: Keys.showPrinterActions) as? Bool ?? true
+        _cameraStaysOnWhilePrinting = defaults.bool(forKey: Keys.cameraStaysOnWhilePrinting)
+        _cameraEnabled = defaults.bool(forKey: Keys.cameraEnabled)
+        _menuBarSerial = defaults.string(forKey: Keys.menuBarPrinter)
+        _selectedSerial = defaults.string(forKey: Keys.selected)
     }
 
     // MARK: - Lifecycle
@@ -275,14 +326,16 @@ final class PrinterStore {
     private func add(_ config: PrinterConfig) -> PrinterSession {
         let session = PrinterSession(config: config)
         session.onPhase = { [weak self] session, phase in
+            self?.recordPhase(session, phase: phase)
             // Reconnect attempts flip between offline and connecting; only settled states earn a widget reload.
             self?.writeSnapshot(force: phase == .online || phase == .unauthorized || phase == .idle)
         }
         session.onStatus = { [weak self] session, old, new, canceled in
+            self?.recordStatusTransition(session, from: old, to: new)
             self?.trackJob(session, from: old, to: new, canceled: canceled)
             self?.writeSnapshot(force: old?.state != new.state)
         }
-        session.onAck = { [weak self] session, command, ok, reason in self?.acknowledged(session, ok: ok, reason: reason) }
+        session.onAck = { [weak self] session, command, ok, reason in self?.acknowledged(session, command: command, ok: ok, reason: reason) }
         session.onHeartbeat = { [weak self] _ in
             // A quiet, unchanging printer is still alive; keep the widget's snapshot from looking stale.
             guard let self, Date().timeIntervalSince(self.lastSnapshotWrite) > 300 else { return }
@@ -417,6 +470,9 @@ final class PrinterStore {
         guard let session = session(serial), session.config.cameraEnabled != on else { return }
         session.config.cameraEnabled = on
         saveConfigs()
+        activity.record(category: .camera, printerName: session.config.name,
+                        summary: on ? String(localized: "Camera enabled") : String(localized: "Camera disabled"),
+                        outcome: .applied)
         cameraSettingsChanged()
     }
 
@@ -582,19 +638,21 @@ final class PrinterStore {
     // MARK: - Commands (current printer)
 
     func pause() {
-        guard let current, ensureControllable(current) else { return }
+        guard let current, ensureControllable(current, action: String(localized: "Pause print")) else { return }
         current.pause()
+        activity.record(category: .action, printerName: current.config.name, summary: String(localized: "Pause print"), outcome: .sent)
         showToast(String(localized: "Pausing…"))
     }
 
     func resume() {
-        guard let current, ensureControllable(current) else { return }
+        guard let current, ensureControllable(current, action: String(localized: "Resume print")) else { return }
         current.resume()
+        activity.record(category: .action, printerName: current.config.name, summary: String(localized: "Resume print"), outcome: .sent)
         showToast(String(localized: "Resuming…"))
     }
 
     func stopPrint() {
-        guard let current, ensureControllable(current) else { return }
+        guard let current, ensureControllable(current, action: String(localized: "Stop print")) else { return }
         if confirmStop {
             let job = current.status?.jobName ?? ""
             let alert = NSAlert()
@@ -609,31 +667,165 @@ final class PrinterStore {
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         current.stopPrint()
+        activity.record(category: .action, printerName: current.config.name, summary: String(localized: "Stop print"), outcome: .sent)
         showToast(String(localized: "Stopping…"))
     }
 
-    func toggleLight(_ light: ChamberLight = .left) { current?.toggleLight(light) }
+    func toggleLight(_ light: ChamberLight = .left) {
+        guard let current else { return }
+        let targetOn = light == .left ? !current.chamberLightOn : !(current.chamberLight2On ?? false)
+        current.toggleLight(light)
+        let label = light == .left
+            ? (targetOn ? String(localized: "Chamber light on") : String(localized: "Chamber light off"))
+            : (targetOn ? String(localized: "Right light on") : String(localized: "Right light off"))
+        activity.record(category: .action, printerName: current.config.name, summary: label, outcome: .sent)
+    }
 
     func setSpeed(_ level: SpeedLevel) {
-        guard let current, ensureControllable(current) else { return }
+        guard let current, ensureControllable(current, action: String(localized: "Speed → \(level.title)")) else { return }
         current.setSpeed(level)
+        activity.record(category: .action, printerName: current.config.name, summary: String(localized: "Speed → \(level.title)"), outcome: .sent)
     }
 
     /// Print commands need the printer in Developer Mode; say so instead of sending something it will refuse.
-    private func ensureControllable(_ session: PrinterSession) -> Bool {
+    private func ensureControllable(_ session: PrinterSession, action: String) -> Bool {
         if session.status?.controlsLocked == true {
+            activity.record(category: .action, printerName: session.config.name, summary: action, outcome: .failed)
             showToast(String(localized: "Turn on LAN Only and Developer Mode on the printer to control prints from Bambu Bar."), error: true)
             return false
         }
         return true
     }
 
-    private func acknowledged(_ session: PrinterSession, ok: Bool, reason: String?) {
-        guard !ok else { return }
+    private func acknowledged(_ session: PrinterSession, command: String, ok: Bool, reason: String?) {
+        if ok {
+            activity.record(category: .action, printerName: session.config.name, summary: command, outcome: .applied)
+            return
+        }
+        activity.record(category: .action, printerName: session.config.name,
+                        summary: reason.map { "\(command): \($0)" } ?? command, outcome: .failed)
         let detail = (reason ?? "").lowercased().contains("verify")
             ? String(localized: "The printer only accepts commands in Developer Mode.")
             : (reason.map { String(localized: "The printer refused: \($0)", comment: "The printer's reason, in English") } ?? String(localized: "The printer refused the command."))
         showToast(hasMultiplePrinters ? "\(session.config.name): \(detail)" : detail, error: true)
+    }
+
+    // MARK: - Activity & Onboarding
+
+    private func recordPhase(_ session: PrinterSession, phase: PrinterConnection.Phase) {
+        guard lastRecordedPhase[session.id] != phase else { return }
+        lastRecordedPhase[session.id] = phase
+        let summary: String
+        switch phase {
+        case .idle: summary = String(localized: "Disconnected")
+        case .connecting: summary = String(localized: "Connecting…")
+        case .online: summary = String(localized: "Connected")
+        case .offline(let reason): summary = reason.isEmpty ? String(localized: "Offline") : String(localized: "Offline: \(reason)")
+        case .unauthorized: summary = String(localized: "Access code rejected")
+        case .certificate: summary = String(localized: "Certificate error")
+        case .localNetworkDenied: summary = String(localized: "Local network access denied")
+        }
+        activity.record(category: .connection, printerName: session.config.name, summary: summary)
+    }
+
+    private func recordStatusTransition(_ session: PrinterSession, from old: PrinterStatus?, to new: PrinterStatus) {
+        if old?.state != new.state {
+            let detail = new.jobName.isEmpty ? new.stateTitle : "\(new.stateTitle) · \(new.jobName)"
+            activity.record(category: .job, printerName: session.config.name, summary: detail)
+        }
+        let oldIDs = Set((old?.issues ?? []).map(\.id))
+        let newIDs = Set(new.issues.map(\.id))
+        for issue in new.issues where !oldIDs.contains(issue.id) {
+            activity.record(category: .issue, printerName: session.config.name, summary: "\(issue.id): \(issue.message)")
+        }
+        for issue in (old?.issues ?? []) where !newIDs.contains(issue.id) {
+            activity.record(category: .issue, printerName: session.config.name, summary: String(localized: "Cleared \(issue.id)"))
+        }
+    }
+
+    func recordCameraState(_ state: CameraFeed.State, for session: PrinterSession) {
+        guard lastRecordedCameraState[session.id] != state else { return }
+        lastRecordedCameraState[session.id] = state
+        let summary: String
+        let outcome: ActivityLog.Outcome?
+        switch state {
+        case .idle: summary = String(localized: "Stream stopped"); outcome = nil
+        case .connecting: summary = String(localized: "Stream connecting…"); outcome = nil
+        case .live: summary = session.camera.detail.map { String(localized: "Stream live · \($0)") } ?? String(localized: "Stream live"); outcome = .applied
+        case .unavailable(let reason): summary = reason; outcome = nil
+        case .failed(let reason, _): summary = reason; outcome = .failed
+        }
+        activity.record(category: .camera, printerName: session.config.name, summary: summary, outcome: outcome)
+    }
+
+    func capabilitySummaries() -> [ActivityLog.CapabilitySummary] {
+        sessions.map { session in
+            let model = session.config.model
+            let status = session.status
+            return ActivityLog.CapabilitySummary(
+                printerName: session.config.name,
+                modelName: session.config.modelName,
+                serialPrefix: String(session.id.prefix(3)).uppercased(),
+                isOnline: session.isOnline,
+                amsCount: status?.ams.count ?? 0,
+                hasChamberSensor: model?.hasChamberSensor ?? (status?.chamber != nil),
+                hasChamberHeater: model?.chamberHeaterMax != nil,
+                hasChamberLight: model?.hasChamberLight ?? (status?.chamberLightOn != nil),
+                hasDualLight: status?.chamberLight2On != nil,
+                cameraEnabled: session.showsCamera,
+                nozzleCount: model?.nozzleCount ?? (status?.secondNozzle != nil ? 2 : 1),
+                hasAuxFan: model?.hasAuxFan ?? (status?.auxFan != nil),
+                hasChamberFan: model?.hasChamberFan ?? (status?.exhaustFan != nil || status?.circulationFan != nil)
+            )
+        }
+    }
+
+    func exportActivityJSON() throws -> Data {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        let serials = sessions.map(\.id) + discovered.map(\.serial)
+        let hosts = sessions.map(\.config.host) + discovered.map(\.host)
+        let codes = sessions.compactMap(\.cameraAccessCode)
+        return try activity.exportJSON(
+            capabilities: capabilitySummaries(),
+            appVersion: version,
+            serials: serials,
+            hosts: hosts,
+            accessCodes: codes
+        )
+    }
+
+    var onboardingCapabilities: OnboardingCapabilities? {
+        guard isConfigured else { return nil }
+        let supportsCamera = !isDemo && Self.emulatorSettings == nil
+        return OnboardingCapabilities(supportsCamera: supportsCamera, hasMultiplePrinters: hasMultiplePrinters)
+    }
+
+    func onboardingSettings() -> OnboardingSettings {
+        OnboardingSettings(
+            showProgressInMenuBar: menuBarStyle != .icon,
+            notifyFinished: notifyFinished,
+            notifyFailed: notifyFailed,
+            notifyPaused: notifyPaused,
+            cameraEnabled: cameraEnabled,
+            showPrinterActions: showPrinterActions,
+            panelShowsAllPrinters: defaults.bool(forKey: "panelShowsAllPrinters")
+        )
+    }
+
+    func applyOnboarding(_ draft: OnboardingDraft) {
+        let updated = draft.applied(to: onboardingSettings())
+        menuBarStyle = updated.showProgressInMenuBar ? (menuBarStyle == .icon ? .both : menuBarStyle) : .icon
+        notifyFinished = updated.notifyFinished
+        notifyFailed = updated.notifyFailed
+        notifyPaused = updated.notifyPaused
+        cameraEnabled = updated.cameraEnabled
+        if updated.cameraEnabled, let current, current.config.cameraEnabled != true {
+            setCameraEnabled(true, for: current.id)
+        }
+        showPrinterActions = updated.showPrinterActions
+        if !isDemo {
+            defaults.set(updated.panelShowsAllPrinters, forKey: "panelShowsAllPrinters")
+        }
     }
 
     func showToast(_ message: String, error: Bool = false) {

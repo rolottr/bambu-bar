@@ -16,12 +16,6 @@ struct SetupPage: View {
     @State private var code = ""
     @State private var selected: String?
     @State private var manual = false
-    /// App Review wants Open at Login to be the person's own choice, so the App Store build starts unchecked.
-    #if APP_STORE
-        @State private var openAtLogin = false
-    #else
-        @State private var openAtLogin = true
-    #endif
     /// The one found printer is picked automatically once; after that only the person changes the selection.
     @State private var autoPicked = false
     /// Where the access code came from ("Bambu Studio"…), nil when typed.
@@ -101,18 +95,6 @@ struct SetupPage: View {
                 } else {
                     codeEntry
                 }
-            }
-
-            if !adding {
-                Toggle(isOn: $openAtLogin) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Open Bambu Bar at login").font(.system(size: 12.5, weight: .medium))
-                        Text("It starts quietly in the menu bar, without a Dock icon.")
-                            .font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-                .tint(Palette.tintDeep)
             }
 
             HStack(spacing: 12) {
@@ -226,7 +208,7 @@ struct SetupPage: View {
                 let firstPrinter = !adding
                 store.addAll(printers)
                 navigation.addingPrinter = false
-                if firstPrinter && openAtLogin && !LoginItem.shared.isEnabled && !store.isDemo { LoginItem.shared.setEnabled(true) }
+                if firstPrinter { navigation.presentFirstRunOnboardingIfNeeded() }
             } label: {
                 Text("Add All \(printers.count)").frame(width: 120)
             }
@@ -518,6 +500,6 @@ struct SetupPage: View {
         let firstPrinter = !adding
         store.connect(to: config, accessCode: code, alternatives: alternativeCodes)
         navigation.addingPrinter = false
-        if firstPrinter && openAtLogin && !LoginItem.shared.isEnabled { LoginItem.shared.setEnabled(true) }
+        if firstPrinter { navigation.presentFirstRunOnboardingIfNeeded() }
     }
 }
