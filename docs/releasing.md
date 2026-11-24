@@ -82,7 +82,10 @@ Before publication, build the tagged source on the GNOME, KDE and Omarchy hosts;
 
 | Version | Channel | Build | Commit | Date | Status |
 | --- | --- | --- | --- | --- | --- |
-| 2.3.2 | GitHub (Mac) | 202611201347 | `v2.3.2` | 2026-11-20 | Published, latest release; zip SHA-256 `eb9f967121363e45b8cb2f9c046f8b37ea3ecb5b036249b8fa7ba5284d9a6c56` |
+| 3.0.0 | GitHub (Mac) | 202611232356 | `v3.0.0` | 2026-11-24 | Published, latest release; includes the unreleased 2.4.0 (Appearance); zip SHA-256 `cd0fecbef09607f321b54ca7e818022dfa58fc89026abd04711cc6f9539496c4` |
+| 3.0.0 | GitHub (Windows) | Local build on the Windows VM | `v3.0.0` | 2026-11-24 | Published, unsigned; x64 SHA-256 `3de678ba591c8327fa66733e4123369007b86467021adbee77eda15894866ade`, ARM64 SHA-256 `3843ceb7ec0376471f8dab8d89f506907e9120d792a8a7b14dd25739789f81ee`; with `rainmeter-5.0.0.5293-source.zip` |
+| 3.0.0 | GitHub (Linux) | Local builds on the GNOME, KDE and Omarchy VMs | `linux-v3.0.0-1` | 2026-11-24 | Published, pre-release; GNOME .deb, Plasma .deb, Omarchy pacman package and AUR recipe; digests in its `SHA256SUMS` |
+| 2.3.2 | GitHub (Mac) | 202611201347 | `v2.3.2` | 2026-11-20 | Published; zip SHA-256 `eb9f967121363e45b8cb2f9c046f8b37ea3ecb5b036249b8fa7ba5284d9a6c56` |
 | 2.3.2 | GitHub (Windows) | CI run 44738757152 | `v2.3.2` | 2026-11-20 | Published, unsigned; x64 SHA-256 `2913e83b5f14a2143523eb1c58600c432851d08d7729b9a51ae2ba5b91648702`, ARM64 SHA-256 `99561b819a7ec4366fd23b62fe26d7f321e8bdbc3f7e8b2bfaccf394bdd11c36`; with `rainmeter-5.0.0.5293-source.zip` |
 | 2.3.1 | GitHub (Mac) | 202611171153 | `v2.3.1` | 2026-11-17 | Published; zip SHA-256 `fbd858c13f6f165c8d44a205b782cdc0df59e58e7cc0c02cb5d96c39a583fe29` |
 | 2.3.1 | GitHub (Windows) | CI run 44068579378 | `v2.3.1` | 2026-11-17 | Published, unsigned; x64 SHA-256 `11370366deaa4a7cb6e5183f69b53432a8a1184ab28464819f1da1a4e527e506`, ARM64 SHA-256 `1fe69ac7c6886c30c8d4e55a537ce70e7d460f5a438092b3481f73395ab82eb4`; with `rainmeter-5.0.0.5293-source.zip` |
