@@ -2,16 +2,22 @@ import AppKit
 import Foundation
 import Observation
 #if !APP_STORE
+    import Combine
+    import Security
     import Sparkle
+    import os
 #endif
 
-/// Supporter update discovery reads GitHub's latest release metadata once a day (no account or identifiers).
-/// Sparkle installs newer releases through their signed appcast. A newer version opens Sparkle's window with its release notes and Install Update, Skip This
-/// Version or Remind Me Later; installing downloads it, checks its EdDSA signature and Developer ID, swaps the app
-/// and relaunches it.
+/// In-app updates with Sparkle 2 on `https://bambubar.app/appcast.xml`.
 ///
-/// The App Store build has none of this: the App Store keeps its copies up to date and App Review doesn't allow apps
-/// to update themselves, so its target doesn't even link Sparkle and the update controls hide.
+/// The daily scheduled check reads the anonymous public feed at `https://bambubar.app/appcast.xml`
+/// (`SUScheduledCheckInterval` = 86400). Only the update download request to
+/// `https://bambubar.app/api/updates/download` carries `X-BambuBar-*` supporter license headers,
+/// attached per-request in `updater(_:willDownloadUpdate:with:)` after verifying the URL with
+/// `UpdateDownload.accepts(_:feed:)`. Every update must carry the shared Clever Mechanisms EdDSA
+/// signature (`SUPublicEDKey`) and Developer ID signature.
+///
+/// The Mac App Store edition compiles with zero Sparkle symbols; the App Store handles updates.
 @MainActor
 @Observable
 final class UpdateChecker: NSObject {
@@ -25,8 +31,6 @@ final class UpdateChecker: NSObject {
         case idle, checking, upToDate, available(Release), failed(String)
     }
 
-    nonisolated static let repository = "rolottr/bambu-bar"
-
     let currentVersion = AppInfo.version
     private(set) var state: State = .idle
     private(set) var lastChecked: Date?
@@ -34,16 +38,18 @@ final class UpdateChecker: NSObject {
     private(set) var offerDismissed = false
     private(set) var skippedVersion: String?
     private(set) var isRunning = false
+    private(set) var pendingVersion: String?
 
     // Preserve the user's choices while supporter validation is pending or unavailable.
     private var automaticChecksPreference = true
     private var automaticDownloadsPreference = false
+    private var sparkleCanCheckForUpdates = false
 
     var supportsAutomaticUpdates: Bool {
         #if APP_STORE
         false
         #else
-        LicenseStore.shared.hasAccess
+        LicenseStore.shared.hasAccess && LicenseStore.shared.record != nil
         #endif
     }
 
@@ -65,11 +71,12 @@ final class UpdateChecker: NSObject {
         }
     }
 
-    var canCheckForUpdates: Bool { isRunning && supportsAutomaticUpdates }
+    var canCheckForUpdates: Bool { isRunning && sparkleCanCheckForUpdates && supportsAutomaticUpdates }
 
     var available: Release? {
         guard supportsAutomaticUpdates else { return nil }
         if case .available(let release) = state { return release }
+        if let pendingVersion { return Release(version: pendingVersion) }
         return nil
     }
 
@@ -91,16 +98,34 @@ final class UpdateChecker: NSObject {
         private func applySettings() {}
     #else
         nonisolated static let isAvailable = true
+        nonisolated static let teamIdentifier = "PCZ6F8Q9DZ"
+        nonisolated static let feedOverrideKey = "UpdateFeedURL"
+        private static let log = Logger(subsystem: "dev.rolottr.BambuBar", category: "updates")
 
-        /// `-UpdateFeedURL <url>` on the command line points a build at another appcast, to try an update end to
-        /// end. The update still has to carry this app's EdDSA signature.
-        nonisolated private static var feedOverride: String? {
-            UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)["UpdateFeedURL"] as? String
+        /// `-UpdateFeedURL <url>` on the command line or `defaults write dev.rolottr.BambuBar UpdateFeedURL <url>`
+        /// points a signed build at a local test appcast. Updates must still carry a valid EdDSA signature.
+        nonisolated static var feedOverride: URL? {
+            guard let string = UserDefaults.standard.string(forKey: feedOverrideKey),
+                  !string.isEmpty else { return nil }
+            return URL(string: string)
+        }
+
+        /// True only when running inside an official `.app` signed by Clever Mechanisms' Team ID (`PCZ6F8Q9DZ`).
+        nonisolated static var isOfficialBuild: Bool {
+            guard Bundle.main.bundleURL.pathExtension == "app" else { return false }
+            var code: SecCode?
+            var staticCode: SecStaticCode?
+            var info: CFDictionary?
+            guard SecCodeCopySelf([], &code) == errSecSuccess, let code,
+                  SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode,
+                  SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
+                  let info = info as? [String: Any]
+            else { return false }
+            return info[kSecCodeInfoTeamIdentifier as String] as? String == teamIdentifier
         }
 
         @ObservationIgnored private var controller: SPUStandardUpdaterController!
-        @ObservationIgnored private var metadataTask: Task<Void, Never>?
-        @ObservationIgnored private var metadataTimer: Timer?
+        @ObservationIgnored private var observations: Set<AnyCancellable> = []
 
         private override init() {
             super.init()
@@ -109,115 +134,103 @@ final class UpdateChecker: NSObject {
 
         private var updater: SPUUpdater { controller.updater }
 
-        /// Starts Sparkle's daily schedule. Demo, showcase and probe runs leave it off, and so do builds Xcode runs
-        /// directly: only build.sh adds Sparkle's settings (Resources/Sparkle-Info.plist).
+        /// Starts Sparkle only in an official `.app` signed by Team ID `PCZ6F8Q9DZ` with `SUPublicEDKey`
+        /// configured, and never during developer runs (`--demo`, `--showcase`, `--readme-frames`, etc.).
         func start() {
-            guard supportsAutomaticUpdates, !isRunning, Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil,
-                  !LaunchContext.isDeveloperRun || Self.feedOverride != nil else { return }
+            guard !isRunning,
+                  Self.isOfficialBuild,
+                  !LaunchContext.isDeveloperRun,
+                  Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil else { return }
+
             migrateSettings()
-            // Disable persisted Sparkle automation before starting its scheduler.
+            // Sync Sparkle automation with current supporter status before starting its scheduler.
             applySettings()
+
+            updater.publisher(for: \.canCheckForUpdates)
+                .sink { [weak self] value in
+                    MainActor.assumeIsolated { self?.sparkleCanCheckForUpdates = value }
+                }
+                .store(in: &observations)
+
+            updater.publisher(for: \.automaticallyChecksForUpdates)
+                .sink { [weak self] value in
+                    MainActor.assumeIsolated {
+                        guard let self, self.supportsAutomaticUpdates, self.automaticChecksPreference != value else { return }
+                        self.automaticChecksPreference = value
+                        UserDefaults.standard.set(value, forKey: "supporterAutomaticChecks")
+                    }
+                }
+                .store(in: &observations)
+
+            updater.publisher(for: \.automaticallyDownloadsUpdates)
+                .sink { [weak self] value in
+                    MainActor.assumeIsolated {
+                        guard let self, self.supportsAutomaticUpdates, self.automaticDownloadsPreference != value else { return }
+                        self.automaticDownloadsPreference = value
+                        UserDefaults.standard.set(value, forKey: "supporterAutomaticDownloads")
+                    }
+                }
+                .store(in: &observations)
+
             controller.startUpdater()
             isRunning = true
-            syncSettings()
+            sparkleCanCheckForUpdates = updater.canCheckForUpdates
+            syncLastChecked()
             applySettings()
         }
 
-        /// Check GitHub metadata first: older releases need no appcast and never trigger a downgrade.
-        func check() { checkGitHub(interactive: false, scheduled: false) }
-        func showUpdate() { checkGitHub(interactive: true, scheduled: false) }
-
-        private func checkGitHub(interactive: Bool, scheduled: Bool) {
-            guard canCheckForUpdates, metadataTask == nil else { return }
-            if updater.sessionInProgress {
-                if interactive { controller.checkForUpdates(nil) }
-                return
-            }
-            // A developer-provided feed is still signature-checked by Sparkle.
-            if Self.feedOverride != nil {
-                if interactive { controller.checkForUpdates(nil) }
-                else if scheduled { updater.checkForUpdatesInBackground() }
-                else { updater.checkForUpdateInformation() }
-                return
-            }
+        func check() {
+            guard canCheckForUpdates else { return }
             state = .checking
-            metadataTask = Task { [weak self] in
-                guard let self else { return }
-                defer { metadataTask = nil }
-                do {
-                    var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(Self.repository)/releases/latest")!)
-                    request.timeoutInterval = 30
-                    request.cachePolicy = .reloadIgnoringLocalCacheData
-                    request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-                    request.setValue("BambuBar/\(currentVersion)", forHTTPHeaderField: "User-Agent")
-                    let (data, response) = try await URLSession.shared.data(for: request)
-                    try Task.checkCancellation()
-                    guard canCheckForUpdates else { return }
-                    guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw GitHubReleaseError.unavailable }
-                    let latest = try JSONDecoder().decode(GitHubRelease.self, from: data)
-                    let version = try latest.newerVersion(than: currentVersion)
-                    lastChecked = Date()
-                    UserDefaults.standard.set(lastChecked, forKey: "supporterLastUpdateCheck")
-                    guard let version else {
-                        state = .upToDate
-                        if interactive { MainWindow.show(.settings) }
-                        return
-                    }
-                    guard latest.hasUpdateFeed else { throw GitHubReleaseError.missingUpdateFeed }
-                    state = .available(Release(version: version))
-                    offerDismissed = false
-                    if interactive { controller.checkForUpdates(nil) }
-                    else if scheduled && checksAutomatically { updater.checkForUpdatesInBackground() }
-                } catch {
-                    guard !Task.isCancelled, canCheckForUpdates else { return }
-                    state = .failed(error.localizedDescription)
-                    if interactive { MainWindow.show(.settings) }
-                }
+            if updater.sessionInProgress {
+                NSApp.activate(ignoringOtherApps: true)
+                controller.checkForUpdates(nil)
+            } else {
+                updater.checkForUpdateInformation()
             }
+        }
+
+        func showUpdate() {
+            guard canCheckForUpdates else { return }
+            NSApp.activate(ignoringOtherApps: true)
+            if state != .checking && available == nil {
+                state = .checking
+            }
+            controller.checkForUpdates(nil)
         }
 
         func supporterStatusChanged() {
-            if supportsAutomaticUpdates { start() }
-            if isRunning { applySettings() }
+            if supportsAutomaticUpdates && !isRunning {
+                start()
+            }
+            if isRunning {
+                applySettings()
+            }
             if !supportsAutomaticUpdates {
-                metadataTask?.cancel()
+                pendingVersion = nil
                 state = .idle
                 offerDismissed = true
             }
         }
 
         private func applySettings() {
-            // Our metadata timer schedules checks; Sparkle only runs after a newer signed release is found.
-            updater.automaticallyChecksForUpdates = false
-            updater.automaticallyDownloadsUpdates = downloadsAutomatically
-            if isRunning && checksAutomatically && metadataTimer == nil {
-                let interval: TimeInterval = 24 * 60 * 60
-                let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.checkGitHub(interactive: false, scheduled: true) }
-                }
-                timer.fireDate = Date().addingTimeInterval(max(1, interval - Date().timeIntervalSince(lastChecked ?? .distantPast)))
-                RunLoop.main.add(timer, forMode: .common)
-                metadataTimer = timer
-            } else if !checksAutomatically {
-                metadataTimer?.invalidate()
-                metadataTimer = nil
+            let autoCheck = checksAutomatically
+            if updater.automaticallyChecksForUpdates != autoCheck {
+                updater.automaticallyChecksForUpdates = autoCheck
+            }
+            let autoDownload = downloadsAutomatically
+            if updater.automaticallyDownloadsUpdates != autoDownload {
+                updater.automaticallyDownloadsUpdates = autoDownload
             }
         }
 
-        /// The checkbox in Sparkle's window can change automatic downloads behind the toggles' back.
-        private func syncSettings() {
-            if supportsAutomaticUpdates {
-                downloadsAutomatically = updater.automaticallyDownloadsUpdates
-            } else {
-                applySettings()
-            }
+        private func syncLastChecked() {
             if let checked = updater.lastUpdateCheckDate, checked > (lastChecked ?? .distantPast) {
                 lastChecked = checked
                 UserDefaults.standard.set(checked, forKey: "supporterLastUpdateCheck")
             }
         }
 
-        /// Up to 1.3 the app checked GitHub itself; keep a switched-off automatic check switched off.
         private func migrateSettings() {
             let defaults = UserDefaults.standard
             lastChecked = defaults.object(forKey: "supporterLastUpdateCheck") as? Date
@@ -233,44 +246,66 @@ final class UpdateChecker: NSObject {
             }
         }
 
+        private var downloadHeaders: [String: String]? {
+            let license = LicenseStore.shared
+            guard license.hasAccess, let record = license.record else { return nil }
+            return UpdateDownload.headers(for: record)
+        }
+
         private func found(_ item: SUAppcastItem) {
             guard supportsAutomaticUpdates else { return }
             let release = Release(version: item.displayVersionString)
             if available != release { offerDismissed = false }
+            pendingVersion = release.version
             state = .available(release)
         }
     #endif
 }
 
 #if !APP_STORE
-    // Sparkle calls its delegates on the main thread.
     extension UpdateChecker: SPUUpdaterDelegate {
-        nonisolated func feedURLString(for updater: SPUUpdater) -> String? { Self.feedOverride }
-
-        // Guard every check, including manual checks and revocation while fetching the feed.
-        nonisolated func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {
-            try MainActor.assumeIsolated { try requireSupporter() }
+        nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
+            Self.feedOverride?.absoluteString
         }
 
         nonisolated func updater(_ updater: SPUUpdater, shouldProceedWithUpdate item: SUAppcastItem,
                                  updateCheck: SPUUpdateCheck) throws {
-            try MainActor.assumeIsolated { try requireSupporter() }
-        }
-
-        private func requireSupporter() throws {
-            if !supportsAutomaticUpdates {
-                throw NSError(domain: "BambuBar.Updates", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: String(localized: "In-app update checks require an active website supporter license.")])
+            try MainActor.assumeIsolated {
+                guard downloadHeaders != nil else {
+                    throw NSError(
+                        domain: "dev.rolottr.BambuBar.updates",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: String(localized: "Activate your license to download updates.")]
+                    )
+                }
             }
         }
 
+        /// Attach `X-BambuBar-*` license headers ONLY on verified download requests to
+        /// `bambubar.app/api/updates/download` (or the local feed override origin). Never on feed checks.
+        nonisolated func updater(_ updater: SPUUpdater, willDownloadUpdate item: SUAppcastItem,
+                                 with request: NSMutableURLRequest) {
+            MainActor.assumeIsolated {
+                guard let url = request.url, UpdateDownload.accepts(url, feed: Self.feedOverride) else {
+                    Self.log.error("Update download from an unexpected address; license not sent")
+                    return
+                }
+                guard let headers = downloadHeaders else { return }
+                for (field, value) in headers {
+                    request.setValue(value, forHTTPHeaderField: field)
+                }
+            }
+        }
 
         nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
             MainActor.assumeIsolated { found(item) }
         }
 
         nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
-            MainActor.assumeIsolated { state = .upToDate }
+            MainActor.assumeIsolated {
+                pendingVersion = nil
+                state = .upToDate
+            }
         }
 
         nonisolated func updater(_ updater: SPUUpdater, userDidMake choice: SPUUserUpdateChoice,
@@ -278,41 +313,65 @@ final class UpdateChecker: NSObject {
             let version = updateItem.displayVersionString
             MainActor.assumeIsolated {
                 switch choice {
-                case .skip: skippedVersion = version
-                case .dismiss: offerDismissed = true
-                case .install: break
-                @unknown default: break
+                case .skip:
+                    skippedVersion = version
+                    pendingVersion = nil
+                case .dismiss:
+                    offerDismissed = true
+                case .install:
+                    break
+                @unknown default:
+                    break
                 }
             }
         }
 
         nonisolated func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: (any Error)?) {
-            let code = (error as NSError?).flatMap { $0.domain == SUSparkleErrorDomain ? $0.code : nil }
-            let failed = error != nil && code != Int(SUError.noUpdateError.rawValue)
-                && code != Int(SUError.installationCanceledError.rawValue)
+            let nsError = error as NSError?
+            let sparkleCode = nsError.flatMap { $0.domain == SUSparkleErrorDomain ? $0.code : nil }
+            let failed = error != nil
+                && sparkleCode != Int(SUError.noUpdateError.rawValue)
+                && sparkleCode != Int(SUError.installationCanceledError.rawValue)
+            let message = error?.localizedDescription ?? String(localized: "Couldn’t check for updates. Check your connection and try again.")
             MainActor.assumeIsolated {
-                if !supportsAutomaticUpdates { state = .idle }
-                else if state == .checking {
-                    state = failed ? .failed(String(localized: "Couldn’t reach GitHub. Check your connection and try again.")) : .upToDate
+                syncLastChecked()
+                if !supportsAutomaticUpdates {
+                    pendingVersion = nil
+                    state = .idle
+                } else if state == .checking {
+                    state = failed ? .failed(message) : .upToDate
                 }
-                syncSettings()
             }
         }
     }
 
     extension UpdateChecker: SPUStandardUserDriverDelegate {
-        /// A menu bar app has no window to wait for: Sparkle shows its window right away (in front shortly after
-        /// launch or while the Mac sat idle, otherwise behind other apps) and the menu bar panel offers the update too.
         nonisolated var supportsGentleScheduledUpdateReminders: Bool { true }
 
         nonisolated func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem,
                                                                               andInImmediateFocus immediateFocus: Bool) -> Bool {
-            true
+            immediateFocus
         }
 
         nonisolated func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem,
                                                                    state: SPUUserUpdateState) {
-            MainActor.assumeIsolated { found(update) }
+            MainActor.assumeIsolated {
+                if !handleShowingUpdate {
+                    found(update)
+                }
+            }
+        }
+
+        nonisolated func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
+            MainActor.assumeIsolated {
+                pendingVersion = nil
+            }
+        }
+
+        nonisolated func standardUserDriverWillFinishUpdateSession() {
+            MainActor.assumeIsolated {
+                pendingVersion = nil
+            }
         }
     }
 #endif
