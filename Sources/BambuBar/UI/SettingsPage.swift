@@ -13,19 +13,23 @@ struct SettingsPage: View {
 
             SettingsGroup("General", symbol: "gearshape") {
                 SettingsRow("Open at login") {
-                    Toggle("", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) }))
+                    Toggle("Open at login", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.setEnabled($0) }))
                         .toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
                 }
-                if loginItem.status == .requiresApproval {
-                    HStack {
-                        Text("Allow Bambu Bar in System Settings → General → Login Items.")
-                            .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                if loginItem.error != nil || loginItem.status == .requiresApproval {
+                    HStack(alignment: .firstTextBaseline) {
+                        if let error = loginItem.error {
+                            Text("Couldn’t change Open at Login. \(error)")
+                                .foregroundStyle(Palette.failed)
+                        } else {
+                            Text("Allow Bambu Bar in System Settings → General → Login Items.")
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
-                        Button("Open System Settings") { loginItem.openSystemSettings() }.controlSize(.small)
+                        Button("Open System Settings") { loginItem.openSystemSettings() }
+                            .controlSize(.small).fixedSize()
                     }
-                }
-                if let error = loginItem.error {
-                    Text(error).font(.system(size: 11.5)).foregroundStyle(Palette.failed)
+                    .font(.system(size: 11.5))
                 }
                 Text("At login Bambu Bar starts in the menu bar only, without a Dock icon. Open it from the menu bar or Spotlight to see this window.")
                     .font(.system(size: 11.5)).foregroundStyle(.secondary)

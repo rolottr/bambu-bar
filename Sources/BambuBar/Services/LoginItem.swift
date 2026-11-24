@@ -9,7 +9,7 @@ final class LoginItem {
     static let shared = LoginItem()
 
     enum Status: Equatable {
-        case enabled, requiresApproval, disabled, unavailable
+        case enabled, requiresApproval, disabled
     }
 
     private(set) var status: Status = .disabled
@@ -20,11 +20,15 @@ final class LoginItem {
     var isEnabled: Bool { status == .enabled || status == .requiresApproval }
 
     func refresh() {
-        status = switch SMAppService.mainApp.status {
+        status = Self.status(for: SMAppService.mainApp.status)
+    }
+
+    nonisolated static func status(for service: SMAppService.Status) -> Status {
+        switch service {
         case .enabled: .enabled
         case .requiresApproval: .requiresApproval
-        case .notRegistered: .disabled
-        case .notFound: .unavailable
+        // macOS can report notFound until this copy first registers.
+        case .notRegistered, .notFound: .disabled
         @unknown default: .disabled
         }
     }
