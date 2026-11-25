@@ -192,15 +192,16 @@ public sealed class PrinterSession : Observable, IDisposable
 
     // MARK: Commands
 
-    public void Pause() { if (_demo is not null) _demo.Pause(); else _connection.Pause(); }
-    public void Resume() { if (_demo is not null) _demo.Resume(); else _connection.Resume(); }
-    public void StopPrint() { if (_demo is not null) _demo.Stop(); else _connection.StopPrint(); }
+    public void Pause() { if (_demo is not null) _demo.Pause(); else _connection.Pause(); _store.RecordAction(this, Loc.T("Pause print")); }
+    public void Resume() { if (_demo is not null) _demo.Resume(); else _connection.Resume(); _store.RecordAction(this, Loc.T("Resume print")); }
+    public void StopPrint() { if (_demo is not null) _demo.Stop(); else _connection.StopPrint(); _store.RecordAction(this, Loc.T("Stop print")); }
 
     public void ToggleLight()
     {
         var on = !ChamberLightOn;
         _pendingLight = on;
         if (_demo is not null) _demo.SetLight(on); else _connection.SetChamberLight(on);
+        _store.RecordAction(this, Loc.T(on ? "Chamber light on" : "Chamber light off"));
         ClearPendingSoon();
         DerivedChanged();
     }
@@ -209,6 +210,7 @@ public sealed class PrinterSession : Observable, IDisposable
     {
         _pendingSpeed = level;
         if (_demo is not null) _demo.SetSpeed(level); else _connection.SetSpeed(level);
+        _store.RecordAction(this, Loc.F("Speed → %@", level.Title()));
         ClearPendingSoon();
         DerivedChanged();
     }

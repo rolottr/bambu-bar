@@ -11,6 +11,8 @@ Control {
     property string page: "Printer"
     property var pages: []
     property var sections: []
+    property var activity: null
+    property string notice: ""
     function isMachineGroup(section) { return page === "Printer" && !!section.fields[0]?.icon }
     readonly property var machineGroups: sections.filter(isMachineGroup)
     readonly property var formSections: sections.filter(section => !isMachineGroup(section) && !(page === "Printer" && section.layout === "history"))
@@ -32,6 +34,7 @@ Control {
     signal cameraRequested()
     signal cameraClosed()
     signal importRequested()
+    signal exportRequested()
     signal quitRequested()
     signal hideRequested()
     signal appearanceRequested(int mode, var palette)
@@ -56,6 +59,7 @@ Control {
         }
         if (field.key === "revert-name") { setDraft("name", field.value); return }
         if (field.key === "import-file") { importRequested(); return }
+        if (field.key === "export-activity") { exportRequested(); return }
         if (field.key === "camera") { cameraRequested(); return }
         if (field.key === "quit") { send("quit"); quitRequested(); return }
         if (field.note === "confirmation" && (field.key !== "stop" || confirmStop)) { confirmation = field.key; confirmationLabel = field.label; return }
@@ -85,6 +89,7 @@ Control {
         if (message.type === "prefill") { drafts = Object.assign({}, drafts, message.fields); return }
         if (message.type === "connection-saved" && message.serial === desktop.printer?.id) { endAddressEdit(); return }
         if (message.type === "error") { error = message.message; return }
+        if (message.type === "notice") { notice = message.message || ""; noticeTimer.restart(); return }
         if (message.type === "camera") { cameraImage = message.image; return }
         if (message.type === "camera-status") { cameraStatus = message.message; cameraRetry = !!message.retry; return }
         if (message.type === "close-camera") { cameraClosed(); return }
@@ -102,10 +107,12 @@ Control {
         desktop = message.desktop || {}
         if (JSON.stringify(pages) !== JSON.stringify(message.pages)) pages = message.pages || []
         if (JSON.stringify(sections) !== JSON.stringify(message.sections)) sections = message.sections || []
+        if (JSON.stringify(activity) !== JSON.stringify(message.activity || null)) activity = message.activity || null
         error = message.error || ""
     }
     // Clipboard ownership belongs to the focused native window on Wayland.
     TextEdit { id: clipboard; visible: false }
+    Timer { id: noticeTimer; interval: 3000; onTriggered: root.notice = "" }
     Timer {
         id: capture
         interval: 100
@@ -178,6 +185,8 @@ Control {
                             controller: root
                         }
                         Field { visible: root.page === "Printer" && !!root.desktop.printer; kit: root.kit; controller: root; field: ({kind:"button", key:"refresh", label:root.t("Refresh")}) }
+                        Field { visible: root.page === "Activity" && !!root.activity; active: visible; kit: root.kit; controller: root; field: ({kind:"button", key:"activity-clear", label:root.activity?.labels?.clear || "", enabled:!!root.activity?.canClear}) }
+                        Field { visible: root.page === "Activity" && !!root.activity; active: visible; kit: root.kit; controller: root; field: ({kind:"button", key:"export-activity", label:root.activity?.labels?.export || ""}) }
                         Field { Layout.alignment: Qt.AlignTop | Qt.AlignRight; kit: root.kit; controller: root; field: ({kind:"link", key:root.supporter ? "navigate:About" : "support-window", icon:root.supporter ? "starred" : "love", label:root.t(root.supporter ? "Hero Supporter" : "Support this project")}) }
                     }
                     Label {
@@ -190,6 +199,11 @@ Control {
                         sourceComponent: WidgetShowcase { kit: root.kit; controller: root }
                     }
                     Label { Layout.fillWidth: true; Layout.leftMargin: 22; text: "Connecting to printer service…"; visible: !root.connected; color: root.kit.muted }
+                    Loader {
+                        Layout.fillWidth: true; Layout.leftMargin: 22; Layout.rightMargin: 22
+                        active: root.page === "Activity" && !!root.activity; visible: active
+                        sourceComponent: ActivityView { kit: root.kit; controller: root; activity: root.activity || ({}) }
+                    }
                     PrinterCard { Layout.fillWidth: true; Layout.leftMargin: 22; Layout.rightMargin: 22; visible: (root.page === "Printer" || root.page === "Filament") && !!root.desktop.printer; kit: root.kit; controller: root; printer: root.desktop.printer || {}; filamentOnly: root.page === "Filament"; viewport: scroll }
                     GridLayout {
                         id: fleetGrid
@@ -282,7 +296,7 @@ Control {
                     Item { height: 12 }
                 }
             }
-            Label { Layout.fillWidth: true; Layout.margins: 14; visible: root.error !== ""; text: root.error; color: root.kit.foreground; wrapMode: Text.Wrap; textFormat: Text.PlainText }
+            Label { Layout.fillWidth: true; Layout.margins: 14; visible: root.error !== "" || root.notice !== ""; text: root.error !== "" ? root.error : root.notice; color: root.kit.foreground; wrapMode: Text.Wrap; textFormat: Text.PlainText }
         }
     }
     Loader {

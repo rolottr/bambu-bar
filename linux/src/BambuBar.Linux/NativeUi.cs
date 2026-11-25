@@ -312,6 +312,7 @@ internal sealed partial class Shell
             type = "state", page = _nativePage, subtitle,
             pages = _pages.Where(p => p != "All Printers" || _store.HasMultiplePrinters).Select(p => new { id = p, title = Loc.T(p) }),
             sections = NativeSections(), desktop = JsonSerializer.Deserialize<JsonElement>(state),
+            activity = _nativePage == "Activity" ? NativeActivity() : null,
             error = _nativeError, supporter = _license.HasAccess, confirmStop = _store.ConfirmStop,
             appearance = _settings.Get("linuxAppearance", 2), palette = Platform.IsOmarchy ? _omarchyTheme?.Palette : null
         }, "state");
@@ -329,8 +330,11 @@ internal sealed partial class Shell
             string Field(string key) => request.TryGetProperty("fields", out var fields) && fields.TryGetProperty(key, out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() ?? "" : "";
             var s = _store.Current;
             _nativeError = "";
-            if (action.StartsWith("navigate:") && (_pages.Contains(action[9..]) || action is "navigate:Setup" or "navigate:Printers")) {
-                _nativePage = action == "navigate:Printers" ? "Printer" : action[9..];
+            if (NativeActivityRequest(action, text)) { /* Handled: filter, more, clear or export. */ }
+            else if (action.StartsWith("navigate:") && (_pages.Contains(action[9..]) || action is "navigate:Setup" or "navigate:Printers")) {
+                var next = action == "navigate:Printers" ? "Printer" : action[9..];
+                if (next == "Activity" && _nativePage != "Activity") ResetActivityView();
+                _nativePage = next;
                 if (_nativeCameraRequested) { _nativeCameraRequested = false; _native?.Send(new { type = "show-camera" }); }
             }
             else if (action.StartsWith("unignore:") && s?.Config.IgnoredIssues?.Contains(action[9..]) == true) _store.Unignore(action[9..], s.Id);

@@ -123,6 +123,9 @@ public sealed class PrinterStore : Observable, IDisposable
 
     public bool IsDemo { get; private set; }
 
+    /// <summary>What happened recently, for the Activity page: connections, prints, issues, camera and commands.</summary>
+    public ActivityLog Activity { get; } = new();
+
     private string? _selectedSerial;
     public string? SelectedSerial { get => _selectedSerial; private set { if (Set(ref _selectedSerial, value)) CurrentChanged(); } }
 
@@ -321,20 +324,22 @@ public sealed class PrinterStore : Observable, IDisposable
         var session = new PrinterSession(config, this)
         {
             // Reconnect attempts flip between offline and connecting; only settled states earn a widget reload.
-            OnPhase = (_, phase) => { WriteSnapshot(force: phase is PrinterConnection.Phase.Online or PrinterConnection.Phase.Unauthorized or PrinterConnection.Phase.Idle); PrintersChanged(); },
+            OnPhase = (session, phase) => { RecordPhase(session, phase); WriteSnapshot(force: phase is PrinterConnection.Phase.Online or PrinterConnection.Phase.Unauthorized or PrinterConnection.Phase.Idle); PrintersChanged(); },
             OnStatus = (session, old, fresh, canceled) =>
             {
+                RecordStatusTransition(session, old, fresh);
                 TrackJob(session, old, fresh, canceled);
                 WriteSnapshot(force: old?.State != fresh.State);
                 PrintersChanged();
             },
-            OnAck = (session, _, ok, reason) => Acknowledged(session, ok, reason),
+            OnAck = (session, command, ok, reason) => Acknowledged(session, command, ok, reason),
             OnHeartbeat = _ =>
             {
                 // A quiet, unchanging printer is still alive; keep the widgets' snapshot from looking stale.
                 if (DateTimeOffset.Now - _lastSnapshotWrite > TimeSpan.FromMinutes(5)) WriteSnapshot(force: false);
             },
         };
+        session.Camera.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(CameraFeed.State)) RecordCameraState(session); };
         _sessions.Add(session);
         PrintersChanged();
         return session;
@@ -641,21 +646,21 @@ public sealed class PrinterStore : Observable, IDisposable
 
     public void Pause()
     {
-        if (Current is not { } current || !EnsureControllable(current)) return;
+        if (Current is not { } current || !EnsureControllable(current, Loc.T("Pause print"))) return;
         current.Pause();
         ShowToast(Loc.T("Pausing…"));
     }
 
     public void Resume()
     {
-        if (Current is not { } current || !EnsureControllable(current)) return;
+        if (Current is not { } current || !EnsureControllable(current, Loc.T("Resume print"))) return;
         current.Resume();
         ShowToast(Loc.T("Resuming…"));
     }
 
     public void StopPrint()
     {
-        if (Current is not { } current || !EnsureControllable(current)) return;
+        if (Current is not { } current || !EnsureControllable(current, Loc.T("Stop print"))) return;
         if (ConfirmStop && _services.Confirmer is { } confirmer)
         {
             var job = current.Status?.JobName ?? "";
@@ -672,26 +677,116 @@ public sealed class PrinterStore : Observable, IDisposable
 
     public void SetSpeed(SpeedLevel level)
     {
-        if (Current is not { } current || !EnsureControllable(current)) return;
+        if (Current is not { } current || !EnsureControllable(current, Loc.F("Speed → %@", level.Title()))) return;
         current.SetSpeed(level);
     }
 
     /// <summary>Print commands need the printer in Developer Mode; say so instead of sending something it will refuse.</summary>
-    private bool EnsureControllable(PrinterSession session)
+    private bool EnsureControllable(PrinterSession session, string action)
     {
         if (session.Status?.ControlsLocked != true) return true;
+        RecordAction(session, action, ActivityLog.Outcome.Failed);
         ShowToast(Loc.T("Turn on LAN Only and Developer Mode on the printer to control prints from Bambu Bar."), error: true);
         return false;
     }
 
-    private void Acknowledged(PrinterSession session, bool ok, string? reason)
+    private void Acknowledged(PrinterSession session, string command, bool ok, string? reason)
     {
+        RecordAction(session, ok || reason is null ? command : $"{command}: {reason}", ok ? ActivityLog.Outcome.Applied : ActivityLog.Outcome.Failed);
         if (ok) return;
         var detail = (reason ?? "").Contains("verify", StringComparison.OrdinalIgnoreCase)
             ? Loc.T("The printer only accepts commands in Developer Mode.")
             : reason is not null ? Loc.F("The printer refused: %@", reason) : Loc.T("The printer refused the command.");
         ShowToast(HasMultiplePrinters ? $"{session.Config.Name}: {detail}" : detail, error: true);
     }
+
+    // MARK: Activity
+
+    private string[] ActivitySerials => [.. _sessions.Select(s => s.Id), .. _discovered.Select(d => d.Serial)];
+    private string[] ActivityHosts => [.. _sessions.Select(s => s.Config.Host), .. _discovered.Select(d => d.Host)];
+    private string[] ActivityCodes => [.. _sessions.Select(s => s.CameraAccessCode).OfType<string>()];
+
+    /// <summary>Keeps addresses, serials and access codes out of the log, as the Mac does.</summary>
+    private string SanitizeActivity(string text) => ActivityLog.Redact(text, ActivitySerials, ActivityHosts, ActivityCodes);
+
+    /// <summary>A command to a printer: sent from a control, applied or refused by the printer.</summary>
+    internal void RecordAction(PrinterSession session, string summary, ActivityLog.Outcome outcome = ActivityLog.Outcome.Sent) =>
+        Activity.Record(ActivityLog.Category.Action, SanitizeActivity(session.Config.Name), SanitizeActivity(summary), outcome);
+
+    private void RecordPhase(PrinterSession session, PrinterConnection.Phase phase)
+    {
+        var (state, summary) = phase switch
+        {
+            PrinterConnection.Phase.Idle => ("idle", Loc.T("Disconnected")),
+            PrinterConnection.Phase.Connecting => ("connecting", Loc.T("Connecting…")),
+            PrinterConnection.Phase.Online => ("online", Loc.T("Connected")),
+            PrinterConnection.Phase.Offline o => ("offline", o.Reason.Length == 0 ? Loc.T("Offline") : Loc.F("Offline: %@", o.Reason)),
+            PrinterConnection.Phase.Unauthorized => ("issue:unauthorized", Loc.T("Access code rejected")),
+            _ => ("issue:certificate", Loc.T("Certificate error")),
+        };
+        Activity.RecordConnectionTransition(session.Id, SanitizeActivity(session.Config.Name), state, SanitizeActivity(summary));
+    }
+
+    private void RecordStatusTransition(PrinterSession session, PrinterStatus? old, PrinterStatus fresh)
+    {
+        var name = SanitizeActivity(session.Config.Name);
+        if (old?.State != fresh.State)
+            Activity.Record(ActivityLog.Category.Job, name, SanitizeActivity(fresh.JobName.Length == 0 ? fresh.StateTitle : $"{fresh.StateTitle} · {fresh.JobName}"));
+        var oldIds = (old?.Issues ?? []).Select(i => i.Id).ToHashSet();
+        var freshIds = fresh.Issues.Select(i => i.Id).ToHashSet();
+        foreach (var issue in fresh.Issues.Where(i => !oldIds.Contains(i.Id)))
+            Activity.Record(ActivityLog.Category.Issue, name, SanitizeActivity($"{issue.Id}: {issue.Message}"));
+        foreach (var issue in (old?.Issues ?? []).Where(i => !freshIds.Contains(i.Id)))
+            Activity.Record(ActivityLog.Category.Issue, name, Loc.F("Cleared %@", issue.Id));
+    }
+
+    private readonly Dictionary<string, string> _lastCameraState = [];
+
+    private void RecordCameraState(PrinterSession session)
+    {
+        var feed = session.Camera;
+        // A printer whose camera is off only says so; log that once it had a stream to stop.
+        if (!session.ShowsCamera && (feed.State is CameraFeed.FeedState.Unavailable || !_lastCameraState.ContainsKey(session.Id))) return;
+        (string Summary, ActivityLog.Outcome? Outcome) result = feed.State switch
+        {
+            CameraFeed.FeedState.Connecting => (Loc.T("Stream connecting…"), null),
+            CameraFeed.FeedState.Live => (feed.Detail is { } detail ? Loc.F("Stream live · %@", detail) : Loc.T("Stream live"), ActivityLog.Outcome.Applied),
+            CameraFeed.FeedState.Unavailable u => (u.Reason, null),
+            CameraFeed.FeedState.Failed f => (f.Reason, ActivityLog.Outcome.Failed),
+            _ => (Loc.T("Stream stopped"), null),
+        };
+        var key = $"{feed.State.GetType().Name}|{result.Summary}";
+        if (_lastCameraState.GetValueOrDefault(session.Id) == key) return;
+        _lastCameraState[session.Id] = key;
+        Activity.Record(ActivityLog.Category.Camera, SanitizeActivity(session.Config.Name), SanitizeActivity(result.Summary), result.Outcome);
+    }
+
+    /// <summary>What each printer reports it has, from its model and, without one, from its reports.</summary>
+    public IReadOnlyList<ActivityLog.CapabilitySummary> CapabilitySummaries() => _sessions.Select(session =>
+    {
+        var model = session.Config.Model;
+        var status = session.Status;
+        return new ActivityLog.CapabilitySummary
+        {
+            PrinterName = session.Config.Name,
+            ModelName = session.Config.ModelName,
+            SerialPrefix = session.Id[..Math.Min(3, session.Id.Length)].ToUpperInvariant(),
+            IsOnline = session.IsOnline,
+            AmsCount = status?.Ams.Count ?? 0,
+            HasChamberSensor = model?.HasChamberSensor ?? status?.Chamber is not null,
+            HasChamberHeater = model?.ChamberHeaterMax is not null,
+            HasChamberLight = model?.HasChamberLight ?? status?.ChamberLightOn is not null,
+            HasDualLight = false,
+            CameraEnabled = session.ShowsCamera,
+            NozzleCount = model?.NozzleCount ?? (status?.SecondNozzle is not null ? 2 : 1),
+            HasAuxFan = model?.HasAuxFan ?? status?.AuxFan is not null,
+            HasChamberFan = model?.HasChamberFan ?? (status?.ExhaustFan is not null || status?.CirculationFan is not null),
+        };
+    }).ToList();
+
+    /// <summary>The Activity page's export: capabilities and events, with serials, addresses and codes redacted.</summary>
+    public byte[] ExportActivityJson(string appVersion) =>
+        Activity.ExportJson(CapabilitySummaries(), appVersion, ActivitySerials, ActivityHosts, ActivityCodes);
 
     public void ShowToast(string message, bool error = false)
     {

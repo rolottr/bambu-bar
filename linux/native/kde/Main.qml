@@ -19,6 +19,13 @@ Kirigami.ApplicationWindow {
         nameFilters: ["Slicer settings (*.conf *.json)", "All files (*)"]
         onAccepted: content.send("import-file", selectedFile.toString())
     }
+    FileDialog {
+        id: exportDialog
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: ["JSON (*.json)"]
+        onAccepted: content.send("export-activity", selectedFile.toString())
+    }
     Kit { id: nativeKit }
     Common.Content {
         id: content
@@ -27,6 +34,7 @@ Kirigami.ApplicationWindow {
         onRequest: message => backend.send(JSON.stringify(message))
         onShowRequested: { window.show(); window.raise(); window.requestActivate() }
         onImportRequested: importDialog.open()
+        onExportRequested: { exportDialog.title = content.activity?.labels?.export || ""; exportDialog.open() }
         onCameraRequested: { camera.show(); camera.raise(); content.send("camera", true) }
         onCameraClosed: camera.close()
         onQuitRequested: Qt.quit()

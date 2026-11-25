@@ -122,6 +122,41 @@ class NativeLayout(unittest.TestCase):
                        and item.metaObject().indexOfSignal(b"clicked()") >= 0]
             self.assertFalse(buttons)
 
+    def test_activity_page_lists_events_and_sends_its_requests(self):
+        activity = dict(
+            filter="", canClear=True, more=True,
+            filters=[dict(value="", label="All"), dict(value="connection", label="Connection"), dict(value="issue", label="Issues")],
+            capabilities=[dict(name="Workshop", model="P2S", serial="22E…", online=True, status="Online",
+                               items=[dict(label="AMS", on=True, detail="1"), dict(label="Camera", on=False, detail="Off")])],
+            events=[dict(id="1", category="action", icon="media-playback-start", printer="", summary="Pause print",
+                         outcome="failed", outcomeLabel="Failed", time="10:41:02"),
+                    dict(id="2", category="connection", icon="network-wireless", printer="", summary="Connected",
+                         outcome="", outcomeLabel="", time="10:40:00")],
+            labels=dict(capabilities="Reported Capabilities", noPrinter="No printer configured", events="Events",
+                        empty="No activity recorded yet.", more="Show more", clear="Clear", export="Export…"))
+        self.content.accept(json.dumps(dict(type="state", page="Activity", pages=[dict(id="Activity", title="Activity")],
+                                            sections=[], desktop={}, activity=activity)))
+        QTest.qWait(60)
+        if os.environ.get("BAMBUBAR_ACTIVITY_SHOT"):
+            self.window.grabWindow().save(os.environ["BAMBUBAR_ACTIVITY_SHOT"])
+        texts = {item.property("text") for item in visual_items(self.content) if item.isVisible()}
+        for text in ("Reported Capabilities", "Workshop", "Pause print", "Failed", "10:41:02", "Connected", "Show more"):
+            self.assertIn(text, texts)
+        requests, exports = [], []
+        self.content.request.connect(lambda message: requests.append(message.toVariant()["action"]))
+        self.content.exportRequested.connect(lambda: exports.append(True))
+        def button(text):
+            return next(item for item in visual_items(self.content) if item.isVisible()
+                        and item.property("text") == text and item.metaObject().indexOfSignal(b"clicked()") >= 0)
+        for text in ("Issues", "Show more", "Clear", "Export…"):
+            button(text).clicked.emit()
+        self.assertEqual(requests, ["activity-filter:issue", "activity-more", "activity-clear"])
+        self.assertEqual(exports, [True])
+        activity["events"] = []
+        self.content.accept(json.dumps(dict(type="state", page="Activity", pages=[], sections=[], desktop={}, activity=activity)))
+        QTest.qWait(30)
+        self.assertIn("No activity recorded yet.", {item.property("text") for item in visual_items(self.content) if item.isVisible()})
+
     def test_add_widget_sends_the_selected_corner(self):
         corners = ["top-left", "top-right", "bottom-left", "bottom-right"]
         fields = [dict(kind="choice", key="widgetCorner", label="Corner", value="top-right",

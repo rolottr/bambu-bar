@@ -41,6 +41,13 @@ ShellRoot {
         nameFilters: ["Slicer settings (*.conf *.json)", "All files (*)"]
         onAccepted: content.send("import-file", selectedFile.toString())
     }
+    FileDialog {
+        id: exportDialog
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: ["JSON (*.json)"]
+        onAccepted: content.send("export-activity", selectedFile.toString())
+    }
     Kit { id: nativeKit }
     // Wayland does not let the application set x/y. Remap after an output's
     // logical geometry changes so our scoped compositor centering rule runs
@@ -88,6 +95,7 @@ ShellRoot {
             // Remapping also brings an already-open window from another workspace.
             onShowRequested: { window.visible = false; Qt.callLater(() => window.visible = true) }
             onImportRequested: importDialog.open()
+            onExportRequested: { exportDialog.title = content.activity?.labels?.export || ""; exportDialog.open() }
             onCameraRequested: { camera.visible = true; content.send("camera", true) }
             onCameraClosed: camera.visible = false
             onQuitRequested: Qt.quit()

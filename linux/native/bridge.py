@@ -16,6 +16,7 @@ connection = None
 pending = bytearray()
 input_pending = bytearray()
 desired_page = os.environ.get("BAMBUBAR_PAGE", "Printer")
+export_target = None  # The file the window's save dialog chose; the app's export may only be written there.
 
 def emit(value):
     try:
@@ -40,8 +41,26 @@ def desktop_call(method, parameters=None):
     BUS.call(APP + '.Desktop', '/dev/rolottr/BambuBar/Desktop', APP + '.Desktop', method,
              parameters, None, Gio.DBusCallFlags.NONE, 3000, None, done)
 
+def file_path(url):
+    parsed = urlparse(str(url))
+    if parsed.scheme != 'file' or parsed.netloc not in ('', 'localhost'):
+        return None
+    return unquote(parsed.path)
+
+def save_export(message):
+    global export_target
+    path, export_target = export_target, None
+    if not path or file_path(message.get('path', '')) != path:
+        return
+    try:
+        with open(path, 'w', encoding='utf-8') as stream:
+            stream.write(str(message.get('data', '')))
+        emit({'type': 'notice', 'message': str(message.get('done', ''))})
+    except OSError as error:
+        emit({'type': 'error', 'message': f'{error.strerror}: {path}'})
+
 def send(message):
-    global desired_page
+    global desired_page, export_target
     if str(message.get("action", "")).startswith("navigate:"):
         desired_page = message["action"][9:]
     if DESKTOP:
@@ -52,6 +71,10 @@ def send(message):
                         'pause', 'resume', 'stop', 'stop-confirmed', 'quit', 'dismiss-issue') or (isinstance(action, str) and action.startswith('speed:')):
             desktop_call('Invoke', GLib.Variant('(ss)', (action, str(message.get('printer', '')))))
     elif connection:
+        if message.get('action') == 'export-activity':
+            export_target = file_path(message.get('value', ''))
+            if not export_target:
+                return
         if message.get('action') == 'import-file':
             parsed = urlparse(str(message.get('value', '')))
             if parsed.scheme != 'file' or parsed.netloc not in ('', 'localhost'):
@@ -119,6 +142,9 @@ def socket_ready(fd, condition):
             line, _, rest = pending.partition(b'\n')
             pending[:] = rest
             message = json.loads(line)
+            if message.get('type') == 'activity-export':
+                save_export(message)
+                continue
             if message.get('type') == 'capture':
                 folder = Path.home() / '.var/app' / APP / 'data'
                 if os.environ.get('BAMBUBAR_SYSTEM_PACKAGE') == '1':

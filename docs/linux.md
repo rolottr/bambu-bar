@@ -201,6 +201,7 @@ Reference captures from the installed Mac app were compared individually with th
 | Printers | Printer list, selected printer details, editable name/address, per-printer camera and separate Controls section. |
 | Widgets | Small dial beside status/time, medium illustration and job, large sensors/AMS/footer; no desktop-card drop shadow. Failed/finished cards do not show active-print progress. |
 | Settings | General, Language, Camera and Updates groups, with native Linux update and appearance behavior. |
+| Activity | Added after 3.1.0's Mac page: reported capabilities per printer, the event list with All/Connection/Print/Issues/Camera/Actions filters, Clear and a redacted JSON export (same keys as the Mac's). One C# log in BambuBar.Core feeds the GTK page (GNOME, Hyprland, Ctrl+9) and the Plasma/Omarchy native page; on those, the bridge writes the export only to the file the save dialog chose. |
 | About | Horizontal app identity, copy/version and links cards, supporter license, how it works, privacy and credits. |
 | Fleet | Two-column cards, attention-first sorting, state colors and one sidebar destination. |
 

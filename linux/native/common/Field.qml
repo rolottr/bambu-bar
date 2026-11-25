@@ -12,12 +12,13 @@ Loader {
         license:"object-unlocked", "add-widget":"list-add", settings:"settings-configure", quit:"application-exit", website:"globe", releases:"help-contents",
         "manage-purchase":"user-identity", "report-issue":"tools-report-bug", "copy-version":"edit-copy",
         "deactivate-license":"list-remove", "activate-license":"object-unlocked", "navigate:About":"bookmarks", support:"love",
-        "support-menu":"love", "support-window":"love", "support-panel":"love"
+        "support-menu":"love", "support-window":"love", "support-panel":"love",
+        "activity-clear":"edit-clear-history", "export-activity":"document-save"
     })
     readonly property var pageIcons: ({
         "All Printers":"view-app-grid", Printer:"printer", Filament:"media-optical", "Menu Bar":"application-menu",
         Notifications:"notifications", Widgets:"dashboard-show",
-        Settings:"settings-configure", About:"help-about"
+        Settings:"settings-configure", Activity:"view-history", About:"help-about"
     })
     readonly property string iconName: field?.icon || (field?.kind === "navigation" ? pageIcons[field?.pageId] : actionIcons[field?.key]) || ""
     readonly property bool pulseHeart: field?.key === "support-panel" || field?.key === "support-window"

@@ -192,3 +192,18 @@ window.theme-omarchy, window.theme-omarchy.tray-popup { border-radius: 0; }
 .theme-omarchy .muted { color: var(--omarchy-secondary, var(--window-fg-color)); opacity: 1; }
 .theme-omarchy .preview-wallpaper .muted, .theme-omarchy .widget-stage .muted { color: inherit; opacity: .8; }
 .theme-omarchy button:disabled, .theme-omarchy dropdown:disabled { opacity: .55; }
+
+/* Activity page (3.1.0): filter chips, the event list and its outcome badges. */
+.activity-chip { min-height: 22px; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; background: alpha(var(--window-fg-color),.05); box-shadow: none; }
+.activity-chip.selected { font-weight: 700; color: #087bfa; background: alpha(#087bfa,.15); }
+.activity-card { padding: 0; }
+.activity-list { background: transparent; padding: 6px 0; }
+.activity-list > row { padding: 7px 14px; background: transparent; }
+.activity-list > row + row { border-top: 1px solid alpha(var(--window-fg-color),.08); }
+.activity-connection, .activity-action { color: #087bfa; }
+.activity-job { color: #21cc6b; }
+.activity-issue { color: #ffb83d; }
+.activity-camera { opacity: .65; }
+.badge.activity-outcome-applied { color: #21cc6b; background: alpha(#21cc6b,.14); }
+.badge.activity-outcome-failed { color: #ff5c5c; background: alpha(#ff5c5c,.14); }
+.badge.activity-outcome-sent { opacity: .75; }

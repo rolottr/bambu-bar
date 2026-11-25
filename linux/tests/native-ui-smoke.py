@@ -37,6 +37,19 @@ with socket.socket(socket.AF_UNIX) as client:
         state = request('navigate:' + page, predicate=lambda m: m.get('type') == 'state' and m.get('page') == page)
         assert isinstance(state['sections'], list)
         assert not state['error'], 'Page reported an error'
+    # Activity: capabilities and events arrive only for its page; filters and the export round-trip.
+    state = request('navigate:Activity', predicate=lambda m: m.get('page') == 'Activity' and m.get('activity'))
+    activity = state['activity']
+    assert isinstance(activity['capabilities'], list) and isinstance(activity['events'], list)
+    assert [f['value'] for f in activity['filters']] == ['', 'connection', 'job', 'issue', 'camera', 'action']
+    state = request('activity-filter:connection', predicate=lambda m: (m.get('activity') or {}).get('filter') == 'connection')
+    assert all(e['category'] == 'connection' for e in state['activity']['events'])
+    request('activity-filter:', predicate=lambda m: (m.get('activity') or {}).get('filter') == '')
+    export = request('export-activity', 'file:///nonexistent/activity.json', lambda m: m.get('type') == 'activity-export')
+    assert export['path'] == 'file:///nonexistent/activity.json'
+    assert sorted(json.loads(export['data'])) == ['appVersion', 'capabilities', 'events', 'exportedAt']
+    other = request('navigate:Settings', predicate=lambda m: m.get('page') == 'Settings')
+    assert other.get('activity') is None
     state = request('navigate:Notifications', predicate=lambda m: m.get('page') == 'Notifications')
     def setting(message):
         return next(f['value'] for s in message['sections'] for f in s['fields'] if f['key'] == 'notifyFinished')

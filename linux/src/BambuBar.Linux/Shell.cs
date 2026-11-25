@@ -31,7 +31,7 @@ internal sealed partial class Shell : IDisposable
     private string _pickerKey = "";
     private readonly List<Action> _updates = [];
     private readonly List<Action> _cleanup = [];
-    private readonly string[] _pages = ["All Printers", "Printer", "Filament", "Menu Bar", "Notifications", "Widgets", "Settings", "About"];
+    private readonly string[] _pages = ["All Printers", "Printer", "Filament", "Menu Bar", "Notifications", "Widgets", "Settings", "Activity", "About"];
     private PrinterConfig? _setupConfig;
     private string? _error;
     private string _schema = "";
@@ -85,7 +85,7 @@ internal sealed partial class Shell : IDisposable
         var sidebar = Column(6); sidebar.SetSizeRequest(210, -1); sidebar.AddCssClass("sidebar");
         _printerPicker = Column(6); sidebar.Append(_printerPicker);
         _nav = Gtk.ListBox.New(); _nav.SetSelectionMode(Gtk.SelectionMode.Single); _nav.AddCssClass("navigation-sidebar");
-        var icons = new[] { "view-grid-symbolic", "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "help-about-symbolic" };
+        var icons = new[] { "view-grid-symbolic", "printer-symbolic", "media-optical-symbolic", "view-dual-symbolic", "preferences-system-notifications-symbolic", "view-grid-symbolic", "emblem-system-symbolic", "document-open-recent-symbolic", "help-about-symbolic" };
         for (var i = 0; i < _pages.Length; i++)
         {
             var row = Gtk.ListBoxRow.New(); var content = Row(10);
@@ -107,7 +107,7 @@ internal sealed partial class Shell : IDisposable
         var keys = Gtk.EventControllerKey.New(); keys.OnKeyPressed += (_, e) =>
         {
             if ((e.State & Gdk.ModifierType.ControlMask) == 0) return false;
-            var shortcut = e.Keyval switch { 48 => "All Printers", 49 => "Printer", 50 => "Filament", 51 => "Widgets", 52 => "Settings", 53 => "About", 55 => "Menu Bar", 56 => "Notifications", _ => null };
+            var shortcut = e.Keyval switch { 48 => "All Printers", 49 => "Printer", 50 => "Filament", 51 => "Widgets", 52 => "Settings", 53 => "About", 55 => "Menu Bar", 56 => "Notifications", 57 => "Activity", _ => null };
             if (shortcut is not null) { Navigate(shortcut); return true; }
             switch (e.Keyval) { case 114: _store.Refresh(); return true; case 108: _store.ToggleLight(); return true; case 113: _app.Quit(); return true; case 107: if (_store.Current is { } camera) OpenCamera(camera); return true; case 119: _window.Close(); return true; case 44: _nav.SelectRow(_nav.GetRowAtIndex(Array.IndexOf(_pages, "Settings"))); return true; }
             return false;
@@ -116,6 +116,7 @@ internal sealed partial class Shell : IDisposable
         _window.OnMap += (_, _) => Refresh();
         _store.CameraSettingsChanged = () => { foreach (var entry in _cameraWindows.ToArray()) if (_store.Session(entry.Key)?.ShowsCamera != true) entry.Value.Window.Close(); };
         _store.PropertyChanged += Changed;
+        _store.Activity.Changed += ActivityChanged;
         ((System.Collections.Specialized.INotifyCollectionChanged)_store.Sessions).CollectionChanged += (_, _) => { SubscribeSessions(); if (_ready) Rebuild(); };
         foreach (var name in new[] { "show", "panel", "quit" })
         {
@@ -222,6 +223,7 @@ internal sealed partial class Shell : IDisposable
         if (index >= 0 && _nav.GetSelectedRow()?.GetIndex() != index) { _nav.SelectRow(_nav.GetRowAtIndex(index)); return; }
         var changed = _page != page;
         if (changed) _error = null;
+        if (changed && page == "Activity") ResetActivityView();
         _page = page; Rebuild();
         if (changed) _scroller.GetVadjustment().SetValue(0);
     }
@@ -240,6 +242,7 @@ internal sealed partial class Shell : IDisposable
         else if (_page == "Settings") SettingsPage();
         else if (_page is "Menu Bar" or "Quick view") QuickViewPage();
         else if (_page == "Widgets") WidgetsPage();
+        else if (_page == "Activity") ActivityPage();
         else AboutPage();
         Refresh();
     }
@@ -300,6 +303,6 @@ internal sealed partial class Shell : IDisposable
         foreach (var clean in _cleanup) clean();
         foreach (var clean in _panelCleanup) clean();
         foreach (var camera in _cameraWindows.Values.ToArray()) { camera.Surface.Dispose(); camera.Window.Destroy(); }
-        _nativeCamera?.Dispose(); _native?.Dispose(); _hyprlandPopup?.Dispose(); _omarchyTheme?.Dispose(); _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Dispose();
+        _nativeCamera?.Dispose(); _native?.Dispose(); _hyprlandPopup?.Dispose(); _omarchyTheme?.Dispose(); _secrets.Dispose(); _background.Dispose(); _license.Dispose(); _desktop?.Dispose(); _tray?.Dispose(); _store.PropertyChanged -= Changed; _store.Activity.Changed -= ActivityChanged; _store.Dispose();
     }
 }

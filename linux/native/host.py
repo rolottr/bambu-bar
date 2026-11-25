@@ -37,7 +37,7 @@ def call(connection, sender, path, interface, method, parameters, invocation):
         page = parameters.unpack()[0]
         if page == "Printers":
             page = "Printer"
-        if page not in ('Printer', 'Filament', 'All Printers', 'Menu Bar', 'Notifications', 'Setup', 'Widgets', 'Settings', 'About'):
+        if page not in ('Printer', 'Filament', 'All Printers', 'Menu Bar', 'Notifications', 'Setup', 'Widgets', 'Settings', 'Activity', 'About'):
             invocation.return_dbus_error(APP + '.InvalidPage', 'Unknown page')
             return
         if process is None or process.poll() is not None:
