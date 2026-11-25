@@ -44,7 +44,10 @@ fi
 
 CONFIG=Release ARCH=universal "$ROOT/scripts/build.sh"
 APP="$ROOT/build/App.noindex/Bambu Bar.app"
-trap '"$ROOT/scripts/unregister-build-apps.sh" "$APP" || true' EXIT
+# The DerivedData product too: packaging can register it again after build.sh unregistered it (seen on CI), and
+# check-one-copy.sh below would count it as a second copy.
+BUILD_APPS=("$APP" "$ROOT/build/DerivedData.noindex/Build/Products/Release/Bambu Bar.app")
+trap '"$ROOT/scripts/unregister-build-apps.sh" "${BUILD_APPS[@]}" || true' EXIT
 VERSION=$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")
 BUILD=$(plutil -extract CFBundleVersion raw "$APP/Contents/Info.plist")
 ARCHIVE="Bambu-Bar-$VERSION-macos.zip"
@@ -136,6 +139,6 @@ if [[ "${NO_REVEAL:-0}" != 1 && -z "${CI:-}" ]]; then
   open -R "$ZIP" || true
 fi
 
-"$ROOT/scripts/unregister-build-apps.sh" "$APP"
+"$ROOT/scripts/unregister-build-apps.sh" "${BUILD_APPS[@]}"
 trap - EXIT
 "$ROOT/scripts/check-one-copy.sh" --allow-uninstalled dev.rolottr.BambuBar
