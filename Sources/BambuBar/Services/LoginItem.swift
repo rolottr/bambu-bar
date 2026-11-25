@@ -160,15 +160,16 @@ struct OnboardingSettings: Equatable, Sendable {
 struct OnboardingDraft: Equatable, Sendable {
     var showProgressInMenuBar: Bool
     var notificationsEnabled: Bool
-    var notificationsTouched: Bool = false
+    let initialNotificationsEnabled: Bool
     var cameraEnabled: Bool
     var showPrinterActions: Bool
     var panelShowsAllPrinters: Bool
 
     init(from settings: OnboardingSettings) {
         showProgressInMenuBar = settings.showProgressInMenuBar
-        notificationsEnabled = settings.notifyFinished || settings.notifyFailed || settings.notifyPaused
-        notificationsTouched = false
+        let initialNotifications = settings.notifyFinished || settings.notifyFailed || settings.notifyPaused
+        notificationsEnabled = initialNotifications
+        initialNotificationsEnabled = initialNotifications
         cameraEnabled = settings.cameraEnabled
         showPrinterActions = settings.showPrinterActions
         panelShowsAllPrinters = settings.panelShowsAllPrinters
@@ -188,9 +189,7 @@ struct OnboardingDraft: Equatable, Sendable {
     mutating func set(_ on: Bool, for feature: OnboardingFeature) {
         switch feature {
         case .menuBar: showProgressInMenuBar = on
-        case .notifications:
-            notificationsEnabled = on
-            notificationsTouched = true
+        case .notifications: notificationsEnabled = on
         case .camera: cameraEnabled = on
         case .controls: showPrinterActions = on
         case .fleet: panelShowsAllPrinters = on
@@ -203,11 +202,12 @@ struct OnboardingDraft: Equatable, Sendable {
         set(!current, for: feature)
     }
 
-    /// Produces the updated settings when Finish is chosen. Untouched notification flags are preserved.
+    /// Produces the updated settings when Finish is chosen. Unchanged notification flags are preserved
+    /// (including if the user toggled Alerts off and back on before finishing).
     func applied(to current: OnboardingSettings) -> OnboardingSettings {
         var next = current
         next.showProgressInMenuBar = showProgressInMenuBar
-        if notificationsTouched {
+        if notificationsEnabled != initialNotificationsEnabled {
             next.notifyFinished = notificationsEnabled
             next.notifyFailed = notificationsEnabled
             next.notifyPaused = notificationsEnabled

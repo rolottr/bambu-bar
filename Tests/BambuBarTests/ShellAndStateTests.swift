@@ -1,4 +1,5 @@
 import AppKit
+import Sparkle
 import XCTest
 
 final class ShellAndStateTests: XCTestCase {
@@ -313,6 +314,40 @@ final class ShellAndStateTests: XCTestCase {
         XCTAssertEqual(log.count, 3)
     }
 
+    @MainActor
+    func testActivityLogCoalescesIssueReconnectFlappingAndLogsRecovery() {
+        let log = ActivityLog(capacity: 500)
+        for _ in 0..<50 {
+            log.recordConnectionTransition(printerID: "SN1", printerName: "P2S", state: .connecting, summary: "Connecting…")
+            log.recordConnectionTransition(
+                printerID: "SN1",
+                printerName: "P2S",
+                state: .issue("localNetworkDenied"),
+                summary: "Local network access denied"
+            )
+        }
+        // Only the initial connecting and issue entries should be recorded, not 100 reconnect cycles.
+        XCTAssertLessThanOrEqual(log.count, 2)
+        XCTAssertEqual(log.allEntries.last?.summary, "Local network access denied")
+
+        log.recordConnectionTransition(printerID: "SN1", printerName: "P2S", state: .online, summary: "Connected")
+        XCTAssertEqual(log.allEntries.last?.summary, "Connected")
+        XCTAssertEqual(log.count, 3)
+    }
+
+    func testActivityLogRedactsIPv6WhilePreservingTimestamps() {
+        let sample = "Error at 12:34:56 connecting to fe80::1, 2001:db8::1, [2001:db8::1]:8883, fe80::1%en0, ::1, and 2001:0db8:85a3:0000:0000:8a2e:0370:7334 (logged 2026-11-25 23:59:59)"
+        let redacted = ActivityLog.redact(sample)
+
+        XCTAssertTrue(redacted.contains("12:34:56"), "Clock timestamp 12:34:56 must survive redaction: \(redacted)")
+        XCTAssertTrue(redacted.contains("23:59:59"), "Clock timestamp 23:59:59 must survive redaction: \(redacted)")
+        XCTAssertFalse(redacted.contains("fe80::1"))
+        XCTAssertFalse(redacted.contains("2001:db8::1"))
+        XCTAssertFalse(redacted.contains("::1"))
+        XCTAssertFalse(redacted.contains("2001:0db8:85a3:0000:0000:8a2e:0370:7334"))
+        XCTAssertTrue(redacted.contains("<ip>"))
+    }
+
     // MARK: - OnboardingDraft Apply vs Skip & Capability Gating
 
     func testOnboardingDraftAppliesOnlyOnFinishAndPreservesUntouchedNotificationFlags() {
@@ -348,21 +383,89 @@ final class ShellAndStateTests: XCTestCase {
         // Click Finish WITHOUT touching Alerts: mixed [true, true, false] notification flags stay intact!
         var untouchedAlertsDraft = OnboardingDraft(from: persisted)
         untouchedAlertsDraft.toggle(.camera)
-        XCTAssertFalse(untouchedAlertsDraft.notificationsTouched)
         applyOnboarding(untouchedAlertsDraft, finished: true)
         XCTAssertEqual(persisted.cameraEnabled, true)
         XCTAssertEqual(persisted.notifyFinished, true)
         XCTAssertEqual(persisted.notifyFailed, true)
         XCTAssertEqual(persisted.notifyPaused, false)
 
-        // Click Finish AFTER explicitly toggling Alerts: all three flags update together.
-        var touchedAlertsDraft = OnboardingDraft(from: persisted)
-        touchedAlertsDraft.toggle(.notifications)
-        XCTAssertTrue(touchedAlertsDraft.notificationsTouched)
-        applyOnboarding(touchedAlertsDraft, finished: true)
+        // Toggle Alerts off and back on before Finish: net value matches initialNotificationsEnabled,
+        // so mixed [true, true, false] notification flags must STILL stay intact (Paused stays false).
+        var roundTripAlertsDraft = OnboardingDraft(from: persisted)
+        roundTripAlertsDraft.toggle(.notifications)
+        XCTAssertEqual(roundTripAlertsDraft.notificationsEnabled, false)
+        roundTripAlertsDraft.toggle(.notifications)
+        XCTAssertEqual(roundTripAlertsDraft.notificationsEnabled, true)
+        applyOnboarding(roundTripAlertsDraft, finished: true)
+        XCTAssertEqual(persisted.notifyFinished, true)
+        XCTAssertEqual(persisted.notifyFailed, true)
+        XCTAssertEqual(persisted.notifyPaused, false)
+
+        // Click Finish AFTER changing Alerts from true -> false: all three flags update together.
+        var changedAlertsDraft = OnboardingDraft(from: persisted)
+        changedAlertsDraft.toggle(.notifications)
+        applyOnboarding(changedAlertsDraft, finished: true)
         XCTAssertEqual(persisted.notifyFinished, false)
         XCTAssertEqual(persisted.notifyFailed, false)
         XCTAssertEqual(persisted.notifyPaused, false)
+    }
+
+    // MARK: - UpdateChecker Unlicensed Notice & Download Gate (B-1)
+
+    @MainActor
+    func testUnlicensedUpdateCheckRecordsAvailableVersionWhileBlockingDownload() throws {
+        let item = try XCTUnwrap(SUAppcastItem(dictionary: [
+            "enclosure": [
+                "url": "https://bambubar.app/api/updates/download?version=3.1.1",
+                "sparkle:version": "202612310000",
+                "sparkle:shortVersionString": "3.1.1",
+                "length": "1024",
+            ],
+        ]))
+
+        // 1. Manual probing check (.updateInformation) while unlicensed:
+        //    must record `available` AND throw to block download, and `didFinishUpdateCycleFor`
+        //    must preserve `.available` instead of clobbering it to `.failed` or `.idle`.
+        let unlicensed = UpdateChecker(downloadHeadersProvider: { nil })
+        unlicensed.beginCheckingForTests()
+        var thrownError: Error?
+        XCTAssertThrowsError(
+            try unlicensed.updater(unlicensed.updater, shouldProceedWithUpdate: item, updateCheck: .updateInformation)
+        ) { error in
+            thrownError = error
+        }
+        let gateError = try XCTUnwrap(thrownError as NSError?)
+        XCTAssertEqual(gateError.domain, UpdateChecker.unlicensedGateErrorDomain)
+        XCTAssertEqual(gateError.code, UpdateChecker.unlicensedGateErrorCode)
+        XCTAssertEqual(unlicensed.available, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(unlicensed.offered, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(unlicensed.state, .available(UpdateChecker.Release(version: "3.1.1")))
+
+        unlicensed.updater(unlicensed.updater, didFinishUpdateCycleFor: .updateInformation, error: gateError)
+        XCTAssertEqual(unlicensed.available, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(unlicensed.offered, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(unlicensed.state, .available(UpdateChecker.Release(version: "3.1.1")))
+
+        // 2. Scheduled background check (.updatesInBackground) while unlicensed: same invariants.
+        let scheduled = UpdateChecker(downloadHeadersProvider: { nil })
+        XCTAssertThrowsError(
+            try scheduled.updater(scheduled.updater, shouldProceedWithUpdate: item, updateCheck: .updatesInBackground)
+        )
+        scheduled.updater(scheduled.updater, didFinishUpdateCycleFor: .updatesInBackground, error: gateError)
+        XCTAssertEqual(scheduled.available, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(scheduled.state, .available(UpdateChecker.Release(version: "3.1.1")))
+
+        // 3. Supporter-licensed check does not throw in `shouldProceedWithUpdate`.
+        let licensed = UpdateChecker(downloadHeadersProvider: {
+            [
+                UpdateDownload.licenseKeyHeader: "BB-TEST",
+                UpdateDownload.activationHeader: "act-1",
+                UpdateDownload.installationHeader: "inst-1",
+            ]
+        })
+        XCTAssertNoThrow(
+            try licensed.updater(licensed.updater, shouldProceedWithUpdate: item, updateCheck: .updates)
+        )
     }
 
     func testOnboardingFeatureGatesCardsByCapabilities() {

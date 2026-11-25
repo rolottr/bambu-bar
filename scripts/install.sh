@@ -207,6 +207,8 @@ try:
         for path, backup in reversed(moved):
             if backup.exists():
                 shutil.move(str(backup), str(path))
+                if path == destination:
+                    subprocess.run([lsregister, '-f', str(path)], check=False)
         raise
 
     # Prune old backups, keeping only the 3 most recent app bundles.

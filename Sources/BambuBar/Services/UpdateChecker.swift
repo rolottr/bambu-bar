@@ -14,11 +14,11 @@ import Observation
 /// (`SUScheduledCheckInterval` = 86400) with zero `X-BambuBar-*` headers (`SPUUpdater.httpHeaders`
 /// stays unset), so both licensed and unlicensed direct copies learn when a new release ships.
 /// Automated Sparkle downloads remain strictly gated on an active supporter license:
-/// `updater(_:shouldProceedWithUpdate:updateCheck:)` blocks unlicensed downloads, and only verified
-/// download requests to `https://bambubar.app/api/updates/download` (or a validated loopback
-/// `UpdateFeedURL` override) receive `X-BambuBar-*` headers inside `updater(_:willDownloadUpdate:with:)`.
-/// Every update must carry the shared Clever Mechanisms EdDSA signature (`SUPublicEDKey`) and
-/// Developer ID signature.
+/// `updater(_:shouldProceedWithUpdate:updateCheck:)` records the available release for the UI
+/// notice and throws to block unlicensed downloads, and in Release builds only verified download
+/// requests to `https://bambubar.app/api/updates/download` receive `X-BambuBar-*` headers inside
+/// `updater(_:willDownloadUpdate:with:)`. Every update must carry the shared Clever Mechanisms
+/// EdDSA signature (`SUPublicEDKey`) and Developer ID signature.
 ///
 /// The Mac App Store edition compiles with zero Sparkle symbols; the App Store handles updates.
 @MainActor
@@ -34,7 +34,7 @@ final class UpdateChecker: NSObject {
         case idle, checking, upToDate, available(Release), failed(String)
     }
 
-    let currentVersion = AppInfo.version
+    let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     private(set) var state: State = .idle
     private(set) var lastChecked: Date?
     /// Hidden from the menu bar panel for this run ("Later", or Remind Me Later in Sparkle's window).
@@ -42,6 +42,7 @@ final class UpdateChecker: NSObject {
     private(set) var skippedVersion: String?
     private(set) var isRunning = false
     private(set) var pendingVersion: String?
+    @ObservationIgnored var onOpenSettings: (@MainActor () -> Void)?
 
     // Preserve the user's choices while supporter validation is pending or unavailable.
     private var automaticChecksPreference = true
@@ -104,6 +105,8 @@ final class UpdateChecker: NSObject {
         nonisolated static let isAvailable = true
         nonisolated static let teamIdentifier = "PCZ6F8Q9DZ"
         nonisolated static let feedOverrideKey = "UpdateFeedURL"
+        nonisolated static let unlicensedGateErrorDomain = "dev.rolottr.BambuBar.updates"
+        nonisolated static let unlicensedGateErrorCode = 1
         private static let log = Logger(subsystem: "dev.rolottr.BambuBar", category: "updates")
 
         /// `-UpdateFeedURL <url>` on the command line or `defaults write dev.rolottr.BambuBar UpdateFeedURL <url>`
@@ -129,13 +132,19 @@ final class UpdateChecker: NSObject {
 
         @ObservationIgnored private var controller: SPUStandardUpdaterController!
         @ObservationIgnored private var observations: Set<AnyCancellable> = []
+        @ObservationIgnored private let downloadHeadersProvider: @MainActor () -> [String: String]?
 
-        private override init() {
+        init(downloadHeadersProvider: (@MainActor () -> [String: String]?)? = nil) {
+            self.downloadHeadersProvider = downloadHeadersProvider ?? {
+                let license = LicenseStore.shared
+                guard license.hasAccess, let record = license.record else { return nil }
+                return UpdateDownload.headers(for: record)
+            }
             super.init()
             controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: self)
         }
 
-        private var updater: SPUUpdater { controller.updater }
+        var updater: SPUUpdater { controller.updater }
 
         /// Starts Sparkle only in an official `.app` signed by Team ID `PCZ6F8Q9DZ` with `SUPublicEDKey`
         /// configured, and never during developer runs (`--demo`, `--showcase`, `--readme-frames`, etc.).
@@ -199,7 +208,7 @@ final class UpdateChecker: NSObject {
                     NSWorkspace.shared.open(Website.download)
                 } else {
                     check()
-                    MainWindow.show(.settings)
+                    onOpenSettings?()
                 }
                 return
             }
@@ -253,10 +262,14 @@ final class UpdateChecker: NSObject {
         }
 
         private var downloadHeaders: [String: String]? {
-            let license = LicenseStore.shared
-            guard license.hasAccess, let record = license.record else { return nil }
-            return UpdateDownload.headers(for: record)
+            downloadHeadersProvider()
         }
+
+        #if DEBUG
+        func beginCheckingForTests() {
+            state = .checking
+        }
+        #endif
 
         private func found(_ item: SUAppcastItem) {
             let release = Release(version: item.displayVersionString)
@@ -277,9 +290,14 @@ final class UpdateChecker: NSObject {
                                  updateCheck: SPUUpdateCheck) throws {
             try MainActor.assumeIsolated {
                 guard downloadHeaders != nil else {
+                    // Sparkle invokes `shouldProceedWithUpdate` before `didFindValidUpdate` in all
+                    // drivers (including probing checks). Record the available release first so the
+                    // unlicensed UI notice ("Download from bambubar.app") appears while the throw
+                    // still strictly aborts any download or Sparkle install prompt.
+                    found(item)
                     throw NSError(
-                        domain: "dev.rolottr.BambuBar.updates",
-                        code: 1,
+                        domain: Self.unlicensedGateErrorDomain,
+                        code: Self.unlicensedGateErrorCode,
                         userInfo: [NSLocalizedDescriptionKey: String(localized: "Activate your license to download updates.")]
                     )
                 }
@@ -287,7 +305,7 @@ final class UpdateChecker: NSObject {
         }
 
         /// Attach `X-BambuBar-*` license headers ONLY on verified download requests to
-        /// `bambubar.app/api/updates/download` (or a validated loopback override). Never on feed checks.
+        /// `https://bambubar.app/api/updates/download` (or a Debug-only feed override). Never on feed checks.
         nonisolated func updater(_ updater: SPUUpdater, willDownloadUpdate item: SUAppcastItem,
                                  with request: NSMutableURLRequest) {
             MainActor.assumeIsolated {
@@ -334,7 +352,10 @@ final class UpdateChecker: NSObject {
         nonisolated func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: (any Error)?) {
             let nsError = error as NSError?
             let sparkleCode = nsError.flatMap { $0.domain == SUSparkleErrorDomain ? $0.code : nil }
+            let isUnlicensedGate = nsError?.domain == Self.unlicensedGateErrorDomain
+                && nsError?.code == Self.unlicensedGateErrorCode
             let failed = error != nil
+                && !isUnlicensedGate
                 && sparkleCode != Int(SUError.noUpdateError.rawValue)
                 && sparkleCode != Int(SUError.installationCanceledError.rawValue)
             let message = error?.localizedDescription ?? String(localized: "Couldn’t check for updates. Check your connection and try again.")

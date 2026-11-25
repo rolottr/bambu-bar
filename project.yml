@@ -141,16 +141,23 @@ targets:
         buildPhase: resources
       - path: Sources/BambuBar/Printer/FilamentCatalog.swift
       - path: Sources/BambuBar/Services/AppLanguage.swift
+      - path: Sources/BambuBar/Services/Keychain.swift
       - path: Sources/BambuBar/Services/LaunchContext.swift
       - path: Sources/BambuBar/Services/LoginItem.swift
       - path: Sources/BambuBar/Services/RelaunchTicketStore.swift
       - path: Sources/BambuBar/Services/SingleInstance.swift
+      - path: Sources/BambuBar/Services/UpdateChecker.swift
       - path: Sources/BambuBar/Services/Website.swift
+      - path: Sources/BambuBar/Licensing/LicenseStore.swift
+      - path: Sources/BambuBar/Licensing/PolarClient.swift
+      - path: Sources/BambuBar/Updates/UpdateDownload.swift
       - path: Sources/BambuBar/Printer/CameraProtocol.swift
       - path: Sources/BambuBar/Printer/VideoDepacketizer.swift
       - path: Sources/BambuBar/Printer/SlicerImport.swift
       - path: Sources/BambuBar/Printer/Discovery.swift
       - path: Sources/BambuBar/Printer/PrinterConfig.swift
+    dependencies:
+      - package: Sparkle
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

@@ -17,7 +17,7 @@ struct OnboardingSplash: View {
     @State private var phase = 0
     @State private var demoTask: Task<Void, Never>?
     @State private var keyMonitor: Any?
-    @State private var sheetWindow: NSWindow?
+    @State private var sheetWindowBox = WeakWindowBox()
 
     init(settings: OnboardingSettings, capabilities: OnboardingCapabilities?, firstRun: Bool, close: @escaping () -> Void) {
         self.firstRun = firstRun
@@ -60,7 +60,7 @@ struct OnboardingSplash: View {
         }
         .frame(width: 640, height: 470)
         .background(SheetWindowObserver { window in
-            sheetWindow = window
+            sheetWindowBox.window = window
         })
         .onAppear {
             startDemoLoop()
@@ -69,6 +69,7 @@ struct OnboardingSplash: View {
         .onDisappear {
             stopDemoLoop()
             removeKeyMonitor()
+            sheetWindowBox.window = nil
         }
         .onChange(of: index) { _, _ in
             phase = 0
@@ -487,7 +488,7 @@ struct OnboardingSplash: View {
         removeKeyMonitor()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Scope strictly to this onboarding sheet window so alerts, the menu panel, and camera windows are never hijacked.
-            guard let targetWindow = sheetWindow,
+            guard let targetWindow = sheetWindowBox.window,
                   let eventWindow = event.window,
                   eventWindow === targetWindow else { return event }
             // Ignore events with command/control/option modifiers so standard shortcuts pass through.
@@ -550,10 +551,13 @@ private struct SheetWindowObserver: NSViewRepresentable {
         }
 
         func reportWindow() {
-            let current = window
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async { [weak self, weak current = window] in
                 self?.onWindow?(current)
             }
         }
     }
+}
+
+private final class WeakWindowBox {
+    weak var window: NSWindow?
 }

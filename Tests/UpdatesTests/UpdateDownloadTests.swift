@@ -29,23 +29,54 @@ struct UpdateDownloadTests {
         #expect(!UpdateDownload.accepts(URL(string: "file:///api/updates/download")!))
     }
 
-    @Test func derivesEndpointOriginFromFeedOverride() {
+    @Test func derivesEndpointOriginFromFeedOverrideInDebugPolicyOnly() {
         let localFeed = URL(string: "http://localhost:3201/appcast.xml")!
-        #expect(UpdateDownload.accepts(URL(string: "http://localhost:3201/api/updates/download?version=3.0.1")!, feed: localFeed))
-        #expect(UpdateDownload.accepts(URL(string: "https://bambubar.app/api/updates/download?version=3.0.1")!, feed: localFeed))
-        #expect(!UpdateDownload.accepts(URL(string: "http://localhost:3202/api/updates/download?version=3.0.1")!, feed: localFeed))
-        #expect(!UpdateDownload.accepts(URL(string: "https://localhost:3201/api/updates/download?version=3.0.1")!, feed: localFeed))
-        #expect(!UpdateDownload.accepts(URL(string: "http://localhost:3201/api/updates/download/")!, feed: localFeed))
-        #expect(!UpdateDownload.accepts(URL(string: "http://user@localhost:3201/api/updates/download")!, feed: localFeed))
+        #expect(UpdateDownload.accepts(
+            URL(string: "http://localhost:3201/api/updates/download?version=3.0.1")!,
+            feed: localFeed,
+            allowAnyFeedOverrideHost: true
+        ))
+        #expect(UpdateDownload.accepts(
+            URL(string: "https://bambubar.app/api/updates/download?version=3.0.1")!,
+            feed: localFeed,
+            allowAnyFeedOverrideHost: true
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://localhost:3202/api/updates/download?version=3.0.1")!,
+            feed: localFeed,
+            allowAnyFeedOverrideHost: true
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "https://localhost:3201/api/updates/download?version=3.0.1")!,
+            feed: localFeed,
+            allowAnyFeedOverrideHost: true
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://localhost:3201/api/updates/download/")!,
+            feed: localFeed,
+            allowAnyFeedOverrideHost: true
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://user@localhost:3201/api/updates/download")!,
+            feed: localFeed,
+            allowAnyFeedOverrideHost: true
+        ))
     }
 
-    @Test func releasePolicyRejectsRemoteFeedOverridesAndAllowsLoopback() {
+    @Test func releasePolicyAllowsLoopbackFeedDiscoveryButRejectsAllOverrideHeaderDestinations() {
         #expect(UpdateDownload.validatedFeedOverride("https://evil.example/appcast.xml", allowAnyHost: false) == nil)
         #expect(UpdateDownload.validatedFeedOverride("http://192.168.1.50:8080/appcast.xml", allowAnyHost: false) == nil)
         #expect(UpdateDownload.validatedFeedOverride("http://user:pass@127.0.0.1:8080/appcast.xml", allowAnyHost: false) == nil)
         #expect(UpdateDownload.validatedFeedOverride("http://127.0.0.1:8080/appcast.xml", allowAnyHost: false)?.absoluteString == "http://127.0.0.1:8080/appcast.xml")
         #expect(UpdateDownload.validatedFeedOverride("http://localhost:8080/appcast.xml", allowAnyHost: false)?.absoluteString == "http://localhost:8080/appcast.xml")
         #expect(UpdateDownload.validatedFeedOverride("http://[::1]:8080/appcast.xml", allowAnyHost: false)?.absoluteString == "http://[::1]:8080/appcast.xml")
+
+        // Production endpoint is always accepted in Release policy.
+        #expect(UpdateDownload.accepts(
+            URL(string: "https://bambubar.app/api/updates/download?version=3.1.0")!,
+            feed: URL(string: "http://127.0.0.1:8080/appcast.xml")!,
+            allowAnyFeedOverrideHost: false
+        ))
 
         // Remote override must NEVER cause accepts() to attach license headers in Release policy.
         let evilFeed = URL(string: "https://evil.example/appcast.xml")!
@@ -54,12 +85,41 @@ struct UpdateDownloadTests {
             feed: evilFeed,
             allowAnyFeedOverrideHost: false
         ))
-        // Loopback override IS accepted in Release policy for local testing.
-        let loopbackFeed = URL(string: "http://127.0.0.1:8080/appcast.xml")!
+
+        // Loopback overrides must ALSO NEVER receive X-BambuBar-* license headers in Release policy
+        // (prevents a same-user local process from intercepting license headers over loopback HTTP).
+        let loopbackIPv4Feed = URL(string: "http://127.0.0.1:8080/appcast.xml")!
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://127.0.0.1:8080/api/updates/download")!,
+            feed: loopbackIPv4Feed,
+            allowAnyFeedOverrideHost: false
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://127.0.0.1:8080/api/updates/download?version=3.1.0")!,
+            feed: loopbackIPv4Feed,
+            allowAnyFeedOverrideHost: false
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://localhost:8080/api/updates/download?version=3.1.0")!,
+            feed: URL(string: "http://localhost:8080/appcast.xml")!,
+            allowAnyFeedOverrideHost: false
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "http://[::1]:8080/api/updates/download?version=3.1.0")!,
+            feed: URL(string: "http://[::1]:8080/appcast.xml")!,
+            allowAnyFeedOverrideHost: false
+        ))
+        #expect(!UpdateDownload.accepts(
+            URL(string: "https://127.0.0.1:8443/api/updates/download?version=3.1.0")!,
+            feed: URL(string: "https://127.0.0.1:8443/appcast.xml")!,
+            allowAnyFeedOverrideHost: false
+        ))
+
+        // Debug policy still permits local override origin for end-to-end local testing.
         #expect(UpdateDownload.accepts(
             URL(string: "http://127.0.0.1:8080/api/updates/download?version=3.1.0")!,
-            feed: loopbackFeed,
-            allowAnyFeedOverrideHost: false
+            feed: loopbackIPv4Feed,
+            allowAnyFeedOverrideHost: true
         ))
     }
 

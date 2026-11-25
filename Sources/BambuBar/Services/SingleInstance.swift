@@ -336,7 +336,8 @@ final class ActivityLog {
     var allEntries: [Entry] { buffer }
 
     /// Records a printer connection-state transition while suppressing repeated `.offline ↔ .connecting`
-    /// reconnect cycles. Logs the initial offline transition and the eventual `.online` recovery.
+    /// and `.issue ↔ .connecting` reconnect cycles. Logs the initial failure/offline transition and the
+    /// eventual `.online` recovery.
     func recordConnectionTransition(
         printerID: String,
         printerName: String,
@@ -346,9 +347,14 @@ final class ActivityLog {
     ) {
         let previous = connectionStates[printerID]
         guard previous != state else { return }
-        if state == .connecting && previous == .offline {
-            // Suppress reconnect retry noise while a printer stays powered off / unreachable.
-            return
+        if state == .connecting {
+            switch previous {
+            case .offline, .issue:
+                // Suppress reconnect retry noise while a printer stays offline or blocked by a persistent issue.
+                return
+            default:
+                break
+            }
         }
         connectionStates[printerID] = state
         record(category: .connection, printerName: printerName, summary: summary, timestamp: timestamp)
@@ -384,6 +390,33 @@ final class ActivityLog {
         }
     }
 
+    // Cached redaction patterns (compiled once per process rather than per row per render).
+    nonisolated private static let ipv4Regex = try! NSRegularExpression(
+        pattern: #"\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?\b"#
+    )
+    nonisolated private static let ipv6Regex: NSRegularExpression = {
+        let h = "[0-9A-Fa-f]{1,4}"
+        let core = [
+            "(?:\(h):){7}\(h)",
+            "::(?:[Ff]{4}:)?(?:\\d{1,3}\\.){3}\\d{1,3}",
+            "(?:\(h):){1,6}:\(h)",
+            "(?:\(h):){1,5}(?::\(h)){1,2}",
+            "(?:\(h):){1,4}(?::\(h)){1,3}",
+            "(?:\(h):){1,3}(?::\(h)){1,4}",
+            "(?:\(h):){1,2}(?::\(h)){1,5}",
+            "\(h):(?::\(h)){1,6}",
+            ":(?::\(h)){1,7}",
+            "(?:\(h):){1,7}:",
+        ].joined(separator: "|")
+        let zone = "(?:%[0-9A-Za-z_.-]+)?"
+        let bracketed = "\\[(?:\(core))\(zone)\\](?::\\d{1,5})?"
+        let bare = "(?:\(core))\(zone)"
+        return try! NSRegularExpression(pattern: "(?<![0-9A-Za-z_:])(?:\(bracketed)|\(bare))(?![0-9A-Za-z_:])")
+    }()
+    nonisolated private static let serialRegex = try! NSRegularExpression(
+        pattern: #"\b[0-9A-Z]{3}[0-9A-Z]{12}\b"#
+    )
+
     /// Replaces any IPv4/IPv6 addresses, explicit hosts, full serial numbers, and access codes with safe placeholders.
     nonisolated static func redact(_ text: String, serials: [String] = [], hosts: [String] = [], accessCodes: [String] = []) -> String {
         var output = text
@@ -396,21 +429,24 @@ final class ActivityLog {
         for host in hosts where !host.isEmpty {
             output = output.replacingOccurrences(of: host, with: "<host>", options: .caseInsensitive)
         }
+        // IPv6 literals first (including IPv4-mapped addresses) while preserving HH:MM:SS timestamps.
+        output = ipv6Regex.stringByReplacingMatches(
+            in: output,
+            range: NSRange(output.startIndex..., in: output),
+            withTemplate: "<ip>"
+        )
         // IPv4 (with optional :port)
-        if let ipv4 = try? NSRegularExpression(pattern: #"\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?\b"#) {
-            let range = NSRange(output.startIndex..., in: output)
-            output = ipv4.stringByReplacingMatches(in: output, range: range, withTemplate: "<ip>")
-        }
-        // IPv6 literals (two or more colon-separated hex groups)
-        if let ipv6 = try? NSRegularExpression(pattern: #"\b(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}\b"#) {
-            let range = NSRange(output.startIndex..., in: output)
-            output = ipv6.stringByReplacingMatches(in: output, range: range, withTemplate: "<ip>")
-        }
+        output = ipv4Regex.stringByReplacingMatches(
+            in: output,
+            range: NSRange(output.startIndex..., in: output),
+            withTemplate: "<ip>"
+        )
         // Bambu 15-character alphanumeric serials (e.g. 22E00A123456789)
-        if let serialRegex = try? NSRegularExpression(pattern: #"\b[0-9A-Z]{3}[0-9A-Z]{12}\b"#) {
-            let range = NSRange(output.startIndex..., in: output)
-            output = serialRegex.stringByReplacingMatches(in: output, range: range, withTemplate: "<serial>")
-        }
+        output = serialRegex.stringByReplacingMatches(
+            in: output,
+            range: NSRange(output.startIndex..., in: output),
+            withTemplate: "<serial>"
+        )
         return output
     }
 
