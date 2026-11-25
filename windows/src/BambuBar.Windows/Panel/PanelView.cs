@@ -16,9 +16,8 @@ namespace BambuBar.TrayPanel;
 /// <summary>Where a panel button leads; the app opens its window there (P3.5 fills in the pages).</summary>
 public enum PanelDestination { Overview, Settings, Printers, AddPrinter, Setup, License }
 
-/// <summary>A newer release to offer above the footer (the Mac's UpdateRow). Placeholder until the Windows updater's
-/// UI (P5.4) sets it.</summary>
-public sealed record UpdateOffer(string Version, Action Install, Action Later);
+/// <summary>A newer release to offer above the footer (the Mac's UpdateRow).</summary>
+public sealed record UpdateOffer(string Version, Action Install, Action Later, bool CanInstall = true);
 
 /// <summary>What the sections share: the store, the settings, the theme, and the way out to the app.</summary>
 internal sealed class PanelContext

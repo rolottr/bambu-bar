@@ -120,10 +120,14 @@ public partial class App : Application
         _license.Start();
         if (!ephemeral)
         {
-            // Updates (ledger P5.4): the shared appcast's Windows item for this PC, checked daily while the supporter
-            // license is active, Ed25519-verified before the installer runs.
+            // Updates (ledger P5.4): anonymous daily check of https://bambubar.app/appcast.xml for this PC's item;
+            // gated installer downloads via https://bambubar.app/api/updates/download require an active supporter
+            // license and are Ed25519-verified before running.
             var license = _license;
-            _updates = new UpdateChecker(() => license.HasAccess, _settings, new UpdateFeed(),
+            var feed = new UpdateFeed(
+                url: UpdateFeed.FeedOverride(_settings, args),
+                licenseHeaders: () => UpdateDownload.HeadersIfActivated(license));
+            _updates = new UpdateChecker(() => license.HasAccess && license.Record is not null, _settings, feed,
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "Updates"));
             _updates.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(ShowUpdateOffer);
             license.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(() => _updates?.SupporterStatusChanged());
@@ -319,18 +323,31 @@ public partial class App : Application
     {
         if (_panelView is null || _updates is null) return;
         var offered = _updates.Offered;
-        var offer = offered is null ? null : new UpdateOffer(offered.DisplayVersion ?? "", InstallUpdate, _updates.RemindLater);
-        if (offer?.Version == _panelView.UpdateOffer?.Version && (offer is null) == (_panelView.UpdateOffer is null)) return;
+        var canInstall = _updates.SupportsAutomaticUpdates;
+        var offer = offered is null
+            ? null
+            : new UpdateOffer(offered.DisplayVersion ?? "",
+                canInstall ? InstallUpdate : () => Shell.Open(Website.Download),
+                _updates.RemindLater,
+                canInstall);
+        if (offer?.Version == _panelView.UpdateOffer?.Version
+            && offer?.CanInstall == _panelView.UpdateOffer?.CanInstall
+            && (offer is null) == (_panelView.UpdateOffer is null)) return;
         _panelView.UpdateOffer = offer;
         _panelView.Refresh();
     }
 
     /// <summary>"Update…": downloads and verifies the release (unless it's already here), runs its installer silently
-    /// and quits; the installer replaces the files and starts Bambu Bar again (/RELAUNCH=1). A failure shows in
-    /// Settings → Updates.</summary>
+    /// and quits; the installer replaces the files and starts Bambu Bar again (/RELAUNCH=1). Without an active
+    /// supporter license, opens the manual download page on bambubar.app. A failure shows in Settings → Updates.</summary>
     private async void InstallUpdate()
     {
         if (_updates is null) return;
+        if (!_updates.SupportsAutomaticUpdates)
+        {
+            Shell.Open(Website.Download);
+            return;
+        }
         var installer = _updates.Installer is { } ready && File.Exists(ready.Path) ? ready : await _updates.DownloadAsync();
         if (installer is null)
         {
@@ -352,7 +369,7 @@ public partial class App : Application
 
     private void Quit()
     {
-        var waiting = _updates is { DownloadsAutomatically: true, State: UpdateState.Ready, Installer: { } ready } && File.Exists(ready.Path)
+        var waiting = _updates is { SupportsAutomaticUpdates: true, DownloadsAutomatically: true, State: UpdateState.Ready, Installer: { } ready } && File.Exists(ready.Path)
             ? _updates.Installer!.Path : null;
         Release();
         // "Download and install updates automatically": one downloaded and verified in the background installs as the

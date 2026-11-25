@@ -255,7 +255,7 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
     // MARK: Updates
 
     /// <summary>What the last check found: a newer release, an error, up to date, or when it ran.</summary>
-    private string UpdateLine(DateTimeOffset? last)
+    private string UpdateLine(DateTimeOffset? last, bool access)
     {
         var updates = Ctx.Services.Updates;
         return updates?.State switch
@@ -263,36 +263,37 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
             UpdateState.Checking => Loc.T("Checking…"),
             UpdateState.Downloading => Loc.T("Downloading…"),
             UpdateState.Available or UpdateState.Ready when updates.Available is { } release =>
-                Loc.F("Bambu Bar %@ is available", release.DisplayVersion ?? ""),
+                access
+                    ? Loc.F("Bambu Bar %@ is available", release.DisplayVersion ?? "")
+                    : Loc.T("Download from bambubar.app"),
             UpdateState.Failed => updates.Error ?? Loc.T("Couldn’t check for updates"),
             UpdateState.UpToDate => Loc.T("Bambu Bar is up to date"),
             _ => last is { } when ? Loc.F("Version %@ · last checked %@", AppVersion.Marketing, PanelText.Ago(when)) : Loc.T("Not checked yet"),
         };
     }
 
-    /// <summary>Automatic checks and downloads, which need the supporter license (the Mac's UpdatesGroup), the last
-    /// check's result, Check Now, and Update… when a newer release is waiting.</summary>
+    /// <summary>Anonymous daily feed checks for every copy, automatic downloads behind the supporter license (the Mac's
+    /// UpdatesGroup), the last check's result, Check Now, and Update… / Download… when a newer release is waiting.</summary>
     private FrameworkElement Updates(bool access)
     {
         var group = W.Group(Loc.T("Updates"), Icons.Download, out var body);
         if (!access)
         {
-            body.Children.Add(W.Note(Loc.T("Activate your website supporter license to check GitHub for updates and enable automatic updates."), ThemeKeys.TextSecondary, WRamp.Body));
-            body.Children.Add(W.Button(Loc.T("Activate Supporter License…"), () => Ctx.Show(AppPage.About), small: true));
+            body.Children.Add(W.Note(Loc.T("Supporter license required for automatic updates."), ThemeKeys.TextSecondary, WRamp.Body));
+            body.Children.Add(W.Button(Loc.T("Activate License…"), () => Ctx.Show(AppPage.About), small: true));
         }
         var checks = Ctx.Settings.Get(UpdateChecker.Keys.AutomaticChecks, true);
         ToggleSwitch? downloads = null;
-        body.Children.Add(W.Switch(Loc.T("Check for updates automatically"), access && checks, on =>
+        body.Children.Add(W.Switch(Loc.T("Check for updates automatically"), checks, on =>
         {
             if (Ctx.Services.Updates is { } checker) checker.ChecksAutomatically = on;
             else Ctx.Settings.Set(UpdateChecker.Keys.AutomaticChecks, on);
             if (downloads is not null)
             {
-                downloads.IsEnabled = on;
-                downloads.IsChecked = on && Ctx.Settings.Get(UpdateChecker.Keys.AutomaticDownloads, false);
+                downloads.IsEnabled = access && on;
+                downloads.IsChecked = access && on && Ctx.Settings.Get(UpdateChecker.Keys.AutomaticDownloads, false);
             }
-        }, out var checksSwitch));
-        checksSwitch.IsEnabled = access;
+        }, out _));
         body.Children.Add(W.Switch(Loc.T("Download and install updates automatically"), access && checks && Ctx.Settings.Get(UpdateChecker.Keys.AutomaticDownloads, false),
             on =>
             {
@@ -307,25 +308,33 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         icon.Margin = new Thickness(0, 0, 10, 0);
         status.Children.Add(Ui.At(icon, 0));
         var last = Ctx.Settings.Get<DateTimeOffset?>(UpdateChecker.Keys.LastCheck);
+        var updates = Ctx.Services.Updates;
+        var hasAvailable = updates?.Available is not null && updates.State is UpdateState.Available or UpdateState.Ready;
+        var heading = hasAvailable && updates?.Available is { } available
+            ? Loc.F("Version %@ is available", available.DisplayVersion ?? "")
+            : Loc.F("Version %@", AppVersion.Marketing);
         var titles = new Stack
         {
             Spacing = 2,
             Children =
             {
-                Ui.Text(Loc.F("Version %@", AppVersion.Marketing), WRamp.Body, FontWeights.Medium),
-                Ui.Text(UpdateLine(last), WRamp.Note, null, ThemeKeys.TextSecondary),
+                Ui.Text(heading, WRamp.Body, FontWeights.Medium),
+                Ui.Text(UpdateLine(last, access), WRamp.Note, null, ThemeKeys.TextSecondary),
             },
         };
         status.Children.Add(Ui.At(titles, 1));
-        var updates = Ctx.Services.Updates;
         UIElement action;
-        if (updates?.Available is { } release && updates.State is UpdateState.Available or UpdateState.Ready)
-            action = W.Button(Loc.T("Update…"), Ctx.Services.InstallUpdate, accent: true, small: true);
+        if (hasAvailable)
+        {
+            action = access
+                ? W.Button(Loc.T("Update…"), Ctx.Services.InstallUpdate, accent: true, small: true)
+                : W.Button(Loc.T("Download…"), () => W.Open(Website.Download), accent: true, small: true);
+        }
         else
         {
             var check = W.Button(updates?.State == UpdateState.Checking ? Loc.T("Checking…") : Loc.T("Check Now"),
                 () => _ = updates?.CheckAsync(), small: true);
-            check.IsEnabled = access && updates is { CanCheckForUpdates: true } && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
+            check.IsEnabled = updates is { CanCheckForUpdates: true } && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
             action = check;
         }
         status.Children.Add(Ui.At(action, 2));

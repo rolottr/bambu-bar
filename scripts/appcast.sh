@@ -1,5 +1,10 @@
 #!/bin/zsh
-# Writes build/appcast.xml, the feed Sparkle reads for in-app updates, for a packaged and published release.
+# Writes build/appcast.xml, the GitHub bridge appcast feed for pre-3.1.0 Mac and Windows copies
+# (releases/latest/download/appcast.xml), and build/Bambu-Bar-$VERSION-windows.release.txt when Windows installers are
+# present so the same EdDSA signatures can be added to https://bambubar.app/appcast.xml (releases.ts).
+# From 3.1.0 onward, both macOS and Windows check https://bambubar.app/appcast.xml anonymously and download via
+# gated https://bambubar.app/api/updates/download; 3.1.0 is the bridge release whose GitHub appcast.xml must keep
+# GitHub release enclosures for macOS, windows-x64, and windows-arm64 so existing 3.0.x copies on both platforms upgrade.
 #   scripts/appcast.sh               the version in build/App.noindex (run after package.sh and gh release create)
 #   VERSION=1.4.0 scripts/appcast.sh
 #   UPLOAD=1 scripts/appcast.sh      also attaches appcast.xml to the GitHub release. The app reads
@@ -55,14 +60,29 @@ PUBDATE=$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S +0000')
 
 # The Windows installers, one item per architecture (sparkle:version is X.Y.Z there: no build timestamp).
 WINDOWS_ITEMS=""
+WINDOWS_RELEASE_TXT="$ROOT/build/Bambu-Bar-$VERSION-windows.release.txt"
 X64="$ROOT/build/Bambu-Bar-$VERSION-windows-x64.exe"
 ARM64="$ROOT/build/Bambu-Bar-$VERSION-windows-arm64.exe"
 if [[ -f "$X64" || -f "$ARM64" ]]; then
   [[ -f "$X64" && -f "$ARM64" ]] || { echo "Only one Windows installer in build/: both ship, or neither" >&2; exit 2; }
+  {
+    echo "version: $VERSION"
+    echo "feedURL: https://bambubar.app/appcast.xml"
+  } > "$WINDOWS_RELEASE_TXT"
   for arch in x64 arm64; do
     EXE="$ROOT/build/Bambu-Bar-$VERSION-windows-$arch.exe"
     EXE_URL=${WINDOWS_DOWNLOAD_URL:-https://github.com/$REPO/releases/download/v$VERSION}/${EXE:t}
     EXE_SIGNATURE=$("$SPARKLE_BIN/sign_update" "$EXE")
+    EXE_ED_SIG=$("$SPARKLE_BIN/sign_update" -p "$EXE")
+    EXE_SIZE=$(stat -f%z "$EXE")
+    EXE_SHA256=$(shasum -a 256 "$EXE" | awk '{print $1}')
+    cat >> "$WINDOWS_RELEASE_TXT" <<WINEOF
+windows-${arch}.path: $EXE
+windows-${arch}.sizeBytes: $EXE_SIZE
+windows-${arch}.sha256: $EXE_SHA256
+windows-${arch}.edSignature: $EXE_ED_SIG
+windows-${arch}.downloadURL: https://bambubar.app/api/updates/download?version=$VERSION&os=windows-${arch}
+WINEOF
     WINDOWS_ITEMS+="
     <item>
       <title>Bambu Bar $VERSION</title>
@@ -75,6 +95,7 @@ if [[ -f "$X64" || -f "$ARM64" ]]; then
       <enclosure url=\"$EXE_URL\" sparkle:os=\"windows-$arch\" type=\"application/octet-stream\" $EXE_SIGNATURE />
     </item>"
   done
+  echo "==> Wrote $WINDOWS_RELEASE_TXT"
 fi
 
 cat > "$ROOT/build/appcast.xml" <<EOF

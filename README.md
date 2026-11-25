@@ -76,7 +76,7 @@ Closing the window keeps Bambu Bar running in the menu bar without a Dock icon. 
 - **Tray icon:** Bambu Bar lives in the notification area. If Windows hides the icon under the **^** arrow, drag it onto the taskbar to keep it in sight. A click opens the panel; the window has the same pages as on the Mac, with **Tray** in place of Menu Bar.
 - **Setup** works as on the Mac: pick a printer the app finds, and the access code comes from Bambu Studio or OrcaSlicer on the PC when they have used the printer. If Windows Firewall asks, allow Bambu Bar on private networks; when the firewall keeps the printers' announcements out, the search says so.
 - **Desktop widgets** are drawn by a private copy of [Rainmeter](https://www.rainmeter.net) that comes with the app (nothing else to install; a Rainmeter you use yourself is left alone). Add them from the **Widgets** page. On Windows 10 on ARM the widgets don't run, as Rainmeter needs x64 emulation.
-- **Updates** work like the direct Mac download: Windows copies read GitHub's `releases/latest/download/appcast.xml`, and with an active website supporter license (the same key as on the Mac) supporters on both platforms get updates automatically. Existing 3.0.x Mac copies also bridge to 3.1.0 from that GitHub feed.
+- **Updates** work like the direct Mac download: from 3.1.0 onward, both Mac and Windows copies check `https://bambubar.app/appcast.xml` anonymously once a day (notifying unlicensed copies with a link to `bambubar.app/download`) and, with an active website supporter license (the same key as on the Mac), download EdDSA-signed updates via `https://bambubar.app/api/updates/download` and install automatically. Existing 3.0.x Mac and 3.0.x Windows copies bridge to 3.1.0 from GitHub's `releases/latest/download/appcast.xml`.
 
 Building the Windows app is described in [docs/windows.md](docs/windows.md).
 
@@ -135,7 +135,7 @@ Printers announce themselves on UDP port 2021; that's how Bambu Bar lists them d
 
 ## Privacy and local storage
 
-Bambu Bar talks to your printers on your local network, with no app analytics. Direct macOS copies check the public Sparkle feed at `https://bambubar.app/appcast.xml` anonymously once a day (sending no license or printer data) unless turned off in Settings. Optional supporter licenses are validated online to enable automatic in-app update downloads and the Hero Supporter badge. License checks send the key, activation ID and a random installation ID, never printer data. Supporter benefits remain active for up to seven days offline after validation; printer monitoring has no license or offline-time limit. The Mac App Store build uses Apple’s distribution. See the [privacy policy](PRIVACY.md).
+Bambu Bar talks to your printers on your local network, with no app analytics. Direct macOS and Windows copies check the public appcast feed at `https://bambubar.app/appcast.xml` anonymously once a day (sending no license or printer data) unless turned off in Settings. Optional supporter licenses are validated online to enable automatic in-app update downloads and the Hero Supporter badge. License checks send the key, activation ID and a random installation ID, never printer data. Supporter benefits remain active for up to seven days offline after validation; printer monitoring has no license or offline-time limit. The Mac App Store build uses Apple’s distribution. See the [privacy policy](PRIVACY.md).
 
 - **Printers (address, serial, name) and preferences:** local macOS user defaults.
 - **Access codes:** your login keychain.

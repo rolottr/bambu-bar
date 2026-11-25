@@ -27,4 +27,9 @@ public class WebsiteTests
     public void SupportLinkKeepsItsPlacement() =>
         Assert.Equal("https://bambubar.app/download?utm_source=bambu_bar&utm_medium=app_windows&utm_campaign=support_project&utm_content=menu_panel",
             PolarConfiguration.SupportUrl(PolarConfiguration.SupportPlacement.MenuPanel).ToString());
+
+    [Fact]
+    public void ManualUpdateDownloadLinkIsTagged() =>
+        Assert.Equal("https://bambubar.app/download?utm_source=bambu_bar&utm_medium=app_windows&utm_campaign=update&utm_content=manual_download",
+            Website.Download.ToString());
 }

@@ -29,7 +29,7 @@ public sealed partial class TrayIcon : IDisposable
     public event Action? Quit;
     /// <summary>Opens the window at a page (Widgets, Settings).</summary>
     public event Action<AppPage>? OpenPage;
-    /// <summary>Set while the updater can check (supporter license active).</summary>
+    /// <summary>Set while the updater is running.</summary>
     public Action? CheckForUpdates { get; set; }
 
     /// <summary>Draw the percentage instead of the printer while printing (Tray page, P3.5).</summary>

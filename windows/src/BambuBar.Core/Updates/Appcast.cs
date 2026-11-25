@@ -6,8 +6,9 @@ using System.Xml.Linq;
 namespace BambuBar.Core.Updates;
 
 /// <summary>
-/// The update feed both platforms share (ledger D12, §8): Sparkle's appcast format, written by scripts/appcast.sh and
-/// read from <c>releases/latest/download/appcast.xml</c>.
+/// The update feed both platforms share (ledger D12, §8): Sparkle's appcast format, read from
+/// <c>https://bambubar.app/appcast.xml</c> (and from GitHub's <c>releases/latest/download/appcast.xml</c> for
+/// pre-3.1.0 bridge clients).
 /// <para>Platform and architecture sit where Sparkle and WinSparkle look for them, in the enclosure's
 /// <c>sparkle:os</c>: no attribute or <c>"macos"</c> is the Mac's item (Sparkle's default), and every Windows item
 /// names its architecture, <c>"windows-x64"</c> or <c>"windows-arm64"</c> (WinSparkle's values). Sparkle on the Mac

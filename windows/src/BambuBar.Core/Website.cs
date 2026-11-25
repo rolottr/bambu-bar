@@ -14,4 +14,5 @@ public static class Website
     /// <summary>The About page's links.</summary>
     public static Uri Home => Url("", "about", "website");
     public static Uri Changelog => Url("changelog", "about", "release_notes");
+    public static Uri Download => Url("download", "update", "manual_download");
 }

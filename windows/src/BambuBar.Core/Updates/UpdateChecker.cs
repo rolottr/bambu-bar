@@ -3,15 +3,18 @@ using BambuBar.Core.App;
 namespace BambuBar.Core.Updates;
 
 // Ported from the Mac's Sources/BambuBar/Services/UpdateChecker.swift, without Sparkle: on Windows this class reads
-// the shared appcast itself, picks this PC's item and downloads and verifies the installer. Running it (silently,
-// then relaunching) and the Authenticode check are the app's part.
+// the shared appcast at https://bambubar.app/appcast.xml anonymously, picks this PC's item, and — when a supporter
+// license is active — downloads and verifies the installer via https://bambubar.app/api/updates/download. Running it
+// (silently, then relaunching) is the app's part.
 
 public enum UpdateState { Idle, Checking, UpToDate, Available, Downloading, Ready, Failed }
 
 /// <summary>
-/// Supporter updates: a daily check of the shared appcast (ledger §8), "Skip This Version", "Later" and an optional
-/// automatic download, all behind the supporter license like the Mac's. Windows compares its own appcast item's
-/// version with this app's, never GitHub's tag, so a Mac-only release is simply "up to date" here.
+/// In-app updates on <c>https://bambubar.app/appcast.xml</c>: a daily anonymous check of the shared appcast (zero
+/// <c>X-BambuBar-*</c> headers), "Skip This Version", "Later" and an optional automatic download. Both licensed and
+/// unlicensed copies learn when a new Windows release ships; automated downloads and installs remain strictly gated
+/// on an active supporter license. Windows compares its own appcast item's version with this app's, never a tag, so
+/// a Mac-only release is simply "up to date" here.
 /// <para>Single-threaded like the Mac's <c>@MainActor</c> checker: create it and call every member on the UI thread.
 /// Its awaits resume on the caller's context and it starts no threads of its own. Wire the license with
 /// <c>license.AccessChanged += _ =&gt; checker.SupporterStatusChanged()</c>.</para>
@@ -48,7 +51,7 @@ public sealed class UpdateChecker : Observable
     private CancellationTokenSource? _operation;
     private DateTimeOffset? _lastAttempt;
 
-    /// <param name="hasAccess">Whether the supporter license is active (<c>LicenseStore.HasAccess</c>).</param>
+    /// <param name="hasAccess">Whether the supporter license is active (<c>license.HasAccess &amp;&amp; license.Record is not null</c>).</param>
     /// <param name="settings">Where the preferences, the last check and the skipped version are kept.</param>
     /// <param name="feed">The appcast and downloads.</param>
     /// <param name="downloadFolder">Where installers are saved (e.g. %LOCALAPPDATA%\Bambu Bar\Updates).</param>
@@ -99,11 +102,13 @@ public sealed class UpdateChecker : Observable
 
     public bool IsRunning { get; private set => Set(ref field, value); }
 
+    /// <summary>Whether automated downloads and installs are allowed (requires an active supporter license).</summary>
     public bool SupportsAutomaticUpdates => _hasAccess();
 
+    /// <summary>Anonymous daily checks of <c>https://bambubar.app/appcast.xml</c> are available on all copies.</summary>
     public bool ChecksAutomatically
     {
-        get => SupportsAutomaticUpdates && _checksPreference;
+        get => _checksPreference;
         set
         {
             _checksPreference = value;
@@ -114,9 +119,10 @@ public sealed class UpdateChecker : Observable
         }
     }
 
+    /// <summary>Automatic background downloads and installs require an active supporter license.</summary>
     public bool DownloadsAutomatically
     {
-        get => ChecksAutomatically && _downloadsPreference;
+        get => SupportsAutomaticUpdates && ChecksAutomatically && _downloadsPreference;
         set
         {
             _downloadsPreference = value;
@@ -125,19 +131,19 @@ public sealed class UpdateChecker : Observable
         }
     }
 
-    public bool CanCheckForUpdates => IsRunning && SupportsAutomaticUpdates;
+    public bool CanCheckForUpdates => IsRunning;
 
-    /// <summary>The newer release, while the license allows updates.</summary>
-    public AppcastItem? Available => SupportsAutomaticUpdates ? Release : null;
+    /// <summary>The newer release found for this PC (surfaced to both licensed and unlicensed copies).</summary>
+    public AppcastItem? Available => Release;
 
     /// <summary>The release to offer in the tray panel: not skipped and not put off for later.</summary>
     public AppcastItem? Offered =>
         Available is { } release && !OfferDismissed && release.DisplayVersion != SkippedVersion ? release : null;
 
-    /// <summary>Starts the daily schedule. Demo, emulator and developer runs leave it off.</summary>
+    /// <summary>Starts the daily anonymous schedule. Demo, emulator and developer runs leave it off.</summary>
     public void Start()
     {
-        if (!SupportsAutomaticUpdates || IsRunning) return;
+        if (IsRunning) return;
         IsRunning = true;
         ApplySettings();
         Derived();
@@ -156,11 +162,19 @@ public sealed class UpdateChecker : Observable
     /// check the user asked for. Never downloads by itself.</summary>
     public Task CheckAsync(CancellationToken cancellation = default) => CheckAsync(scheduled: false, cancellation);
 
-    /// <summary>Downloads and verifies <see cref="Available"/>. Null when there is nothing to download, the license
-    /// lapsed, or it failed (<see cref="Error"/> says why).</summary>
+    /// <summary>Downloads and verifies <see cref="Available"/>. Strictly gated on <see cref="SupportsAutomaticUpdates"/>:
+    /// returns null with zero download requests when no active supporter license is present, or when the download fails
+    /// (<see cref="Error"/> says why).</summary>
     public async Task<VerifiedInstaller?> DownloadAsync(CancellationToken cancellation = default)
     {
         if (!CanCheckForUpdates || Available is not { } release || _operation is not null) return null;
+        if (!SupportsAutomaticUpdates)
+        {
+            Error = new UpdateException(UpdateFailure.LicenseRequired).Message;
+            State = UpdateState.Failed;
+            Derived();
+            return null;
+        }
         if (Installer is { } ready && ready.Item == release && File.Exists(ready.Path)) return ready;
         using var operation = _operation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         State = UpdateState.Downloading;
@@ -168,7 +182,7 @@ public sealed class UpdateChecker : Observable
         try
         {
             var installer = await _feed.DownloadAsync(release, _downloadFolder, _signature, operation.Token);
-            if (operation.IsCancellationRequested || !CanCheckForUpdates || Release != release) return null;
+            if (operation.IsCancellationRequested || !CanCheckForUpdates || !SupportsAutomaticUpdates || Release != release) return null;
             Installer = installer;
             State = UpdateState.Ready;
             return installer;
@@ -203,13 +217,15 @@ public sealed class UpdateChecker : Observable
     /// <summary>The license was activated, revalidated, refused or deactivated.</summary>
     public void SupporterStatusChanged()
     {
-        if (SupportsAutomaticUpdates) Start();
         if (IsRunning) ApplySettings();
         if (!SupportsAutomaticUpdates)
         {
-            _operation?.Cancel();
-            State = UpdateState.Idle;
-            OfferDismissed = true;
+            if (State == UpdateState.Downloading) _operation?.Cancel();
+            Installer = null;
+            if (State is UpdateState.Downloading or UpdateState.Ready)
+            {
+                State = Release is not null ? UpdateState.Available : UpdateState.Idle;
+            }
         }
         Changed(null);
     }
@@ -244,7 +260,8 @@ public sealed class UpdateChecker : Observable
                 SkippedVersion = null;
                 _settings.Set<string>(Keys.SkippedVersion, null);
             }
-            State = Installer is not null && File.Exists(Installer.Path) ? UpdateState.Ready : UpdateState.Available;
+            State = SupportsAutomaticUpdates && Installer is not null && File.Exists(Installer.Path)
+                ? UpdateState.Ready : UpdateState.Available;
             download = scheduled && State == UpdateState.Available && DownloadsAutomatically && item.DisplayVersion != SkippedVersion;
         }
         catch (OperationCanceledException) when (operation.IsCancellationRequested) { }
@@ -309,6 +326,8 @@ public sealed class UpdateChecker : Observable
     /// <summary>The computed properties may read differently now.</summary>
     private void Derived()
     {
+        Changed(nameof(SupportsAutomaticUpdates));
+        Changed(nameof(DownloadsAutomatically));
         Changed(nameof(CanCheckForUpdates));
         Changed(nameof(Available));
         Changed(nameof(Offered));

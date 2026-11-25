@@ -7611,113 +7611,6 @@
         }
       }
     },
-    "Activate Supporter License…": {
-      "comment": "Windows: shared string",
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivovat podporovatelskou licenci…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unterstützerlizenz aktivieren …"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activar licencia de apoyo…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activer la licence de soutien…"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Támogatói licenc aktiválása…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attiva licenza di supporto…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サポーターライセンスを認証…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "후원자 라이선스 활성화…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activeer supporterlicentie…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktywuj licencję wspierającego…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ativar Licença de Apoio…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активировать лицензию сторонника…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivera stödlicens…"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Destekçi Lisansını Etkinleştir…"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активувати ліцензію прихильника…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "激活支持者许可证…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟用支持者授權⋯"
-          }
-        }
-      }
-    },
     "Activate a supporter license to enable automatic updates and receive the Hero Supporter badge.": {
       "localizations": {
         "cs": {
@@ -7926,113 +7819,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "請啟用您的授權以下載更新。"
-          }
-        }
-      }
-    },
-    "Activate your website supporter license to check GitHub for updates and enable automatic updates.": {
-      "comment": "Windows: shared string",
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivujte podporovatelskou licenci z webu, abyste mohli vyhledávat aktualizace na GitHubu a zapnout automatické aktualizace."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivieren Sie Ihre Unterstützerlizenz von der Website, um auf GitHub nach Updates zu suchen und automatische Updates einzuschalten."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Active su licencia de apoyo del sitio web para buscar actualizaciones en GitHub y activar las actualizaciones automáticas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activez votre licence de soutien achetée sur le site pour rechercher les mises à jour sur GitHub et activer les mises à jour automatiques."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktiváld a weboldalon vásárolt támogatói licencedet, hogy frissítéseket kereshess a GitHubon, és bekapcsolhasd az automatikus frissítéseket."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attiva la licenza di supporto acquistata sul sito per controllare gli aggiornamenti su GitHub e abilitare gli aggiornamenti automatici."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウェブサイトで購入したサポーターライセンスを認証すると、GitHubでアップデートを確認したり、自動アップデートを有効にしたりできます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "웹사이트 후원자 라이선스를 활성화하면 GitHub에서 업데이트를 확인하고 자동 업데이트를 사용할 수 있습니다."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activeer uw supporterlicentie van de website om op GitHub op updates te controleren en automatische updates in te schakelen."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktywuj licencję wspierającego kupioną na stronie, aby sprawdzać uaktualnienia w serwisie GitHub i włączyć automatyczne uaktualnienia."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ative sua licença de apoio comprada no site para verificar atualizações no GitHub e ativar as atualizações automáticas."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активируйте лицензию сторонника, купленную на сайте, чтобы проверять обновления на GitHub и включить автоматические обновления."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktivera din stödlicens från webbplatsen för att söka efter uppdateringar på GitHub och slå på automatiska uppdateringar."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GitHub'da güncellemeleri denetlemek ve otomatik güncellemeleri açmak için web sitesinden aldığın destekçi lisansını etkinleştir."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активуйте ліцензію прихильника, придбану на сайті, щоб перевіряти оновлення на GitHub і ввімкнути автоматичні оновлення."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "激活您的网站支持者许可证，即可从 GitHub 检查更新并启用自动更新。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟用網站支持者授權後，即可從 GitHub 檢查更新項目並開啟自動更新。"
           }
         }
       }
@@ -37522,113 +37308,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用中"
-          }
-        }
-      }
-    },
-    "In-app update checks require an active website supporter license.": {
-      "comment": "Windows: shared string",
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrola aktualizací v aplikaci vyžaduje aktivní podporovatelskou licenci z webu."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Update-Prüfungen in der App erfordern eine aktive Unterstützerlizenz von der Website."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La búsqueda de actualizaciones en la app requiere una licencia de apoyo activa del sitio web."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche de mises à jour dans l’app nécessite une licence de soutien active achetée sur le site."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Az alkalmazáson belüli frissítéskereséshez aktív, a weboldalon vásárolt támogatói licenc szükséges."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il controllo degli aggiornamenti nell'app richiede una licenza di supporto attiva acquistata sul sito."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリ内のアップデート確認には、有効なウェブサイトのサポーターライセンスが必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱 내 업데이트 확인에는 유효한 웹사이트 후원자 라이선스가 필요합니다."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updatecontroles in de app vereisen een actieve supporterlicentie via de website."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sprawdzanie uaktualnień w aplikacji wymaga aktywnej licencji wspierającego kupionej na stronie."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A verificação de atualizações no app exige uma licença de apoio ativa comprada no site."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для проверки обновлений в приложении нужна активная лицензия сторонника, купленная на сайте."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uppdateringskontroller i appen kräver en aktiv stödlicens från webbplatsen."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uygulama içi güncelleme denetimleri, web sitesinden alınmış etkin bir destekçi lisansı gerektirir."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перевірка оновлень у програмі потребує активної ліцензії прихильника, придбаної на сайті."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App 内更新检查需要有效的网站支持者许可证。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App 內的更新檢查需要有效的網站支持者授權。"
           }
         }
       }
@@ -71171,109 +70850,109 @@
         }
       }
     },
-    "Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. In-app update checks use the latest GitHub release feed and require an active website supporter license. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.": {
+    "Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. In-app update checks read the public feed at bambubar.app anonymously once a day; downloading updates requires an active website supporter license. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.": {
       "comment": "Windows: About page, privacy (the Mac's names the Keychain)",
       "localizations": {
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Podporovatelské licence se ověřují online; klíč a ID instalace se ukládají do Správce přihlašovacích údajů. Kontrola aktualizací v aplikaci používá kanál nejnovějších vydání na GitHubu a vyžaduje aktivní podporovatelskou licenci z webu. Kontroly aktualizací neposílají žádná data tiskáren a aktualizace musí nést podpis vývojáře. Automatické aktualizace spravujete v Nastavení → Aktualizace."
+            "value": "Podporovatelské licence se ověřují online; klíč a ID instalace se ukládají do Správce přihlašovacích údajů. Kontrola aktualizací v aplikaci jednou denně anonymně načítá veřejný kanál na bambubar.app; stahování aktualizací vyžaduje aktivní podporovatelskou licenci z webu. Kontroly aktualizací neposílají žádná data tiskáren a aktualizace musí nést podpis vývojáře. Automatické aktualizace spravujete v Nastavení → Aktualizace."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unterstützerlizenzen werden online validiert; Schlüssel und Installations-ID liegen in der Anmeldeinformationsverwaltung. Update-Prüfungen in der App nutzen den Feed des neuesten Release auf GitHub und erfordern eine aktive Unterstützerlizenz von der Website. Update-Prüfungen senden keine Druckerdaten, und Updates müssen die Signatur des Entwicklers tragen. Automatische Updates verwalten Sie unter Einstellungen → Updates."
+            "value": "Unterstützerlizenzen werden online validiert; Schlüssel und Installations-ID liegen in der Anmeldeinformationsverwaltung. Update-Prüfungen in der App lesen einmal täglich anonym den öffentlichen Feed auf bambubar.app; das Herunterladen von Updates erfordert eine aktive Unterstützerlizenz von der Website. Update-Prüfungen senden keine Druckerdaten, und Updates müssen die Signatur des Entwicklers tragen. Automatische Updates verwalten Sie unter Einstellungen → Updates."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las licencias de apoyo se validan en línea, y la clave y el ID de instalación se guardan en el Administrador de credenciales. La búsqueda de actualizaciones en la app usa el feed de la última versión en GitHub y requiere una licencia de apoyo activa del sitio web. La búsqueda de actualizaciones no envía datos de las impresoras, y las actualizaciones deben llevar la firma del desarrollador. Gestione las actualizaciones automáticas en Ajustes → Actualizaciones."
+            "value": "Las licencias de apoyo se validan en línea, y la clave y el ID de instalación se guardan en el Administrador de credenciales. La búsqueda de actualizaciones en la app consulta de forma anónima el feed público en bambubar.app una vez al día; descargar actualizaciones requiere una licencia de apoyo activa del sitio web. La búsqueda de actualizaciones no envía datos de las impresoras, y las actualizaciones deben llevar la firma del desarrollador. Gestione las actualizaciones automáticas en Ajustes → Actualizaciones."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les licences de soutien sont validées en ligne, avec la clé et l’identifiant d’installation stockés dans le Gestionnaire d’identification. La recherche de mises à jour dans l’app consulte le flux des dernières versions sur GitHub et nécessite une licence de soutien active achetée sur le site. Elle n’envoie aucune donnée des imprimantes, et les mises à jour doivent porter la signature du développeur. Gérez les mises à jour automatiques dans Réglages → Mises à jour."
+            "value": "Les licences de soutien sont validées en ligne, avec la clé et l’identifiant d’installation stockés dans le Gestionnaire d’identification. La recherche de mises à jour dans l’app consulte anonymement le flux public sur bambubar.app une fois par jour ; le téléchargement des mises à jour nécessite une licence de soutien active achetée sur le site. Elle n’envoie aucune donnée des imprimantes, et les mises à jour doivent porter la signature du développeur. Gérez les mises à jour automatiques dans Réglages → Mises à jour."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A támogatói licencek ellenőrzése online történik, a kulcsot és a telepítési azonosítót a Hitelesítőadat-kezelő tárolja. Az alkalmazáson belüli frissítéskeresés a legújabb GitHub-kiadások csatornáját használja, és aktív, a weboldalon vásárolt támogatói licencet igényel. A frissítéskeresés nem küld nyomtatóadatokat, és a frissítéseknek a fejlesztő aláírásával kell rendelkezniük. Az automatikus frissítéseket itt kezelheted: Beállítások → Frissítések."
+            "value": "A támogatói licencek ellenőrzése online történik, a kulcsot és a telepítési azonosítót a Hitelesítőadat-kezelő tárolja. Az alkalmazáson belüli frissítéskeresés naponta egyszer névtelenül lekéri a bambubar.app nyilvános csatornáját; a frissítések letöltéséhez aktív, a weboldalon vásárolt támogatói licenc szükséges. A frissítéskeresés nem küld nyomtatóadatokat, és a frissítéseknek a fejlesztő aláírásával kell rendelkezniük. Az automatikus frissítéseket itt kezelheted: Beállítások → Frissítések."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le licenze di supporto vengono convalidate online e la chiave e l'ID di installazione sono salvati in Gestione credenziali. Il controllo degli aggiornamenti nell'app usa il feed dell'ultima release su GitHub e richiede una licenza di supporto attiva acquistata sul sito. Il controllo degli aggiornamenti non invia dati delle stampanti e gli aggiornamenti devono portare la firma dello sviluppatore. Gestisci gli aggiornamenti automatici in Impostazioni → Aggiornamenti."
+            "value": "Le licenze di supporto vengono convalidate online e la chiave e l'ID di installazione sono salvati in Gestione credenziali. Il controllo degli aggiornamenti nell'app legge in modo anonimo il feed pubblico su bambubar.app una volta al giorno; scaricare gli aggiornamenti richiede una licenza di supporto attiva acquistata sul sito. Il controllo degli aggiornamenti non invia dati delle stampanti e gli aggiornamenti devono portare la firma dello sviluppatore. Gestisci gli aggiornamenti automatici in Impostazioni → Aggiornamenti."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サポーターライセンスはオンラインで検証され、キーとインストールIDは資格情報マネージャーに保存されます。アプリ内のアップデート確認はGitHubの最新リリースフィードを使用し、有効なウェブサイトのサポーターライセンスが必要です。アップデート確認でプリンターのデータが送信されることはなく、アップデートには開発者の署名が必要です。自動アップデートは設定 → アップデートで管理できます。"
+            "value": "サポーターライセンスはオンラインで検証され、キーとインストールIDは資格情報マネージャーに保存されます。アプリ内のアップデート確認は1日1回、bambubar.appの公開フィードを匿名で読み込みます。アップデートのダウンロードには有効なウェブサイトのサポーターライセンスが必要です。アップデート確認でプリンターのデータが送信されることはなく、アップデートには開発者の署名が必要です。自動アップデートは設定 → アップデートで管理できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "후원자 라이선스는 온라인으로 검증되며, 키와 설치 ID는 자격 증명 관리자에 저장됩니다. 앱 내 업데이트 확인은 최신 GitHub 릴리스 피드를 사용하며 유효한 웹사이트 후원자 라이선스가 필요합니다. 업데이트 확인 시 프린터 데이터는 전송되지 않으며, 업데이트에는 개발자의 서명이 있어야 합니다. 자동 업데이트는 설정 → 업데이트에서 관리할 수 있습니다."
+            "value": "후원자 라이선스는 온라인으로 검증되며, 키와 설치 ID는 자격 증명 관리자에 저장됩니다. 앱 내 업데이트 확인은 하루에 한 번 bambubar.app의 공개 피드를 익명으로 읽으며, 업데이트를 다운로드하려면 유효한 웹사이트 후원자 라이선스가 필요합니다. 업데이트 확인 시 프린터 데이터는 전송되지 않으며, 업데이트에는 개발자의 서명이 있어야 합니다. 자동 업데이트는 설정 → 업데이트에서 관리할 수 있습니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Supporterlicenties worden online gevalideerd; de sleutel en de installatie-ID worden in Referentiebeheer bewaard. Updatecontroles in de app gebruiken de feed met de nieuwste release op GitHub en vereisen een actieve supporterlicentie via de website. Bij updatecontroles worden geen printergegevens verstuurd, en updates moeten de handtekening van de ontwikkelaar dragen. Beheer automatische updates in Instellingen → Updates."
+            "value": "Supporterlicenties worden online gevalideerd; de sleutel en de installatie-ID worden in Referentiebeheer bewaard. Updatecontroles in de app lezen eenmaal per dag anoniem de openbare feed op bambubar.app; voor het downloaden van updates is een actieve supporterlicentie via de website vereist. Bij updatecontroles worden geen printergegevens verstuurd, en updates moeten de handtekening van de ontwikkelaar dragen. Beheer automatische updates in Instellingen → Updates."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Licencje wspierającego są weryfikowane online, a klucz i identyfikator instalacji są przechowywane w Menedżerze poświadczeń. Sprawdzanie uaktualnień w aplikacji korzysta z kanału najnowszych wydań w serwisie GitHub i wymaga aktywnej licencji wspierającego kupionej na stronie. Sprawdzanie uaktualnień nie wysyła żadnych danych drukarek, a uaktualnienia muszą mieć podpis dewelopera. Automatycznymi uaktualnieniami zarządzasz w: Ustawienia → Uaktualnienia."
+            "value": "Licencje wspierającego są weryfikowane online, a klucz i identyfikator instalacji są przechowywane w Menedżerze poświadczeń. Sprawdzanie uaktualnień w aplikacji raz dziennie anonimowo odczytuje publiczny kanał w serwisie bambubar.app; pobieranie uaktualnień wymaga aktywnej licencji wspierającego kupionej na stronie. Sprawdzanie uaktualnień nie wysyła żadnych danych drukarek, a uaktualnienia muszą mieć podpis dewelopera. Automatycznymi uaktualnieniami zarządzasz w: Ustawienia → Uaktualnienia."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "As licenças de apoio são validadas on-line, com a chave e o ID de instalação guardados no Gerenciador de Credenciais. A verificação de atualizações no app usa o feed da versão mais recente no GitHub e exige uma licença de apoio ativa comprada no site. A verificação de atualizações não envia dados das impressoras, e as atualizações precisam ter a assinatura do desenvolvedor. Gerencie as atualizações automáticas em Ajustes → Atualizações."
+            "value": "As licenças de apoio são validadas on-line, com a chave e o ID de instalação guardados no Gerenciador de Credenciais. A verificação de atualizações no app lê anonimamente o feed público em bambubar.app uma vez por dia; baixar atualizações exige uma licença de apoio ativa comprada no site. A verificação de atualizações não envia dados das impressoras, e as atualizações precisam ter a assinatura do desenvolvedor. Gerencie as atualizações automáticas em Ajustes → Atualizações."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Лицензии сторонника проверяются онлайн, а ключ и идентификатор установки хранятся в Диспетчере учетных данных. Для проверки обновлений приложение читает ленту последних выпусков на GitHub; для этого нужна активная лицензия сторонника, купленная на сайте. При проверке обновлений данные принтеров не передаются, а обновления должны быть подписаны разработчиком. Управлять автоматическими обновлениями можно в разделе Настройки → Обновления."
+            "value": "Лицензии сторонника проверяются онлайн, а ключ и идентификатор установки хранятся в Диспетчере учетных данных. Проверка обновлений в приложении раз в день анонимно читает общедоступную ленту на bambubar.app; для загрузки обновлений требуется активная лицензия сторонника, купленная на сайте. При проверке обновлений данные принтеров не передаются, а обновления должны быть подписаны разработчиком. Управлять автоматическими обновлениями можно в разделе Настройки → Обновления."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stödlicenser valideras online, och nyckeln och installations-ID:t lagras i Autentiseringshanteraren. Uppdateringskontroller i appen använder flödet för den senaste versionen på GitHub och kräver en aktiv stödlicens från webbplatsen. Uppdateringskontrollerna skickar inga skrivardata, och uppdateringar måste ha utvecklarens signatur. Hantera automatiska uppdateringar i Inställningar → Uppdateringar."
+            "value": "Stödlicenser valideras online, och nyckeln och installations-ID:t lagras i Autentiseringshanteraren. Uppdateringskontroller i appen läser det publika flödet på bambubar.app anonymt en gång om dagen; att hämta uppdateringar kräver en aktiv stödlicens från webbplatsen. Uppdateringskontrollerna skickar inga skrivardata, och uppdateringar måste ha utvecklarens signatur. Hantera automatiska uppdateringar i Inställningar → Uppdateringar."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Destekçi lisansları çevrimiçi doğrulanır; anahtar ve kurulum kimliği Kimlik Bilgileri Yöneticisi'nde saklanır. Uygulama içi güncelleme denetimleri en son GitHub sürüm akışını kullanır ve web sitesinden alınmış etkin bir destekçi lisansı gerektirir. Güncelleme denetimleri hiçbir yazıcı verisi göndermez ve güncellemelerin geliştiricinin imzasını taşıması gerekir. Otomatik güncellemeleri Ayarlar → Güncellemeler bölümünden yönet."
+            "value": "Destekçi lisansları çevrimiçi doğrulanır; anahtar ve kurulum kimliği Kimlik Bilgileri Yöneticisi'nde saklanır. Uygulama içi güncelleme denetimleri günde bir kez bambubar.app genel akışını anonim olarak okur; güncellemeleri indirmek için web sitesinden alınmış etkin bir destekçi lisansı gerekir. Güncelleme denetimleri hiçbir yazıcı verisi göndermez ve güncellemelerin geliştiricinin imzasını taşıması gerekir. Otomatik güncellemeleri Ayarlar → Güncellemeler bölümünden yönet."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ліцензії прихильника перевіряються онлайн, а ключ та ідентифікатор інсталяції зберігаються у Диспетчері облікових даних. Перевірка оновлень у програмі використовує стрічку останніх випусків на GitHub і потребує активної ліцензії прихильника, придбаної на сайті. Під час перевірки оновлень дані принтерів не надсилаються, а оновлення мають бути підписані розробником. Керувати автоматичними оновленнями можна в розділі Параметри → Оновлення."
+            "value": "Ліцензії прихильника перевіряються онлайн, а ключ та ідентифікатор інсталяції зберігаються у Диспетчері облікових даних. Перевірка оновлень у програмі раз на день анонімно читає публічну стрічку на bambubar.app; для завантаження оновлень потрібна активна ліцензія прихильника, придбана на сайті. Під час перевірки оновлень дані принтерів не надсилаються, а оновлення мають бути підписані розробником. Керувати автоматичними оновленнями можна в розділі Параметри → Оновлення."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "支持者许可证会在线验证，密钥和安装 ID 保存在凭据管理器中。App 内更新检查使用 GitHub 上的最新发布源，并且需要有效的网站支持者许可证。更新检查不会发送任何打印机数据，且更新必须带有开发者的签名。可在“设置 → 更新”中管理自动更新。"
+            "value": "支持者许可证会在线验证，密钥和安装 ID 保存在凭据管理器中。App 内更新检查每天匿名读取一次 bambubar.app 上的公开源；下载更新需要有效的网站支持者许可证。更新检查不会发送任何打印机数据，且更新必须带有开发者的签名。可在“设置 → 更新”中管理自动更新。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "支持者授權會在線上驗證，金鑰和安裝 ID 儲存在認證管理員中。App 內的更新檢查使用 GitHub 的最新版本發布來源，且需要有效的網站支持者授權。更新檢查不會傳送任何印表機資料，且更新項目必須帶有開發者的簽名。可在「設定」→「更新項目」中管理自動更新。"
+            "value": "支持者授權會在線上驗證，金鑰和安裝 ID 儲存在認證管理員中。App 內的更新檢查每天會匿名讀取一次 bambubar.app 上的公開來源；下載更新項目需要有效的網站支持者授權。更新檢查不會傳送任何印表機資料，且更新項目必須帶有開發者的簽名。可在「設定」→「更新項目」中管理自動更新。"
           }
         }
       }
