@@ -190,6 +190,7 @@ public sealed class UpdateChecker : Observable
                 }
                 InvalidateTamperedInstaller(ready, markFailed: false);
             }
+            if (!SupportsAutomaticUpdates) return null;
             State = UpdateState.Downloading;
             Error = null;
             var installer = await _feed.DownloadAsync(release, _downloadFolder, _signature, headers, operation.Token);
