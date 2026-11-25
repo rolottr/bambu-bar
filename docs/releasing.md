@@ -127,6 +127,10 @@ Before publication, build the tagged source on the GNOME, KDE and Omarchy hosts;
 
 | Version | Channel | Build | Commit | Date | Status |
 | --- | --- | --- | --- | --- | --- |
+| 3.1.0 | GitHub (Mac) | 202611251745 | `v3.1.0` | 2026-11-25 | Published, latest release; zip SHA-256 `1d346e609edab1082f6bfa7b9b99734b1760b4c04b04a8a846ed119fd415ce3d`; GitHub bridge `appcast.xml` attached (the last one: later versions are announced on bambubar.app only) |
+| 3.1.0 | GitHub (Windows) | Local build on the Windows VM | `v3.1.0` | 2026-11-25 | Published, unsigned; x64 SHA-256 `57fa14e5af919ee027c460d2598a88be483679bf58aaba7f62e6fc18a047f228`, ARM64 SHA-256 `e52f3e7380f3ff2a4db58cf5a6dfcd7db733749aa7ef3d24d8aee308577c9c47`; with `rainmeter-5.0.0.5293-source.zip` |
+| 3.1.0 | GitHub (Linux) | Local builds on the GNOME, KDE and Omarchy VMs | `linux-v3.1.0-1` | 2026-11-25 | Published, pre-release; GNOME .deb, Plasma .deb, Omarchy pacman package and AUR recipe; digests in its `SHA256SUMS` |
+| 3.1.0 | App Store | 20261125.1747 | `v3.1.0` | 2026-11-25 | Archived and exported locally; not uploaded |
 | 3.0.0 | GitHub (Mac) | 202611232356 | `v3.0.0` | 2026-11-24 | Published, latest release; includes the unreleased 2.4.0 (Appearance); zip SHA-256 `cd0fecbef09607f321b54ca7e818022dfa58fc89026abd04711cc6f9539496c4` |
 | 3.0.0 | GitHub (Windows) | Local build on the Windows VM | `v3.0.0` | 2026-11-24 | Published, unsigned; x64 SHA-256 `3de678ba591c8327fa66733e4123369007b86467021adbee77eda15894866ade`, ARM64 SHA-256 `3843ceb7ec0376471f8dab8d89f506907e9120d792a8a7b14dd25739789f81ee`; with `rainmeter-5.0.0.5293-source.zip` |
 | 3.0.0 | GitHub (Linux) | Local builds on the GNOME, KDE and Omarchy VMs | `linux-v3.0.0-1` | 2026-11-24 | Published, pre-release; GNOME .deb, Plasma .deb, Omarchy pacman package and AUR recipe; digests in its `SHA256SUMS` |

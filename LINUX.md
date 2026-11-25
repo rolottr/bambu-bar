@@ -4,12 +4,12 @@ Choose one download for your desktop. These packages include the app, its deskto
 
 | Desktop | Download | Install |
 | --- | --- | --- |
-| Ubuntu 26.04 with GNOME 50 | [Ubuntu GNOME .deb](https://github.com/rolottr/bambu-bar/releases/download/linux-v3.0.0-1/bambu-bar-gnome_3.0.0-1_amd64.deb) | Open the download with **App Center** and select **Install**. |
-| Kubuntu 26.04 or Ubuntu 26.04 with KDE Plasma 6.6 | [Ubuntu Plasma .deb](https://github.com/rolottr/bambu-bar/releases/download/linux-v3.0.0-1/bambu-bar-plasma_3.0.0-1_amd64.deb) | Open the download with **Discover** and select **Install**. |
-| Omarchy 4.5 with its Quickshell bar | [Omarchy package](https://github.com/rolottr/bambu-bar/releases/download/linux-v3.0.0-1/bambu-bar-bin-3.0.0-1-x86_64.pkg.tar.zst) | Open a terminal in the download folder and run the command below. |
+| Ubuntu 26.04 with GNOME 50 | [Ubuntu GNOME .deb](https://github.com/rolottr/bambu-bar/releases/download/linux-v3.1.0-1/bambu-bar-gnome_3.1.0-1_amd64.deb) | Open the download with **App Center** and select **Install**. |
+| Kubuntu 26.04 or Ubuntu 26.04 with KDE Plasma 6.6 | [Ubuntu Plasma .deb](https://github.com/rolottr/bambu-bar/releases/download/linux-v3.1.0-1/bambu-bar-plasma_3.1.0-1_amd64.deb) | Open the download with **Discover** and select **Install**. |
+| Omarchy 4.5 with its Quickshell bar | [Omarchy package](https://github.com/rolottr/bambu-bar/releases/download/linux-v3.1.0-1/bambu-bar-bin-3.1.0-1-x86_64.pkg.tar.zst) | Open a terminal in the download folder and run the command below. |
 
 ```sh
-sudo pacman -U ./bambu-bar-bin-3.0.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./bambu-bar-bin-3.1.0-1-x86_64.pkg.tar.zst
 ```
 
 Open **Bambu Bar** from the launcher. Add your printer on the same LAN and enter its access code when prompted.
@@ -24,9 +24,9 @@ Open **Bambu Bar** from the launcher. Add your printer on the same LAN and enter
 
 Install a newer download for the same desktop over the existing package. To uninstall, remove **bambu-bar-gnome**, **bambu-bar-plasma** or **bambu-bar-bin** with your package manager. On Omarchy, disable the widget before removing the package. You can then remove the user-local widget directory `~/.config/omarchy/plugins/dev.rolottr.BambuBar/`.
 
-If your Ubuntu file manager opens the package as an archive, open a terminal in the download folder and run `sudo apt install ./bambu-bar-gnome_3.0.0-1_amd64.deb` (use the Plasma filename on KDE).
+If your Ubuntu file manager opens the package as an archive, open a terminal in the download folder and run `sudo apt install ./bambu-bar-gnome_3.1.0-1_amd64.deb` (use the Plasma filename on KDE).
 
-The GitHub release includes the Arch binary and the checksum-pinned `PKGBUILD` for AUR maintainers. Until an AUR listing is available, use the GitHub download above. [Linux release and checksums](https://github.com/rolottr/bambu-bar/releases/tag/linux-v3.0.0-1)
+The GitHub release includes the Arch binary and the checksum-pinned `PKGBUILD` for AUR maintainers. Until an AUR listing is available, use the GitHub download above. [Linux release and checksums](https://github.com/rolottr/bambu-bar/releases/tag/linux-v3.1.0-1)
 
 For Fedora, openSUSE, Debian or another desktop, see the [Flatpak guide](docs/linux-flatpak.md). It includes the local build path when a release has no Flatpak asset. ARM64 remains unvalidated.
 
