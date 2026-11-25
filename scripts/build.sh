@@ -129,9 +129,11 @@ codesign --verify --strict --deep "$APP"
 
 if [[ "$CONFIG" == Release ]]; then
   echo "==> Release guards"
-  [[ -x "$ROOT/scripts/check-updater.sh" ]] && "$ROOT/scripts/check-updater.sh" "$APP"
-  [[ -x "$ROOT/scripts/check-direct-licensing.sh" ]] && "$ROOT/scripts/check-direct-licensing.sh" "$APP"
-  [[ -x "$ROOT/scripts/check-release-harness.sh" ]] && "$ROOT/scripts/check-release-harness.sh" "$APP"
+  for guard_script in check-updater.sh check-direct-licensing.sh check-release-harness.sh; do
+    guard_path="$ROOT/scripts/$guard_script"
+    [[ -x "$guard_path" ]] || { echo "Required release guard missing or not executable: $guard_path" >&2; exit 1; }
+    "$guard_path" "$APP"
+  done
 fi
 
 "$ROOT/scripts/unregister-build-apps.sh" "${build_apps[@]}"

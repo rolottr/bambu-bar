@@ -118,7 +118,7 @@ def matching_pids(app_paths) -> list[int]:
         if len(parts) != 2:
             continue
         pid_str, comm = parts
-        if any(comm.startswith(prefix) for prefix in prefixes) or comm.endswith('/BambuBarWidget'):
+        if any(comm.startswith(prefix) for prefix in prefixes):
             try:
                 pid = int(pid_str)
             except ValueError:
@@ -194,13 +194,14 @@ try:
                 read_info(backup)
                 unregister(backup)
                 shutil.rmtree(backup)
+            unregister(path)
             shutil.move(str(path), str(backup))
             unregister(backup)
             moved.append((path, backup))
 
         shutil.move(str(stage), str(destination))
         verify(destination)
-    except Exception:
+    except BaseException:
         if destination.exists() and not stage.exists():
             shutil.move(str(destination), str(stage))
         for path, backup in reversed(moved):
@@ -208,7 +209,24 @@ try:
                 shutil.move(str(backup), str(path))
         raise
 
+    # Prune old backups, keeping only the 3 most recent app bundles.
+    backups = sorted(
+        (p for p in backups_dir.glob('Bambu Bar-*.app') if p.is_dir()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for stale_backup in backups[3:]:
+        try:
+            read_info(stale_backup)
+            unregister(stale_backup)
+            shutil.rmtree(stale_backup)
+        except Exception:
+            pass
+
     subprocess.run([lsregister, '-f', str(destination)], check=True)
+    # Unregister backups again after registering /Applications so FSEvents/bookmark tracking
+    # from the atomic move never leaves the backup registered in Launch Services.
+    unregister(*(backup for _, backup in moved))
     # Stop any newly respawned old widget extension so widgets reload from the new bundle.
     for pid in matching_pids([destination]):
         # Only terminate widget processes; the app itself has not been opened yet.

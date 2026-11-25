@@ -68,6 +68,12 @@ struct RelaunchTicketStore: @unchecked Sendable {
         _ = defaults.synchronize()
     }
 
+    /// Returns the stored ticket if it belongs to `predecessor` and is still within its validity window.
+    func activeTicket(forPredecessor predecessor: Int32) -> RelaunchTicket? {
+        guard let ticket = stored(), ticket.predecessor == predecessor, isPending(ticket) else { return nil }
+        return ticket
+    }
+
     /// Queues URLs arriving during a restart so the replacement opens them; returns false if they couldn't be saved.
     func queue(_ urls: [URL], for ticket: RelaunchTicket) -> Bool {
         guard isPending(ticket), var stored = stored() else { return false }

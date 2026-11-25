@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Scan tracked and untracked non-ignored files for secrets, private paths, and Keychain API sprawl."""
+import base64
 import json
 import re
 import subprocess
@@ -33,6 +34,13 @@ PEM_PRIVATE_KEY_RE = re.compile(
     rb"-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE" + rb" KEY-----"
 )
 POLAR_TOKEN_RE = re.compile(rb"\bpolar_" + rb"(?:oat|at)_[A-Za-z0-9_-]{8,}\b")
+POLAR_LICENSE_KEY_RE = re.compile(
+    rb"\b(?:polar_" + rb"lk_[A-Za-z0-9_-]{8,}|BAMBUBAR-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\b"
+)
+SPARKLE_PRIVATE_SEED_ASSIGN_RE = re.compile(
+    rb"""(?i)\b(?:sparkle[_-]?(?:eddsa[_-]?)?private[_-]?(?:key|seed)|eddsa[_-]?private[_-]?(?:key|seed))\s*[:=]\s*["']?[A-Za-z0-9+/]{40,}={0,2}["']?"""
+)
+RAW_B64_SEED_RE = re.compile(rb"^[A-Za-z0-9+/]{42,88}={0,2}$")
 USER_HOME_PATH_RE = re.compile(rb"/" + rb"Users/[A-Za-z0-9._-]+/")
 SECITEM_CALL_RE = re.compile(rb"\bSecItem(?:Add|CopyMatching|Update|Delete)\s*\(")
 ACCESS_CODE_ASSIGN_RE = re.compile(
@@ -100,6 +108,25 @@ def main() -> int:
 
         if POLAR_TOKEN_RE.search(data):
             issues.append((relative, "Polar API token (polar_oat_/polar_at_)"))
+
+        if not relative.startswith("Tests/") and POLAR_LICENSE_KEY_RE.search(data):
+            issues.append((relative, "possible live Polar license key"))
+
+        if SPARKLE_PRIVATE_SEED_ASSIGN_RE.search(data):
+            issues.append((relative, "possible Sparkle EdDSA private key/seed"))
+
+        stripped = data.strip()
+        if (
+            not relative.startswith("Tests/")
+            and 42 <= len(stripped) <= 90
+            and RAW_B64_SEED_RE.match(stripped)
+        ):
+            try:
+                decoded = base64.b64decode(stripped, validate=True)
+                if len(decoded) in (32, 64):
+                    issues.append((relative, "standalone base64 32/64-byte key (possible exported Sparkle EdDSA private seed)"))
+            except Exception:
+                pass
 
         for match in ACCESS_CODE_ASSIGN_RE.finditer(data):
             code = match.group(1).decode("ascii", errors="ignore")

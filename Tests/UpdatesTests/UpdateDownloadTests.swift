@@ -39,6 +39,30 @@ struct UpdateDownloadTests {
         #expect(!UpdateDownload.accepts(URL(string: "http://user@localhost:3201/api/updates/download")!, feed: localFeed))
     }
 
+    @Test func releasePolicyRejectsRemoteFeedOverridesAndAllowsLoopback() {
+        #expect(UpdateDownload.validatedFeedOverride("https://evil.example/appcast.xml", allowAnyHost: false) == nil)
+        #expect(UpdateDownload.validatedFeedOverride("http://192.168.1.50:8080/appcast.xml", allowAnyHost: false) == nil)
+        #expect(UpdateDownload.validatedFeedOverride("http://user:pass@127.0.0.1:8080/appcast.xml", allowAnyHost: false) == nil)
+        #expect(UpdateDownload.validatedFeedOverride("http://127.0.0.1:8080/appcast.xml", allowAnyHost: false)?.absoluteString == "http://127.0.0.1:8080/appcast.xml")
+        #expect(UpdateDownload.validatedFeedOverride("http://localhost:8080/appcast.xml", allowAnyHost: false)?.absoluteString == "http://localhost:8080/appcast.xml")
+        #expect(UpdateDownload.validatedFeedOverride("http://[::1]:8080/appcast.xml", allowAnyHost: false)?.absoluteString == "http://[::1]:8080/appcast.xml")
+
+        // Remote override must NEVER cause accepts() to attach license headers in Release policy.
+        let evilFeed = URL(string: "https://evil.example/appcast.xml")!
+        #expect(!UpdateDownload.accepts(
+            URL(string: "https://evil.example/api/updates/download?version=3.1.0")!,
+            feed: evilFeed,
+            allowAnyFeedOverrideHost: false
+        ))
+        // Loopback override IS accepted in Release policy for local testing.
+        let loopbackFeed = URL(string: "http://127.0.0.1:8080/appcast.xml")!
+        #expect(UpdateDownload.accepts(
+            URL(string: "http://127.0.0.1:8080/api/updates/download?version=3.1.0")!,
+            feed: loopbackFeed,
+            allowAnyFeedOverrideHost: false
+        ))
+    }
+
     @Test func headersCarryExactBambuBarFieldsWhenRecordComplete() {
         let record = LicenseRecord(key: "BB-KEY-1234", activationID: "act-1", installationID: "inst-1")
         let headers = UpdateDownload.headers(for: record)

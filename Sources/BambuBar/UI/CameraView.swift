@@ -418,6 +418,7 @@ enum CameraWindow {
         window.contentAspectRatio = NSSize(width: ratio, height: 1)
         let width = content.frame.width
         window.setContentSize(NSSize(width: width, height: (width / ratio).rounded()))
+        WindowFrameClamp.clamp(window, minSize: minimumContentSize)
     }
 
 }

@@ -169,7 +169,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated {
-                LoginItem.shared.refresh()
                 PrinterStore.shared.appOpened()
             }
         }
@@ -195,6 +194,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        // If a language restart is in flight, hand incoming URLs to the replacement instance.
+        if SingleInstance.queueURLsIfRelaunching(urls, forPredecessor: ProcessInfo.processInfo.processIdentifier) {
+            return
+        }
         // bambubar://printer/<serial> from a widget, or bambubar://open/<section> to show a page.
         if let url = urls.first {
             if url.host == "printer", let serial = url.pathComponents.dropFirst().first {

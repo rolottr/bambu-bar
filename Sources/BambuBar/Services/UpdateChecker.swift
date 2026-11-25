@@ -11,11 +11,14 @@ import Observation
 /// In-app updates with Sparkle 2 on `https://bambubar.app/appcast.xml`.
 ///
 /// The daily scheduled check reads the anonymous public feed at `https://bambubar.app/appcast.xml`
-/// (`SUScheduledCheckInterval` = 86400). Only the update download request to
-/// `https://bambubar.app/api/updates/download` carries `X-BambuBar-*` supporter license headers,
-/// attached per-request in `updater(_:willDownloadUpdate:with:)` after verifying the URL with
-/// `UpdateDownload.accepts(_:feed:)`. Every update must carry the shared Clever Mechanisms EdDSA
-/// signature (`SUPublicEDKey`) and Developer ID signature.
+/// (`SUScheduledCheckInterval` = 86400) with zero `X-BambuBar-*` headers (`SPUUpdater.httpHeaders`
+/// stays unset), so both licensed and unlicensed direct copies learn when a new release ships.
+/// Automated Sparkle downloads remain strictly gated on an active supporter license:
+/// `updater(_:shouldProceedWithUpdate:updateCheck:)` blocks unlicensed downloads, and only verified
+/// download requests to `https://bambubar.app/api/updates/download` (or a validated loopback
+/// `UpdateFeedURL` override) receive `X-BambuBar-*` headers inside `updater(_:willDownloadUpdate:with:)`.
+/// Every update must carry the shared Clever Mechanisms EdDSA signature (`SUPublicEDKey`) and
+/// Developer ID signature.
 ///
 /// The Mac App Store edition compiles with zero Sparkle symbols; the App Store handles updates.
 @MainActor
@@ -53,8 +56,9 @@ final class UpdateChecker: NSObject {
         #endif
     }
 
+    /// Anonymous daily checks of `https://bambubar.app/appcast.xml` are available on all direct copies.
     var checksAutomatically: Bool {
-        get { supportsAutomaticUpdates && automaticChecksPreference }
+        get { Self.isAvailable && automaticChecksPreference }
         set {
             automaticChecksPreference = newValue
             UserDefaults.standard.set(newValue, forKey: "supporterAutomaticChecks")
@@ -62,8 +66,9 @@ final class UpdateChecker: NSObject {
         }
     }
 
+    /// Automatic background downloads and installs require an active supporter license.
     var downloadsAutomatically: Bool {
-        get { checksAutomatically && automaticDownloadsPreference }
+        get { supportsAutomaticUpdates && checksAutomatically && automaticDownloadsPreference }
         set {
             automaticDownloadsPreference = newValue
             UserDefaults.standard.set(newValue, forKey: "supporterAutomaticDownloads")
@@ -71,10 +76,9 @@ final class UpdateChecker: NSObject {
         }
     }
 
-    var canCheckForUpdates: Bool { isRunning && sparkleCanCheckForUpdates && supportsAutomaticUpdates }
+    var canCheckForUpdates: Bool { isRunning && sparkleCanCheckForUpdates }
 
     var available: Release? {
-        guard supportsAutomaticUpdates else { return nil }
         if case .available(let release) = state { return release }
         if let pendingVersion { return Release(version: pendingVersion) }
         return nil
@@ -103,11 +107,10 @@ final class UpdateChecker: NSObject {
         private static let log = Logger(subsystem: "dev.rolottr.BambuBar", category: "updates")
 
         /// `-UpdateFeedURL <url>` on the command line or `defaults write dev.rolottr.BambuBar UpdateFeedURL <url>`
-        /// points a signed build at a local test appcast. Updates must still carry a valid EdDSA signature.
+        /// points a signed build at a local loopback test appcast (Release builds ignore any non-loopback host).
+        /// Updates must still carry a valid EdDSA signature.
         nonisolated static var feedOverride: URL? {
-            guard let string = UserDefaults.standard.string(forKey: feedOverrideKey),
-                  !string.isEmpty else { return nil }
-            return URL(string: string)
+            UpdateDownload.validatedFeedOverride(UserDefaults.standard.string(forKey: feedOverrideKey))
         }
 
         /// True only when running inside an official `.app` signed by Clever Mechanisms' Team ID (`PCZ6F8Q9DZ`).
@@ -143,7 +146,6 @@ final class UpdateChecker: NSObject {
                   Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil else { return }
 
             migrateSettings()
-            // Sync Sparkle automation with current supporter status before starting its scheduler.
             applySettings()
 
             updater.publisher(for: \.canCheckForUpdates)
@@ -155,7 +157,7 @@ final class UpdateChecker: NSObject {
             updater.publisher(for: \.automaticallyChecksForUpdates)
                 .sink { [weak self] value in
                     MainActor.assumeIsolated {
-                        guard let self, self.supportsAutomaticUpdates, self.automaticChecksPreference != value else { return }
+                        guard let self, self.automaticChecksPreference != value else { return }
                         self.automaticChecksPreference = value
                         UserDefaults.standard.set(value, forKey: "supporterAutomaticChecks")
                     }
@@ -182,7 +184,7 @@ final class UpdateChecker: NSObject {
         func check() {
             guard canCheckForUpdates else { return }
             state = .checking
-            if updater.sessionInProgress {
+            if updater.sessionInProgress && supportsAutomaticUpdates {
                 NSApp.activate(ignoringOtherApps: true)
                 controller.checkForUpdates(nil)
             } else {
@@ -192,6 +194,15 @@ final class UpdateChecker: NSObject {
 
         func showUpdate() {
             guard canCheckForUpdates else { return }
+            if !supportsAutomaticUpdates {
+                if available != nil {
+                    NSWorkspace.shared.open(Website.download)
+                } else {
+                    check()
+                    MainWindow.show(.settings)
+                }
+                return
+            }
             NSApp.activate(ignoringOtherApps: true)
             if state != .checking && available == nil {
                 state = .checking
@@ -200,16 +211,11 @@ final class UpdateChecker: NSObject {
         }
 
         func supporterStatusChanged() {
-            if supportsAutomaticUpdates && !isRunning {
+            if !isRunning {
                 start()
             }
             if isRunning {
                 applySettings()
-            }
-            if !supportsAutomaticUpdates {
-                pendingVersion = nil
-                state = .idle
-                offerDismissed = true
             }
         }
 
@@ -253,7 +259,6 @@ final class UpdateChecker: NSObject {
         }
 
         private func found(_ item: SUAppcastItem) {
-            guard supportsAutomaticUpdates else { return }
             let release = Release(version: item.displayVersionString)
             if available != release { offerDismissed = false }
             pendingVersion = release.version
@@ -282,7 +287,7 @@ final class UpdateChecker: NSObject {
         }
 
         /// Attach `X-BambuBar-*` license headers ONLY on verified download requests to
-        /// `bambubar.app/api/updates/download` (or the local feed override origin). Never on feed checks.
+        /// `bambubar.app/api/updates/download` (or a validated loopback override). Never on feed checks.
         nonisolated func updater(_ updater: SPUUpdater, willDownloadUpdate item: SUAppcastItem,
                                  with request: NSMutableURLRequest) {
             MainActor.assumeIsolated {
@@ -335,10 +340,7 @@ final class UpdateChecker: NSObject {
             let message = error?.localizedDescription ?? String(localized: "Couldn’t check for updates. Check your connection and try again.")
             MainActor.assumeIsolated {
                 syncLastChecked()
-                if !supportsAutomaticUpdates {
-                    pendingVersion = nil
-                    state = .idle
-                } else if state == .checking {
+                if state == .checking {
                     state = failed ? .failed(message) : .upToDate
                 }
             }
@@ -350,7 +352,7 @@ final class UpdateChecker: NSObject {
 
         nonisolated func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem,
                                                                               andInImmediateFocus immediateFocus: Bool) -> Bool {
-            immediateFocus
+            immediateFocus && MainActor.assumeIsolated { supportsAutomaticUpdates }
         }
 
         nonisolated func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem,
@@ -364,13 +366,17 @@ final class UpdateChecker: NSObject {
 
         nonisolated func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
             MainActor.assumeIsolated {
-                pendingVersion = nil
+                if supportsAutomaticUpdates {
+                    pendingVersion = nil
+                }
             }
         }
 
         nonisolated func standardUserDriverWillFinishUpdateSession() {
             MainActor.assumeIsolated {
-                pendingVersion = nil
+                if supportsAutomaticUpdates {
+                    pendingVersion = nil
+                }
             }
         }
     }

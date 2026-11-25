@@ -6,13 +6,6 @@ import UniformTypeIdentifiers
 /// and sanitized JSON export (no access codes, full serials, or IP addresses).
 struct ActivityPage: View {
     @Environment(PrinterStore.self) private var store
-    @State private var filter: ActivityLog.Category?
-
-    private var filteredEntries: [ActivityLog.Entry] {
-        let entries = store.activity.visibleEntries.reversed()
-        guard let filter else { return Array(entries) }
-        return entries.filter { $0.category == filter }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -33,18 +26,38 @@ struct ActivityPage: View {
                 }
             }
 
-            capabilitiesCard
-            eventsCard
+            ActivityCapabilitiesCard()
+            ActivityEventsCard()
         }
         .onAppear { store.activity.startMonitoring() }
         .onDisappear { store.activity.stopMonitoring() }
     }
 
-    // MARK: - Capabilities
+    // MARK: - Export
 
-    private var capabilitiesCard: some View {
+    private func exportJSON() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        let date = Date().formatted(.iso8601.year().month().day())
+        panel.nameFieldStringValue = "Bambu Bar Activity \(date).json"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try store.exportActivityJSON()
+            try data.write(to: url, options: .atomic)
+            store.showToast(String(localized: "Activity exported"))
+        } catch {
+            store.showToast(error.localizedDescription, error: true)
+        }
+    }
+}
+
+/// Isolated child view so ~1 Hz printer status reports invalidate only this card, never the event list.
+private struct ActivityCapabilitiesCard: View {
+    @Environment(PrinterStore.self) private var store
+
+    var body: some View {
         let summaries = store.capabilitySummaries()
-        return SettingsGroup("Reported Capabilities", symbol: "list.bullet.rectangle") {
+        SettingsGroup("Reported Capabilities", symbol: "list.bullet.rectangle") {
             if summaries.isEmpty {
                 Label("No printer configured", systemImage: "printer")
                     .font(.system(size: 12))
@@ -133,10 +146,27 @@ struct ActivityPage: View {
         case (false, false): return ""
         }
     }
+}
 
-    // MARK: - Events
+/// Isolated event stream view: observes only `store.activity.visibleEntries` and `store.hasMultiplePrinters`,
+/// renders lazily with a bounded page size, and redacts IPs/hosts/serials in displayed rows.
+private struct ActivityEventsCard: View {
+    @Environment(PrinterStore.self) private var store
+    @State private var filter: ActivityLog.Category?
+    @State private var displayLimit = 200
 
-    private var eventsCard: some View {
+    private func filtered() -> [ActivityLog.Entry] {
+        let reversed = store.activity.visibleEntries.reversed()
+        guard let filter else { return Array(reversed) }
+        return reversed.filter { $0.category == filter }
+    }
+
+    var body: some View {
+        let entries = filtered()
+        let shown = Array(entries.prefix(displayLimit))
+        let hasMore = entries.count > shown.count
+        let showPrinterName = store.hasMultiplePrinters
+
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Label("Events", systemImage: "waveform.path.ecg")
@@ -146,7 +176,7 @@ struct ActivityPage: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                if filteredEntries.isEmpty {
+                if entries.isEmpty {
                     Text("No activity recorded yet.")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
@@ -154,11 +184,21 @@ struct ActivityPage: View {
                         .padding(16)
                 } else {
                     ScrollView {
-                        // Eager VStack keeps bounded log rows stable for VoiceOver / accessibility scrolling.
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(filteredEntries.enumerated()), id: \.element.id) { idx, entry in
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(shown.enumerated()), id: \.element.id) { idx, entry in
                                 if idx > 0 { Divider().padding(.leading, 34) }
-                                eventRow(entry)
+                                eventRow(entry, showPrinterName: showPrinterName)
+                            }
+                            if hasMore {
+                                Divider().padding(.leading, 34)
+                                HStack {
+                                    Spacer()
+                                    Button("Show more") { displayLimit += 200 }
+                                        .buttonStyle(.link)
+                                        .font(.system(size: 11.5, weight: .medium))
+                                    Spacer()
+                                }
+                                .padding(.vertical, 8)
                             }
                         }
                         .padding(.vertical, 6)
@@ -168,6 +208,7 @@ struct ActivityPage: View {
             }
             .panel(radius: 16, padding: 0)
         }
+        .onChange(of: filter) { _, _ in displayLimit = 200 }
     }
 
     private var filterBar: some View {
@@ -191,20 +232,22 @@ struct ActivityPage: View {
         .buttonStyle(.plain)
     }
 
-    private func eventRow(_ entry: ActivityLog.Entry) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+    private func eventRow(_ entry: ActivityLog.Entry, showPrinterName: Bool) -> some View {
+        let safePrinter = ActivityLog.redact(entry.printerName)
+        let safeSummary = ActivityLog.redact(entry.summary)
+        return HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: entry.category.symbol)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(categoryTint(entry.category))
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    if store.hasMultiplePrinters {
-                        Text(verbatim: entry.printerName)
+                    if showPrinterName {
+                        Text(verbatim: safePrinter)
                             .font(.system(size: 11.5, weight: .semibold))
                             .foregroundStyle(.secondary)
                     }
-                    Text(verbatim: entry.summary)
+                    Text(verbatim: safeSummary)
                         .font(.system(size: 12))
                         .lineLimit(2)
                 }
@@ -247,22 +290,5 @@ struct ActivityPage: View {
             .padding(.vertical, 2)
             .background(Capsule().fill(color.opacity(0.14)))
             .fixedSize()
-    }
-
-    // MARK: - Export
-
-    private func exportJSON() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        let date = Date().formatted(.iso8601.year().month().day())
-        panel.nameFieldStringValue = "Bambu Bar Activity \(date).json"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let data = try store.exportActivityJSON()
-            try data.write(to: url, options: .atomic)
-            store.showToast(String(localized: "Activity exported"))
-        } catch {
-            store.showToast(error.localizedDescription, error: true)
-        }
     }
 }

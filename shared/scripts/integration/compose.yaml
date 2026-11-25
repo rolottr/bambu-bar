@@ -13,7 +13,7 @@ services:
     init: true
     cpus: 0.5
     mem_limit: 256m
-    restart: unless-stopped
+    restart: "no"
     environment:
       PUBLISHED_HOST: 127.0.0.1
       SSDP_TARGET: host.docker.internal
@@ -31,7 +31,7 @@ services:
     init: true
     cpus: 0.5
     mem_limit: 256m
-    restart: unless-stopped
+    restart: "no"
     environment:
       ACCESS_CODE: "12345678"
       CAMERA_SERIAL: 01P00C000000001

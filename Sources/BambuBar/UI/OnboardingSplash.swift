@@ -17,6 +17,7 @@ struct OnboardingSplash: View {
     @State private var phase = 0
     @State private var demoTask: Task<Void, Never>?
     @State private var keyMonitor: Any?
+    @State private var sheetWindow: NSWindow?
 
     init(settings: OnboardingSettings, capabilities: OnboardingCapabilities?, firstRun: Bool, close: @escaping () -> Void) {
         self.firstRun = firstRun
@@ -58,6 +59,9 @@ struct OnboardingSplash: View {
             .padding(.vertical, 14)
         }
         .frame(width: 640, height: 470)
+        .background(SheetWindowObserver { window in
+            sheetWindow = window
+        })
         .onAppear {
             startDemoLoop()
             installKeyMonitor()
@@ -482,8 +486,17 @@ struct OnboardingSplash: View {
     private func installKeyMonitor() {
         removeKeyMonitor()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Scope strictly to this onboarding sheet window so alerts, the menu panel, and camera windows are never hijacked.
+            guard let targetWindow = sheetWindow,
+                  let eventWindow = event.window,
+                  eventWindow === targetWindow else { return event }
             // Ignore events with command/control/option modifiers so standard shortcuts pass through.
             guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return event }
+            let responder = eventWindow.firstResponder
+            let responderHandlesActivation = responder is NSButton
+                || responder is NSTextView
+                || responder is NSTextField
+                || responder is NSControl
             switch event.keyCode {
             case 123: // ←
                 move(-1)
@@ -492,9 +505,11 @@ struct OnboardingSplash: View {
                 move(1)
                 return nil
             case 49: // Space
+                guard !responderHandlesActivation else { return event }
                 draft.toggle(current)
                 return nil
             case 36, 76: // Return / Enter
+                guard !responderHandlesActivation else { return event }
                 if isLast { finish() } else { move(1) }
                 return nil
             case 53: // Esc
@@ -509,5 +524,36 @@ struct OnboardingSplash: View {
     private func removeKeyMonitor() {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         keyMonitor = nil
+    }
+}
+
+private struct SheetWindowObserver: NSViewRepresentable {
+    let onWindow: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> ObserverView {
+        let view = ObserverView()
+        view.onWindow = onWindow
+        return view
+    }
+
+    func updateNSView(_ view: ObserverView, context: Context) {
+        view.onWindow = onWindow
+        view.reportWindow()
+    }
+
+    final class ObserverView: NSView {
+        var onWindow: ((NSWindow?) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            reportWindow()
+        }
+
+        func reportWindow() {
+            let current = window
+            DispatchQueue.main.async { [weak self] in
+                self?.onWindow?(current)
+            }
+        }
     }
 }

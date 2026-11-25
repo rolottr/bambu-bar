@@ -62,11 +62,32 @@ enum SingleInstance {
             return (try? ticketStore.consume(ticket)) ?? []
         }
         guard let other = earlierInstance(bundleIdentifier: Bundle.main.bundleIdentifier ?? "") else { return [] }
-        if !background {
+        let forwardedURLs = arguments.dropFirst().compactMap { arg -> URL? in
+            guard let url = URL(string: arg), url.scheme == ticketStore.urlScheme || url.isFileURL else { return nil }
+            return url
+        }
+        let queuedForRelaunch = queueURLsIfRelaunching(
+            forwardedURLs,
+            forPredecessor: other.processIdentifier,
+            ticketStore: ticketStore
+        )
+        if !background && !queuedForRelaunch {
             DistributedNotificationCenter.default().postNotificationName(showWindow, object: nil, deliverImmediately: true)
             other.activate()
         }
         exit(0)
+    }
+
+    /// Queues URLs onto an active relaunch ticket when `predecessor` is mid-restart so the replacement
+    /// opens them after taking over.
+    @discardableResult
+    nonisolated static func queueURLsIfRelaunching(
+        _ urls: [URL],
+        forPredecessor predecessor: Int32,
+        ticketStore: RelaunchTicketStore = .shared
+    ) -> Bool {
+        guard !urls.isEmpty, let ticket = ticketStore.activeTicket(forPredecessor: predecessor) else { return false }
+        return ticketStore.queue(urls, for: ticket)
     }
 
     /// Shows the window when a later copy hands over.
@@ -89,31 +110,113 @@ enum SingleInstance {
 /// Clamps window frames to a visible screen area (excluding the menu bar and Dock) so windows never
 /// appear off-screen, behind the Dock, or larger than a smaller display.
 enum WindowFrameClamp {
-    nonisolated static func clamped(_ frame: NSRect, minSize: NSSize, visibleFrame: NSRect) -> NSRect {
+    nonisolated static func clamped(
+        _ frame: NSRect,
+        minSize: NSSize,
+        visibleFrame: NSRect,
+        aspectRatio: CGFloat? = nil,
+        contentChrome: NSSize = .zero
+    ) -> NSRect {
         guard visibleFrame.width > 0, visibleFrame.height > 0 else { return frame }
         var result = frame
-        result.size.width = min(max(result.width, minSize.width), visibleFrame.width)
-        result.size.height = min(max(result.height, minSize.height), visibleFrame.height)
+        if let ratio = aspectRatio, ratio > 0 {
+            let maxContentW = max(1, visibleFrame.width - contentChrome.width)
+            let maxContentH = max(1, visibleFrame.height - contentChrome.height)
+            let minContentW = max(1, minSize.width - contentChrome.width)
+            let currentContentW = max(1, result.width - contentChrome.width)
+            var contentW = min(max(currentContentW, minContentW), maxContentW)
+            var contentH = (contentW / ratio).rounded()
+            if contentH > maxContentH {
+                contentH = maxContentH
+                contentW = (contentH * ratio).rounded()
+            }
+            if contentW > maxContentW {
+                contentW = maxContentW
+                contentH = (contentW / ratio).rounded()
+            }
+            result.size.width = min(max(1, contentW) + contentChrome.width, visibleFrame.width)
+            result.size.height = min(max(1, contentH) + contentChrome.height, visibleFrame.height)
+        } else {
+            result.size.width = min(max(result.width, minSize.width), visibleFrame.width)
+            result.size.height = min(max(result.height, minSize.height), visibleFrame.height)
+        }
         result.origin.x = min(max(result.minX, visibleFrame.minX), visibleFrame.maxX - result.width)
         result.origin.y = min(max(result.minY, visibleFrame.minY), visibleFrame.maxY - result.height)
         return result
     }
 
+    /// Selects the screen whose visible frame has the largest non-zero intersection area with `frame`,
+    /// falling back to `preferred` or the first screen.
+    nonisolated static func bestVisibleFrame(for frame: NSRect, screens: [NSRect], preferred: NSRect? = nil) -> NSRect? {
+        guard !screens.isEmpty else { return nil }
+        var best: NSRect?
+        var bestArea: CGFloat = 0
+        for visible in screens {
+            let intersection = visible.intersection(frame)
+            guard !intersection.isNull, !intersection.isEmpty else { continue }
+            let area = intersection.width * intersection.height
+            if area > bestArea {
+                bestArea = area
+                best = visible
+            }
+        }
+        return best ?? preferred ?? screens.first
+    }
+
+    nonisolated static func clamped(
+        _ frame: NSRect,
+        minSize: NSSize,
+        screens: [NSRect],
+        preferred: NSRect? = nil,
+        aspectRatio: CGFloat? = nil,
+        contentChrome: NSSize = .zero
+    ) -> NSRect {
+        guard let target = bestVisibleFrame(for: frame, screens: screens, preferred: preferred) else { return frame }
+        return clamped(frame, minSize: minSize, visibleFrame: target, aspectRatio: aspectRatio, contentChrome: contentChrome)
+    }
+
     @MainActor
-    static func clampedToScreens(_ frame: NSRect, minSize: NSSize, preferredScreen: NSScreen? = nil) -> NSRect {
+    static func clampedToScreens(
+        _ frame: NSRect,
+        minSize: NSSize,
+        preferredScreen: NSScreen? = nil,
+        aspectRatio: CGFloat? = nil,
+        contentChrome: NSSize = .zero
+    ) -> NSRect {
         let screens = NSScreen.screens
         guard !screens.isEmpty else { return frame }
-        let screen = screens.first { $0.visibleFrame.intersects(frame) }
-            ?? preferredScreen
-            ?? NSScreen.main
-            ?? screens[0]
-        return clamped(frame, minSize: minSize, visibleFrame: screen.visibleFrame)
+        let preferred = preferredScreen?.visibleFrame ?? NSScreen.main?.visibleFrame
+        return clamped(
+            frame,
+            minSize: minSize,
+            screens: screens.map(\.visibleFrame),
+            preferred: preferred,
+            aspectRatio: aspectRatio,
+            contentChrome: contentChrome
+        )
     }
 
     @MainActor
     static func clamp(_ window: NSWindow, minSize: NSSize) {
+        guard !window.styleMask.contains(.fullScreen),
+              !window.isMiniaturized,
+              !window.inLiveResize else { return }
         let minFrameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: minSize)).size
-        let target = clampedToScreens(window.frame, minSize: minFrameSize, preferredScreen: window.screen)
+        let contentRect = window.contentRect(forFrameRect: window.frame)
+        let chrome = NSSize(
+            width: max(0, window.frame.width - contentRect.width),
+            height: max(0, window.frame.height - contentRect.height)
+        )
+        let ratio: CGFloat? = (window.contentAspectRatio.width > 0 && window.contentAspectRatio.height > 0)
+            ? window.contentAspectRatio.width / window.contentAspectRatio.height
+            : nil
+        let target = clampedToScreens(
+            window.frame,
+            minSize: minFrameSize,
+            preferredScreen: window.screen,
+            aspectRatio: ratio,
+            contentChrome: chrome
+        )
         if target != window.frame {
             window.setFrame(target, display: true)
         }
@@ -208,9 +311,16 @@ final class ActivityLog {
         let events: [Entry]
     }
 
+    enum ConnectionState: Equatable, Sendable {
+        case idle, connecting, online, offline, issue(String)
+    }
+
     let capacity: Int
     @ObservationIgnored private var buffer: [Entry] = []
     @ObservationIgnored private(set) var isMonitoring = false
+    /// Tracks the last logged connection state per printer so repeated offline ↔ connecting
+    /// reconnect retries do not flood the ring buffer.
+    @ObservationIgnored private var connectionStates: [String: ConnectionState] = [:]
 
     /// Observed by `ActivityPage` only while mounted. Empty whenever the page is hidden.
     private(set) var visibleEntries: [Entry] = []
@@ -224,6 +334,25 @@ final class ActivityLog {
 
     /// Snapshot of all buffered entries, newest last.
     var allEntries: [Entry] { buffer }
+
+    /// Records a printer connection-state transition while suppressing repeated `.offline ↔ .connecting`
+    /// reconnect cycles. Logs the initial offline transition and the eventual `.online` recovery.
+    func recordConnectionTransition(
+        printerID: String,
+        printerName: String,
+        state: ConnectionState,
+        summary: String,
+        timestamp: Date = Date()
+    ) {
+        let previous = connectionStates[printerID]
+        guard previous != state else { return }
+        if state == .connecting && previous == .offline {
+            // Suppress reconnect retry noise while a printer stays powered off / unreachable.
+            return
+        }
+        connectionStates[printerID] = state
+        record(category: .connection, printerName: printerName, summary: summary, timestamp: timestamp)
+    }
 
     func record(category: Category, printerName: String, summary: String, outcome: Outcome? = nil, timestamp: Date = Date()) {
         let entry = Entry(timestamp: timestamp, category: category, printerName: printerName, summary: summary, outcome: outcome)

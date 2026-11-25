@@ -10,6 +10,9 @@ public struct LicenseRecord: Codable, Equatable, Sendable, CustomStringConvertib
     public var expiresAt: Date?
 
     public static let offlineGrace: TimeInterval = 7 * 24 * 60 * 60
+    /// Tolerance for minor NTP backwards clock steps without revoking access.
+    /// Rolling the clock backwards never extends `accessDeadline` (which is anchored to `validatedAt`).
+    public static let clockSkewTolerance: TimeInterval = 60
 
     public init(key: String, activationID: String, installationID: String,
                 validatedAt: Date? = nil, expiresAt: Date? = nil) {
@@ -21,8 +24,10 @@ public struct LicenseRecord: Codable, Equatable, Sendable, CustomStringConvertib
     }
 
     public func permitsOfflineUse(at now: Date) -> Bool {
-        guard let validatedAt, now >= validatedAt,
-              now.timeIntervalSince(validatedAt) < Self.offlineGrace else { return false }
+        guard let validatedAt else { return false }
+        let elapsed = now.timeIntervalSince(validatedAt)
+        guard elapsed >= -Self.clockSkewTolerance,
+              elapsed < Self.offlineGrace else { return false }
         return expiresAt.map { $0 > now } ?? true
     }
 
@@ -89,7 +94,7 @@ final class MemoryLicensePersistence: LicensePersistence {
 
 @MainActor @Observable
 final class LicenseStore {
-    static let shared = LicenseStore(persistence: Keychain.isDeveloperRun ? MemoryLicensePersistence() : LicenseKeychain())
+    static let shared = LicenseStore(persistence: LaunchContext.isDeveloperRun ? MemoryLicensePersistence() : LicenseKeychain())
 
     static let revalidationInterval: TimeInterval = 15 * 60
     private static let didBecomeActiveNotification = Notification.Name("NSApplicationDidBecomeActiveNotification")
@@ -110,6 +115,7 @@ final class LicenseStore {
     @ObservationIgnored private var accessDeadlineTask: Task<Void, Never>?
     @ObservationIgnored private var activeObserver: NSObjectProtocol?
     @ObservationIgnored private var storageReady = false
+    @ObservationIgnored private(set) var lastRefreshAttempt: Date?
 
     init(api: any LicenseAPI = PolarClient(),
          persistence: any LicensePersistence = LicenseKeychain(),
@@ -127,7 +133,7 @@ final class LicenseStore {
 
     func start() {
         // Developer runs never touch the real Keychain or Polar.
-        if Keychain.isDeveloperRun {
+        if LaunchContext.isDeveloperRun {
             isInitializing = false
             return
         }
@@ -138,9 +144,7 @@ final class LicenseStore {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self else { return }
-                self.enforceAccessDeadline()
-                Task { await self.refresh() }
+                self?.handleDidBecomeActive()
             }
         }
         schedule = Task { [weak self] in
@@ -150,6 +154,20 @@ final class LicenseStore {
                 await self?.refresh()
             }
         }
+    }
+
+    /// Runs synchronous deadline enforcement on every activation, and only triggers a network
+    /// revalidation when no refresh has been attempted within `revalidationInterval`.
+    func handleDidBecomeActive() {
+        enforceAccessDeadline()
+        guard shouldRefreshOnActivation() else { return }
+        Task { await self.refresh() }
+    }
+
+    private func shouldRefreshOnActivation() -> Bool {
+        guard let lastRefreshAttempt else { return true }
+        let elapsed = now().timeIntervalSince(lastRefreshAttempt)
+        return elapsed >= Self.revalidationInterval || elapsed < -LicenseRecord.clockSkewTolerance
     }
 
     func stop() {
@@ -196,6 +214,7 @@ final class LicenseStore {
             return
         }
         isBusy = true
+        lastRefreshAttempt = now()
         defer {
             isBusy = false
             isInitializing = false
@@ -241,6 +260,7 @@ final class LicenseStore {
                 return
             }
             record = saved
+            lastRefreshAttempt = now()
             message = nil
             setAccess(true)
         } catch {
@@ -290,6 +310,7 @@ final class LicenseStore {
                 throw error
             }
             record = saved
+            lastRefreshAttempt = now()
             message = nil
             setAccess(true)
         } catch LicenseError.invalidKey {

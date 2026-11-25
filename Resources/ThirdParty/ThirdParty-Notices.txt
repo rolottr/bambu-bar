@@ -6,11 +6,11 @@ Bambu Bar — Third-Party Open-Source Notices
    License: MIT License (full text in Sparkle-LICENSE.txt)
    Used for signed, EdDSA-verified in-app updates in the direct Developer ID edition.
 
-2. ha-bambulab (Protocol & HMS catalog reference)
+2. ha-bambulab (Protocol, HMS catalog & Bambu Lab CA certificates)
    URL: https://github.com/greghesp/ha-bambulab
-   License: MIT License
-   Protocol documentation and HMS error message references informed Bambu Bar's
-   local-network printer report parsing and HMS error catalog.
+   License: MIT License (full text in ha-bambulab-LICENSE.txt)
+   Protocol details, HMS error texts, and Bambu Lab certificate authorities
+   shipped with Bambu Bar are derived from ha-bambulab.
 
 3. Community Protocol Documentation
    - Bambuddy: community documentation of newer printer telemetry fields.

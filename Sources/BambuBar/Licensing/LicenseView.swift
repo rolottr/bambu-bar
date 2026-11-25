@@ -107,8 +107,12 @@ private struct SavedLicenseKeyView: View {
                     isRevealed.toggle()
                 }
                 Button(copied ? "Copied" : "Copy") {
-                    NSPasteboard.general.clearContents()
-                    copied = NSPasteboard.general.setString(key, forType: .string)
+                    let pasteboard = NSPasteboard.general
+                    let concealed = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
+                    pasteboard.clearContents()
+                    pasteboard.declareTypes([.string, concealed], owner: nil)
+                    copied = pasteboard.setString(key, forType: .string)
+                    pasteboard.setData(Data(), forType: concealed)
                 }
             }
             Text(verbatim: isRevealed ? key : "••••-••••-••••-\(key.suffix(4))")

@@ -187,12 +187,27 @@ struct PolarClient: LicenseAPI {
         case 200..<300: return body
         case 400..<500 where status != 429 && !isJSONObject(body): throw LicenseError.unavailable
         case 404 where operation == "deactivate": return Data() // Already removed in Polar.
-        case 403 where operation == "activate": throw LicenseError.activationLimit
+        case 403 where operation == "activate":
+            throw Self.isActivationLimitError(body) ? LicenseError.activationLimit : LicenseError.rejected
         case 404 where operation == "activate": throw LicenseError.invalidKey
         case 422 where operation == "activate": throw LicenseError.invalidKey
         case 400, 401, 403, 404, 422: throw LicenseError.rejected
         default: throw LicenseError.unavailable // 3xx redirects, 429, 5xx, proxy statuses…
         }
+    }
+
+    /// Distinguishes an activation-limit 403 from a revoked/disabled/other 403 on `/activate`.
+    static func isActivationLimitError(_ body: Data) -> Bool {
+        guard let object = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { return false }
+        let fields = ["detail", "error", "message", "type"]
+            .compactMap { object[$0] as? String }
+            .joined(separator: " ")
+            .lowercased()
+        guard !fields.isEmpty else { return false }
+        if fields.contains("revoked") || fields.contains("disabled") || fields.contains("expired") {
+            return false
+        }
+        return fields.contains("limit") || fields.contains("maximum")
     }
 
     /// Decodes a 2xx body. Non-JSON 200 (e.g. captive-portal HTML) is `.unavailable`;

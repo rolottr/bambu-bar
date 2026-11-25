@@ -14,6 +14,7 @@ let package = Package(
                 "Licensing/LicenseStore.swift",
                 "Licensing/PolarClient.swift",
                 "Services/Keychain.swift",
+                "Services/LaunchContext.swift",
                 "Services/Website.swift",
             ]
         ),

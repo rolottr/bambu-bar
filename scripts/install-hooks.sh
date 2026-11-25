@@ -1,14 +1,26 @@
 #!/bin/zsh
 # Installs the pre-push git hook that blocks pushing main-appstore (by ref name or any commit
 # reachable only from main-appstore), and sets branch.main-appstore.pushRemote=no_push when
-# main-appstore exists locally. Works in both regular clones and git worktrees.
+# main-appstore exists locally. Works in regular clones, git worktrees, and custom core.hooksPath.
 set -euo pipefail
 
 ROOT=${0:A:h:h}
 cd "$ROOT"
 
-HOOK=$(git rev-parse --git-path hooks/pre-push)
+HOOKS_DIR=$(git config --get core.hooksPath || true)
+if [[ -n "$HOOKS_DIR" ]]; then
+  [[ "$HOOKS_DIR" = /* ]] || HOOKS_DIR="$ROOT/$HOOKS_DIR"
+  HOOK="$HOOKS_DIR/pre-push"
+else
+  HOOK=$(git rev-parse --git-path hooks/pre-push)
+fi
 mkdir -p "${HOOK:h}"
+
+if [[ -f "$HOOK" ]] && ! grep -qF "Refuse to push main-appstore" "$HOOK"; then
+  BACKUP="${HOOK}.backup-$(date +%Y%m%d-%H%M%S)"
+  cp -p "$HOOK" "$BACKUP"
+  echo "==> Backed up existing pre-push hook to $BACKUP"
+fi
 
 cat > "$HOOK" <<'EOF'
 #!/bin/sh

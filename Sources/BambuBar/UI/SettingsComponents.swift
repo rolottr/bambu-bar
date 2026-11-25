@@ -75,20 +75,28 @@ struct SettingsRow<Content: View>: View {
 struct SettingsToggle: View {
     let title: LocalizedStringKey
     let help: LocalizedStringKey?
+    let disabled: Bool
     @Binding var isOn: Bool
 
-    init(_ title: LocalizedStringKey, help: LocalizedStringKey? = nil, isOn: Binding<Bool>) {
+    init(_ title: LocalizedStringKey, help: LocalizedStringKey? = nil, disabled: Bool = false, isOn: Binding<Bool>) {
         self.title = title
         self.help = help
+        self.disabled = disabled
         self._isOn = isOn
     }
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(title).font(.system(size: 12.5))
+            Text(title)
+                .font(.system(size: 12.5))
+                .foregroundStyle(disabled ? .secondary : .primary)
             if let help { SettingsHelpButton(help) }
             Spacer()
-            Toggle(title, isOn: $isOn).toggleStyle(.switch).labelsHidden().tint(Palette.tintDeep)
+            Toggle(title, isOn: $isOn)
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .tint(Palette.tintDeep)
+                .disabled(disabled)
         }
     }
 }

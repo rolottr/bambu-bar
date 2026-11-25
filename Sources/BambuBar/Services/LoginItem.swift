@@ -72,28 +72,6 @@ final class LoginItem {
     }
 }
 
-/// How this process was started.
-@MainActor
-enum LaunchContext {
-    /// True when macOS opened the app from the Open at Login list. Only meaningful during
-    /// `applicationDidFinishLaunching`, while the open-application event is current.
-    static func wasLaunchedAtLogin() -> Bool {
-        guard let event = NSAppleEventManager.shared().currentAppleEvent else { return false }
-        return event.eventID == kAEOpenApplication
-            && event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
-    }
-
-    /// `--background` starts the app the way a login launch does: menu bar only, no window, no Dock icon.
-    static var requestsBackground: Bool { CommandLine.arguments.contains("--background") }
-
-    /// Demo, showcase, README-frame and probe runs: no update checks, license network calls, or first-run prompts.
-    static var isDeveloperRun: Bool {
-        let arguments = CommandLine.arguments
-        return ["--demo", "--showcase", "--readme-frames", "--store-media", "--probe", "--connect", "--emulator", "--dump-status"]
-            .contains { arguments.contains($0) }
-    }
-}
-
 // MARK: - Onboarding Model
 
 /// Capabilities used to decide which Setup Guide cards apply to the connected setup.
@@ -182,6 +160,7 @@ struct OnboardingSettings: Equatable, Sendable {
 struct OnboardingDraft: Equatable, Sendable {
     var showProgressInMenuBar: Bool
     var notificationsEnabled: Bool
+    var notificationsTouched: Bool = false
     var cameraEnabled: Bool
     var showPrinterActions: Bool
     var panelShowsAllPrinters: Bool
@@ -189,6 +168,7 @@ struct OnboardingDraft: Equatable, Sendable {
     init(from settings: OnboardingSettings) {
         showProgressInMenuBar = settings.showProgressInMenuBar
         notificationsEnabled = settings.notifyFinished || settings.notifyFailed || settings.notifyPaused
+        notificationsTouched = false
         cameraEnabled = settings.cameraEnabled
         showPrinterActions = settings.showPrinterActions
         panelShowsAllPrinters = settings.panelShowsAllPrinters
@@ -208,7 +188,9 @@ struct OnboardingDraft: Equatable, Sendable {
     mutating func set(_ on: Bool, for feature: OnboardingFeature) {
         switch feature {
         case .menuBar: showProgressInMenuBar = on
-        case .notifications: notificationsEnabled = on
+        case .notifications:
+            notificationsEnabled = on
+            notificationsTouched = true
         case .camera: cameraEnabled = on
         case .controls: showPrinterActions = on
         case .fleet: panelShowsAllPrinters = on
@@ -221,13 +203,15 @@ struct OnboardingDraft: Equatable, Sendable {
         set(!current, for: feature)
     }
 
-    /// Produces the updated settings when Finish is chosen.
+    /// Produces the updated settings when Finish is chosen. Untouched notification flags are preserved.
     func applied(to current: OnboardingSettings) -> OnboardingSettings {
         var next = current
         next.showProgressInMenuBar = showProgressInMenuBar
-        next.notifyFinished = notificationsEnabled
-        next.notifyFailed = notificationsEnabled
-        next.notifyPaused = notificationsEnabled
+        if notificationsTouched {
+            next.notifyFinished = notificationsEnabled
+            next.notifyFailed = notificationsEnabled
+            next.notifyPaused = notificationsEnabled
+        }
         next.cameraEnabled = cameraEnabled
         next.showPrinterActions = showPrinterActions
         next.panelShowsAllPrinters = panelShowsAllPrinters

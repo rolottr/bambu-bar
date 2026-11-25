@@ -27,7 +27,9 @@ struct AboutPage: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Palette.tintDeep)
-                        .help("Shows what’s new in \(release.version) and installs it")
+                        .help(updates.supportsAutomaticUpdates
+                              ? Text("Shows what’s new in \(release.version) and installs it")
+                              : Text("Download \(release.version) from bambubar.app"))
                         .padding(.top, 6)
                     }
                 }
@@ -57,6 +59,9 @@ struct AboutPage: View {
                     link("Manage Purchase", symbol: "person.crop.circle", PolarConfiguration.portalURL)
                     #endif
                     link("Support", symbol: "questionmark.bubble", Website.support)
+                    if let noticesURL = Self.thirdPartyNoticesURL {
+                        link("Acknowledgements", symbol: "doc.plaintext", noticesURL)
+                    }
                 }
             }
 
@@ -85,6 +90,11 @@ struct AboutPage: View {
         .buttonStyle(.borderless)
         .foregroundStyle(Palette.tint)
         .help(url.absoluteString)
+    }
+
+    private static var thirdPartyNoticesURL: URL? {
+        Bundle.main.url(forResource: "ThirdParty-Notices", withExtension: "txt", subdirectory: "ThirdParty")
+            ?? Bundle.main.resourceURL?.appendingPathComponent("ThirdParty", isDirectory: true)
     }
 
     private func copy() {

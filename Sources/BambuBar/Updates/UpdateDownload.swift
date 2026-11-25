@@ -4,14 +4,45 @@ import Foundation
 import BambuBarLicensing
 #endif
 
-/// The license headers sent ONLY to `bambubar.app/api/updates/download` (or the same path on a local
-/// `-UpdateFeedURL` test host) so the website can verify the supporter license with Polar before
-/// redirecting to the signed archive. Never attached to feed checks (`SPUUpdater.httpHeaders` stays unused).
+/// The license headers sent ONLY to `bambubar.app/api/updates/download` (or the same path on a
+/// validated local `UpdateFeedURL` loopback test host) so the website can verify the supporter
+/// license with Polar before redirecting to the signed archive. Never attached to feed checks
+/// (`SPUUpdater.httpHeaders` stays unused).
 public enum UpdateDownload {
     public static let licenseKeyHeader = "X-BambuBar-License-Key"
     public static let activationHeader = "X-BambuBar-Activation-Id"
     public static let installationHeader = "X-BambuBar-Installation-Id"
     public static let endpoint = URL(string: "https://bambubar.app/api/updates/download")!
+
+    #if DEBUG
+    public static let defaultAllowsAnyFeedOverrideHost = true
+    #else
+    public static let defaultAllowsAnyFeedOverrideHost = false
+    #endif
+
+    /// True only for strict loopback hosts (`127.0.0.1`, `::1`, or `localhost`).
+    public static func isLoopbackHost(_ host: String) -> Bool {
+        let lowered = host.lowercased()
+        return lowered == "localhost" || lowered == "127.0.0.1" || lowered == "::1" || lowered == "[::1]"
+    }
+
+    /// Validates an `UpdateFeedURL` UserDefaults override.
+    /// In Release policy (`allowAnyHost == false`), only strict loopback hosts are permitted so a
+    /// same-user process cannot redirect `X-BambuBar-*` license headers to an untrusted remote origin.
+    public static func validatedFeedOverride(_ raw: String?, allowAnyHost: Bool = defaultAllowsAnyFeedOverrideHost) -> URL? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              let url = URL(string: raw),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || scheme == "http",
+              url.user == nil,
+              url.password == nil,
+              let host = url.host?.lowercased(), !host.isEmpty else { return nil }
+        if !allowAnyHost {
+            guard isLoopbackHost(host) else { return nil }
+        }
+        return url
+    }
 
     /// Returns nil when no complete activation record exists.
     public static func headers(for record: LicenseRecord?) -> [String: String]? {
@@ -27,9 +58,13 @@ public enum UpdateDownload {
     }
 
     /// True only for `https://bambubar.app/api/updates/download` (or `/api/updates/download` on the
-    /// exact scheme/host/port of a local test `UpdateFeedURL` override), with no URL userinfo and no
+    /// exact scheme/host/port of a validated `UpdateFeedURL` override), with no URL userinfo and no
     /// trailing slash or alternate path encoding.
-    public static func accepts(_ url: URL, feed override: URL? = nil) -> Bool {
+    public static func accepts(
+        _ url: URL,
+        feed override: URL? = nil,
+        allowAnyFeedOverrideHost: Bool = defaultAllowsAnyFeedOverrideHost
+    ) -> Bool {
         // `path(percentEncoded: true)` preserves trailing slashes (`URL.path` drops them), so
         // `…/api/updates/download/` is rejected.
         guard url.path(percentEncoded: true) == endpoint.path(percentEncoded: true),
@@ -45,7 +80,11 @@ public enum UpdateDownload {
         }
 
         guard let target = origin(url) else { return false }
-        return target == origin(endpoint) || override.flatMap(origin) == target
+        if target == origin(endpoint) { return true }
+        guard let validOverride = validatedFeedOverride(override?.absoluteString, allowAnyHost: allowAnyFeedOverrideHost) else {
+            return false
+        }
+        return origin(validOverride) == target
     }
 }
 #endif

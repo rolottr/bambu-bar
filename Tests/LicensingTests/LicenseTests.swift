@@ -31,6 +31,7 @@ private final class FakePolar: LicenseAPI, @unchecked Sendable {
     var activation: Result<PolarActivation, Error> = .success(.init(id: activationID, licenseKey: granted(activation: nil)))
     var deactivationError: Error?
     var activations = 0
+    var validations = 0
     var deactivations = 0
     var validatedRecord: LicenseRecord?
     var suspendValidation = false
@@ -43,6 +44,7 @@ private final class FakePolar: LicenseAPI, @unchecked Sendable {
     }
 
     func validate(_ record: LicenseRecord) async throws -> PolarLicense {
+        validations += 1
         validatedRecord = record
         if suspendValidation {
             return try await withCheckedThrowingContinuation {
@@ -120,6 +122,9 @@ private final class FakeKeychainBackend: Keychain.Backend, @unchecked Sendable {
     var readCalls = 0
     var writeCalls = 0
     var deleteCalls = 0
+    var legacyReadCalls = 0
+    var legacyWriteCalls = 0
+    var legacyDeleteCalls = 0
 
     private func id(_ service: String, _ account: String) -> String { "\(service)::\(account)" }
 
@@ -131,6 +136,7 @@ private final class FakeKeychainBackend: Keychain.Backend, @unchecked Sendable {
             guard let data = dpItems[id(service, account)] else { return (errSecItemNotFound, nil) }
             return (errSecSuccess, data)
         } else {
+            legacyReadCalls += 1
             guard let data = legacyItems[id(service, account)] else { return (errSecItemNotFound, nil) }
             return (errSecSuccess, data)
         }
@@ -144,6 +150,7 @@ private final class FakeKeychainBackend: Keychain.Backend, @unchecked Sendable {
             dpItems[id(service, account)] = data
             return errSecSuccess
         } else {
+            legacyWriteCalls += 1
             legacyItems[id(service, account)] = data
             return errSecSuccess
         }
@@ -156,6 +163,7 @@ private final class FakeKeychainBackend: Keychain.Backend, @unchecked Sendable {
             guard dpEntitled else { return errSecMissingEntitlement }
             return dpItems.removeValue(forKey: id(service, account)) != nil ? errSecSuccess : errSecItemNotFound
         } else {
+            legacyDeleteCalls += 1
             return legacyItems.removeValue(forKey: id(service, account)) != nil ? errSecSuccess : errSecItemNotFound
         }
     }
@@ -303,23 +311,54 @@ struct LicenseTests {
         await store.refresh()
         #expect(store.hasAccess)
 
+        // Small NTP step back (<= 60 s) does not revoke access.
+        clock = fixedNow.addingTimeInterval(-30)
+        store.enforceAccessDeadline()
+        #expect(store.hasAccess)
+
         // Advance past 7-day offline grace without any network refresh.
         clock = fixedNow.addingTimeInterval(LicenseRecord.offlineGrace + 1)
         store.enforceAccessDeadline()
         #expect(!store.hasAccess)
 
-        // Re-grant and test clock rollback before validatedAt.
+        // Re-grant and test significant clock rollback (> 60 s before validatedAt).
         clock = fixedNow
         await store.refresh()
         #expect(store.hasAccess)
-        clock = fixedNow.addingTimeInterval(-10)
+        clock = fixedNow.addingTimeInterval(-120)
         store.enforceAccessDeadline()
         #expect(!store.hasAccess)
         store.stop()
     }
 
+    @Test func repeatedActivationsWithinRevalidationIntervalSendZeroExtraValidations() async {
+        let api = FakePolar(), storage = MemoryLicense(saved(at: fixedNow))
+        var clock = fixedNow
+        let center = NotificationCenter()
+        let store = LicenseStore(api: api, persistence: storage, now: { clock }, notificationCenter: center)
+        await store.refresh()
+        #expect(api.validations == 1)
+
+        // Simulate 10 menu bar activations over the next 14 minutes -> 0 additional /validate POSTs.
+        for minute in 1...10 {
+            clock = fixedNow.addingTimeInterval(TimeInterval(minute * 60))
+            store.handleDidBecomeActive()
+        }
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(api.validations == 1)
+
+        // Once revalidationInterval (15 min) has elapsed, activation triggers one refresh.
+        clock = fixedNow.addingTimeInterval(LicenseStore.revalidationInterval + 1)
+        store.handleDidBecomeActive()
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(api.validations == 2)
+        store.stop()
+    }
+
     @Test func expiryAndClockRollbackCannotExtendOfflineUse() {
-        #expect(!saved().permitsOfflineUse(at: fixedNow.addingTimeInterval(-1)))
+        #expect(saved().permitsOfflineUse(at: fixedNow.addingTimeInterval(-60)))
+        #expect(!saved().permitsOfflineUse(at: fixedNow.addingTimeInterval(-61)))
         var record = saved()
         record.expiresAt = fixedNow.addingTimeInterval(30)
         #expect(!record.permitsOfflineUse(at: fixedNow.addingTimeInterval(31)))
@@ -434,8 +473,19 @@ struct LicenseTests {
         PolarHTTPFixture.response = Data(#"{"detail":"limit reached"}"#.utf8)
         do { try await api.deactivate(saved()); Issue.record("403 JSON must not clear a local activation") }
         catch LicenseError.rejected {} catch { Issue.record("Unexpected error: \(error)") }
-        do { _ = try await api.activate(key: "test-key", installationID: "installation"); Issue.record("403 JSON on activate must be activationLimit") }
+        do { _ = try await api.activate(key: "test-key", installationID: "installation"); Issue.record("403 limit JSON on activate must be activationLimit") }
         catch LicenseError.activationLimit {} catch { Issue.record("Unexpected error: \(error)") }
+
+        // Non-limit 403 on /activate (disabled or revoked key) must map to .rejected, not .activationLimit.
+        PolarHTTPFixture.status = 403
+        PolarHTTPFixture.response = Data(#"{"detail":"License key is disabled"}"#.utf8)
+        do { _ = try await api.activate(key: "test-key", installationID: "installation"); Issue.record("403 disabled key on activate must be rejected") }
+        catch LicenseError.rejected {} catch { Issue.record("Unexpected error: \(error)") }
+
+        PolarHTTPFixture.status = 403
+        PolarHTTPFixture.response = Data(#"{"detail":"License key is revoked"}"#.utf8)
+        do { _ = try await api.activate(key: "test-key", installationID: "installation"); Issue.record("403 revoked key on activate must be rejected") }
+        catch LicenseError.rejected {} catch { Issue.record("Unexpected error: \(error)") }
 
         PolarHTTPFixture.status = 503
         PolarHTTPFixture.response = Data()
@@ -505,10 +555,10 @@ struct LicenseTests {
         #expect(throws: (any Error).self) { try license.verify(activationID: "wrong", now: fixedNow) }
     }
 
-    @Test func keychainMigratesLegacyCachesReadsAndSkipsNoopWrites() throws {
+    @Test func keychainMigratesLegacyCachesReadsAndRewritesAfterExternalDelete() throws {
         let backend = FakeKeychainBackend()
         backend.legacyItems["\(Keychain.accessCodeService)::SN123"] = Data("12345678".utf8)
-        Keychain.resetForTesting(backend: backend, memoryOnly: false)
+        Keychain.resetForTesting(backend: backend, memoryOnly: false, allowsLegacyLoginFallback: true)
         defer { Keychain.resetForTesting() }
 
         // First read migrates legacy item to data-protection keychain and removes legacy copy.
@@ -521,28 +571,69 @@ struct LicenseTests {
         #expect(Keychain.accessCode(for: "SN123") == "12345678")
         #expect(backend.readCalls == readsAfterFirst)
 
-        // Writing the identical code performs zero backend writes.
+        // Simulate external deletion in Keychain Access: an explicit write still restores the item (P3-15).
+        backend.dpItems.removeValue(forKey: "\(Keychain.accessCodeService)::SN123")
         let writesBefore = backend.writeCalls
         Keychain.setAccessCode("12345678", for: "SN123")
-        #expect(backend.writeCalls == writesBefore)
-
-        // Writing a new code updates data-protection keychain.
-        Keychain.setAccessCode("87654321", for: "SN123")
         #expect(backend.writeCalls == writesBefore + 1)
+        #expect(backend.dpItems["\(Keychain.accessCodeService)::SN123"] == Data("12345678".utf8))
+
+        // Writing a new code updates data-protection keychain and removes any stale legacy item.
+        backend.legacyItems["\(Keychain.accessCodeService)::SN123"] = Data("old-code".utf8)
+        Keychain.setAccessCode("87654321", for: "SN123")
         #expect(backend.dpItems["\(Keychain.accessCodeService)::SN123"] == Data("87654321".utf8))
+        #expect(backend.legacyItems["\(Keychain.accessCodeService)::SN123"] == nil)
+    }
+
+    @Test func appStoreKeychainConfigurationNeverTouchesLegacyLoginKeychain() throws {
+        let backend = FakeKeychainBackend()
+        // Pre-populate a direct-build login-keychain item that App Store must NEVER read or delete.
+        backend.legacyItems["\(Keychain.accessCodeService)::SN999"] = Data("direct99".utf8)
+        Keychain.resetForTesting(backend: backend, memoryOnly: false, allowsLegacyLoginFallback: false)
+        defer { Keychain.resetForTesting() }
+
+        // Read when DP returns errSecItemNotFound -> returns nil without touching login keychain.
+        #expect(Keychain.accessCode(for: "SN999") == nil)
+        #expect(backend.legacyReadCalls == 0)
+        #expect(backend.legacyItems["\(Keychain.accessCodeService)::SN999"] == Data("direct99".utf8))
+
+        // Write -> writes only to DP and never deletes the direct build's login-keychain item.
+        Keychain.setAccessCode("store111", for: "SN999")
+        #expect(backend.dpItems["\(Keychain.accessCodeService)::SN999"] == Data("store111".utf8))
+        #expect(backend.legacyWriteCalls == 0)
+        #expect(backend.legacyDeleteCalls == 0)
+        #expect(backend.legacyItems["\(Keychain.accessCodeService)::SN999"] == Data("direct99".utf8))
+
+        // Delete -> deletes only DP and leaves the direct build's login-keychain item intact.
+        Keychain.removeAccessCode(for: "SN999")
+        #expect(backend.dpItems["\(Keychain.accessCodeService)::SN999"] == nil)
+        #expect(backend.legacyDeleteCalls == 0)
+        #expect(backend.legacyItems["\(Keychain.accessCodeService)::SN999"] == Data("direct99".utf8))
+    }
+
+    @Test func launchContextUnifiesDeveloperRunFlags() {
+        for flag in ["--demo", "--emulator", "--showcase", "--snapshot", "--readme-frames", "--store-media", "--probe", "--probe-camera", "--connect", "--dump-status"] {
+            #expect(LaunchContext.isDeveloperRun(arguments: ["BambuBar", flag]))
+        }
+        #expect(!LaunchContext.isDeveloperRun(arguments: ["BambuBar"]))
+        #expect(LaunchContext.usesMemoryKeychain(arguments: ["BambuBar", "--demo"]))
+        #expect(LaunchContext.usesMemoryKeychain(arguments: ["BambuBar", "--showcase", "/tmp/out"]))
+        #expect(!LaunchContext.usesMemoryKeychain(arguments: ["BambuBar", "--probe", "192.168.1.50", "SN123", "keychain"]))
+        #expect(LaunchContext.usesMemoryKeychain(arguments: ["BambuBar", "--probe", "192.168.1.50", "SN123", "12345678"]))
     }
 
     @Test func keychainFallsBackWhenUnentitledAndDeveloperModeNeverTouchesBackend() throws {
         let backend = FakeKeychainBackend()
         backend.dpEntitled = false
         backend.legacyItems["\(LicenseKeychain.service)::\(LicenseKeychain.account)"] = try JSONEncoder().encode(saved())
-        Keychain.resetForTesting(backend: backend, memoryOnly: false)
+        Keychain.resetForTesting(backend: backend, memoryOnly: false, allowsLegacyLoginFallback: true)
         defer { Keychain.resetForTesting() }
 
         let loaded = try LicenseKeychain().load()
         #expect(loaded?.key == "test-key")
         // Unentitled build must NOT delete the legacy item.
         #expect(backend.legacyItems["\(LicenseKeychain.service)::\(LicenseKeychain.account)"] != nil)
+        #expect(backend.legacyDeleteCalls == 0)
 
         // Memory-only developer mode never touches the backend at all.
         let devBackend = FakeKeychainBackend()

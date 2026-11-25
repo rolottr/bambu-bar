@@ -53,4 +53,5 @@ enum Website {
     static let home = url(campaign: "about", content: "website")
     static let changelog = url("changelog", campaign: "about", content: "release_notes")
     static let support = url("support", campaign: "about", content: "support")
+    static let download = url("download", campaign: "update", content: "manual_download")
 }

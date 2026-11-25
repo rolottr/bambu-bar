@@ -5,21 +5,26 @@ import Security
 /// in direct builds, the Polar license record).
 ///
 /// ## Verified macOS 26 Data-Protection Keychain behavior
-/// - `kSecUseDataProtectionKeychain: true` is attempted unconditionally (not gated behind `#if APP_STORE`)
-///   so App Store builds, Xcode Development builds, and Developer ID builds with an embedded Developer ID
-///   provisioning profile all store secrets in the data-protection keychain with zero ACL prompts.
-/// - On macOS 26, adding `keychain-access-groups` to `BambuBar.entitlements` *without* a matching embedded
-///   Developer ID provisioning profile causes AMFI to terminate the process on launch (`SIGKILL`, exit 137).
-///   Without that profile, `SecItemAdd`/`SecItemUpdate`/`SecItemDelete` with `kSecUseDataProtectionKeychain`
-///   returns `errSecMissingEntitlement` (`-34018`). In that case this store transparently falls back to the
-///   login keychain without deleting any existing item; once a build carries the data-protection entitlement,
-///   the first read silently migrates legacy login-keychain items into the data-protection keychain and
-///   removes the legacy copy.
-/// - Every secret is cached in memory (read-once per process) and written only when its bytes change.
-/// - Developer launches (`--demo`, `--emulator`, `--snapshot`, `--showcase`, `--readme-frames`,
-///   `--store-media`, `--connect`, `--dump-status`) stay strictly in memory and never touch the real Keychain.
+/// - App Store builds (`APP_STORE`) use **only** the data-protection keychain (`kSecUseDataProtectionKeychain: true`)
+///   and never read, migrate, or delete login-keychain items, preventing cross-edition ACL prompts or deletion of
+///   the direct build's saved access codes.
+/// - Direct builds attempt `kSecUseDataProtectionKeychain: true` first so Xcode Development builds and Developer ID
+///   builds with an embedded Developer ID provisioning profile store secrets in the data-protection keychain with
+///   zero ACL prompts. Without that profile, `SecItem*` with `kSecUseDataProtectionKeychain` returns
+///   `errSecMissingEntitlement` (`-34018`) and this store transparently falls back to the login keychain without
+///   deleting any existing item; once entitled, the first read silently migrates legacy login-keychain items into
+///   the data-protection keychain and removes the legacy copy.
+/// - Reads are cached in memory per process (`readData`). Explicit `writeData` calls always persist to the backend
+///   and refresh the cache so an item deleted externally is cleanly rewritten.
+/// - Developer launches (`LaunchContext.usesMemoryKeychain()`) stay strictly in memory and never touch the real Keychain.
 enum Keychain {
     static let accessCodeService = "dev.rolottr.BambuBar.access-code"
+
+    #if APP_STORE
+    static let defaultAllowsLegacyLoginFallback = false
+    #else
+    static let defaultAllowsLegacyLoginFallback = true
+    #endif
 
     /// Low-level Keychain backend, injectable for unit tests.
     protocol Backend: Sendable {
@@ -37,6 +42,7 @@ enum Keychain {
         let lock = NSLock()
         var backend: any Backend = SystemBackend()
         var forceMemoryOnly: Bool?
+        var allowsLegacyLoginFallback: Bool = Keychain.defaultAllowsLegacyLoginFallback
         var memoryItems: [ItemKey: Data] = [:]
         /// Read-once per-process cache. A key mapped to `nil` means confirmed absent.
         var cache: [ItemKey: Data?] = [:]
@@ -44,29 +50,15 @@ enum Keychain {
 
     private static let state = State()
 
-    private static let developerRunFlags: Set<String> = [
-        "--demo",
-        "--emulator",
-        "--snapshot",
-        "--showcase",
-        "--readme-frames",
-        "--store-media",
-        "--connect",
-        "--dump-status",
-    ]
+    /// Convenience alias for `LaunchContext.isDeveloperRun`.
+    static var isDeveloperRun: Bool { LaunchContext.isDeveloperRun }
 
-    /// True when this process was started with a developer/demo/snapshot flag that must never touch
-    /// the user's real Keychain (D-09). `--probe` is excluded because `--probe ... keychain` explicitly
-    /// asks to read a saved printer's access code.
-    static var isDeveloperRun: Bool {
-        CommandLine.arguments.contains { developerRunFlags.contains($0) }
-    }
-
-    private static var usesMemoryStore: Bool {
-        state.lock.lock()
-        let override = state.forceMemoryOnly
-        state.lock.unlock()
-        return override ?? isDeveloperRun
+    private static var legacyFallbackAllowedLocked: Bool {
+        #if APP_STORE
+        false
+        #else
+        state.allowsLegacyLoginFallback
+        #endif
     }
 
     // MARK: - Printer LAN access codes
@@ -94,7 +86,7 @@ enum Keychain {
         if let cached = state.cache[key] {
             return cached
         }
-        if state.forceMemoryOnly ?? isDeveloperRun {
+        if state.forceMemoryOnly ?? LaunchContext.usesMemoryKeychain() {
             let value = state.memoryItems[key]
             state.cache[key] = .some(value)
             return value
@@ -106,31 +98,40 @@ enum Keychain {
             state.cache[key] = .some(dpData)
             return dpData
         }
-        if dpStatus != errSecItemNotFound && dpStatus != errSecMissingEntitlement {
-            throw KeychainStorageError(status: dpStatus)
-        }
 
-        // Not found in data-protection keychain (or unentitled build): check legacy login keychain.
-        let (legacyStatus, legacyData) = backend.read(service: service, account: account, dataProtection: false)
-        if legacyStatus == errSecItemNotFound {
+        #if !APP_STORE
+        if legacyFallbackAllowedLocked {
+            if dpStatus != errSecItemNotFound && dpStatus != errSecMissingEntitlement {
+                throw KeychainStorageError(status: dpStatus)
+            }
+            // Not found in data-protection keychain (or unentitled build): check legacy login keychain.
+            let (legacyStatus, legacyData) = backend.read(service: service, account: account, dataProtection: false)
+            if legacyStatus == errSecItemNotFound {
+                state.cache[key] = .some(nil)
+                return nil
+            }
+            guard legacyStatus == errSecSuccess else {
+                throw KeychainStorageError(status: legacyStatus)
+            }
+            // One-time silent migration: copy legacy item into data-protection keychain and delete the legacy copy
+            // only when the data-protection write succeeds.
+            if let legacyData, dpStatus != errSecMissingEntitlement {
+                let migrateStatus = backend.write(legacyData, service: service, account: account, label: nil, dataProtection: true)
+                if migrateStatus == errSecSuccess {
+                    _ = backend.delete(service: service, account: account, dataProtection: false)
+                }
+            }
+            state.cache[key] = .some(legacyData)
+            return legacyData
+        }
+        #endif
+
+        // Data-protection-only path (App Store edition): never touch the login keychain.
+        if dpStatus == errSecItemNotFound {
             state.cache[key] = .some(nil)
             return nil
         }
-        guard legacyStatus == errSecSuccess else {
-            throw KeychainStorageError(status: legacyStatus)
-        }
-
-        // One-time silent migration: copy legacy item into data-protection keychain and delete the legacy copy
-        // only when the data-protection write succeeds.
-        if let legacyData, dpStatus != errSecMissingEntitlement {
-            let migrateStatus = backend.write(legacyData, service: service, account: account, label: nil, dataProtection: true)
-            if migrateStatus == errSecSuccess {
-                _ = backend.delete(service: service, account: account, dataProtection: false)
-            }
-        }
-
-        state.cache[key] = .some(legacyData)
-        return legacyData
+        throw KeychainStorageError(status: dpStatus)
     }
 
     static func writeData(_ data: Data, service: String, account: String, label: String? = nil) throws {
@@ -138,11 +139,7 @@ enum Keychain {
         state.lock.lock()
         defer { state.lock.unlock() }
 
-        // Write only when values change.
-        if let cached = state.cache[key], cached == data {
-            return
-        }
-        if state.forceMemoryOnly ?? isDeveloperRun {
+        if state.forceMemoryOnly ?? LaunchContext.usesMemoryKeychain() {
             state.memoryItems[key] = data
             state.cache[key] = .some(data)
             return
@@ -152,16 +149,22 @@ enum Keychain {
         let dpStatus = backend.write(data, service: service, account: account, label: label, dataProtection: true)
         if dpStatus == errSecSuccess {
             state.cache[key] = .some(data)
-            // Remove any stale legacy login-keychain copy now that data-protection holds the truth.
-            _ = backend.delete(service: service, account: account, dataProtection: false)
+            #if !APP_STORE
+            if legacyFallbackAllowedLocked {
+                // Remove any stale legacy login-keychain copy now that data-protection holds the truth.
+                _ = backend.delete(service: service, account: account, dataProtection: false)
+            }
+            #endif
             return
         }
-        if dpStatus == errSecMissingEntitlement {
+        #if !APP_STORE
+        if dpStatus == errSecMissingEntitlement && legacyFallbackAllowedLocked {
             let legacyStatus = backend.write(data, service: service, account: account, label: label, dataProtection: false)
             guard legacyStatus == errSecSuccess else { throw KeychainStorageError(status: legacyStatus) }
             state.cache[key] = .some(data)
             return
         }
+        #endif
         throw KeychainStorageError(status: dpStatus)
     }
 
@@ -170,7 +173,7 @@ enum Keychain {
         state.lock.lock()
         defer { state.lock.unlock() }
 
-        if state.forceMemoryOnly ?? isDeveloperRun {
+        if state.forceMemoryOnly ?? LaunchContext.usesMemoryKeychain() {
             state.memoryItems.removeValue(forKey: key)
             state.cache[key] = .some(nil)
             return
@@ -178,23 +181,39 @@ enum Keychain {
 
         let backend = state.backend
         let dpStatus = backend.delete(service: service, account: account, dataProtection: true)
-        if dpStatus != errSecSuccess && dpStatus != errSecItemNotFound && dpStatus != errSecMissingEntitlement {
-            throw KeychainStorageError(status: dpStatus)
+        #if !APP_STORE
+        if legacyFallbackAllowedLocked {
+            if dpStatus != errSecSuccess && dpStatus != errSecItemNotFound && dpStatus != errSecMissingEntitlement {
+                throw KeychainStorageError(status: dpStatus)
+            }
+            let legacyStatus = backend.delete(service: service, account: account, dataProtection: false)
+            if legacyStatus != errSecSuccess && legacyStatus != errSecItemNotFound {
+                throw KeychainStorageError(status: legacyStatus)
+            }
+            state.cache[key] = .some(nil)
+            return
         }
-        let legacyStatus = backend.delete(service: service, account: account, dataProtection: false)
-        if legacyStatus != errSecSuccess && legacyStatus != errSecItemNotFound {
-            throw KeychainStorageError(status: legacyStatus)
+        #endif
+
+        // Data-protection-only path (App Store edition): never delete login-keychain items.
+        if dpStatus != errSecSuccess && dpStatus != errSecItemNotFound {
+            throw KeychainStorageError(status: dpStatus)
         }
         state.cache[key] = .some(nil)
     }
 
     // MARK: - Testing hooks
 
-    static func resetForTesting(backend: (any Backend)? = nil, memoryOnly: Bool? = nil) {
+    static func resetForTesting(
+        backend: (any Backend)? = nil,
+        memoryOnly: Bool? = nil,
+        allowsLegacyLoginFallback: Bool = defaultAllowsLegacyLoginFallback
+    ) {
         state.lock.lock()
         defer { state.lock.unlock() }
         state.backend = backend ?? SystemBackend()
         state.forceMemoryOnly = memoryOnly
+        state.allowsLegacyLoginFallback = allowsLegacyLoginFallback
         state.memoryItems.removeAll()
         state.cache.removeAll()
     }

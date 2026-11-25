@@ -205,7 +205,6 @@ final class PrinterStore {
         static let cameraEnabled = "cameraEnabled"
     }
 
-    private var lastRecordedPhase: [String: PrinterConnection.Phase] = [:]
     private var lastRecordedCameraState: [String: CameraFeed.State] = [:]
 
     private init() {
@@ -703,7 +702,7 @@ final class PrinterStore {
             return
         }
         activity.record(category: .action, printerName: session.config.name,
-                        summary: reason.map { "\(command): \($0)" } ?? command, outcome: .failed)
+                        summary: sanitizeActivityText(reason.map { "\(command): \($0)" } ?? command), outcome: .failed)
         let detail = (reason ?? "").lowercased().contains("verify")
             ? String(localized: "The printer only accepts commands in Developer Mode.")
             : (reason.map { String(localized: "The printer refused: \($0)", comment: "The printer's reason, in English") } ?? String(localized: "The printer refused the command."))
@@ -712,20 +711,45 @@ final class PrinterStore {
 
     // MARK: - Activity & Onboarding
 
+    private func sanitizeActivityText(_ text: String) -> String {
+        let serials = sessions.map(\.id) + discovered.map(\.serial)
+        let hosts = sessions.map(\.config.host) + discovered.map(\.host)
+        let codes = sessions.compactMap(\.cameraAccessCode)
+        return ActivityLog.redact(text, serials: serials, hosts: hosts, accessCodes: codes)
+    }
+
     private func recordPhase(_ session: PrinterSession, phase: PrinterConnection.Phase) {
-        guard lastRecordedPhase[session.id] != phase else { return }
-        lastRecordedPhase[session.id] = phase
+        let state: ActivityLog.ConnectionState
         let summary: String
         switch phase {
-        case .idle: summary = String(localized: "Disconnected")
-        case .connecting: summary = String(localized: "Connecting…")
-        case .online: summary = String(localized: "Connected")
-        case .offline(let reason): summary = reason.isEmpty ? String(localized: "Offline") : String(localized: "Offline: \(reason)")
-        case .unauthorized: summary = String(localized: "Access code rejected")
-        case .certificate: summary = String(localized: "Certificate error")
-        case .localNetworkDenied: summary = String(localized: "Local network access denied")
+        case .idle:
+            state = .idle
+            summary = String(localized: "Disconnected")
+        case .connecting:
+            state = .connecting
+            summary = String(localized: "Connecting…")
+        case .online:
+            state = .online
+            summary = String(localized: "Connected")
+        case .offline(let reason):
+            state = .offline
+            summary = reason.isEmpty ? String(localized: "Offline") : String(localized: "Offline: \(reason)")
+        case .unauthorized:
+            state = .issue("unauthorized")
+            summary = String(localized: "Access code rejected")
+        case .certificate:
+            state = .issue("certificate")
+            summary = String(localized: "Certificate error")
+        case .localNetworkDenied:
+            state = .issue("localNetworkDenied")
+            summary = String(localized: "Local network access denied")
         }
-        activity.record(category: .connection, printerName: session.config.name, summary: summary)
+        activity.recordConnectionTransition(
+            printerID: session.id,
+            printerName: sanitizeActivityText(session.config.name),
+            state: state,
+            summary: sanitizeActivityText(summary)
+        )
     }
 
     private func recordStatusTransition(_ session: PrinterSession, from old: PrinterStatus?, to new: PrinterStatus) {
@@ -755,7 +779,8 @@ final class PrinterStore {
         case .unavailable(let reason): summary = reason; outcome = nil
         case .failed(let reason, _): summary = reason; outcome = .failed
         }
-        activity.record(category: .camera, printerName: session.config.name, summary: summary, outcome: outcome)
+        activity.record(category: .camera, printerName: sanitizeActivityText(session.config.name),
+                        summary: sanitizeActivityText(summary), outcome: outcome)
     }
 
     func capabilitySummaries() -> [ActivityLog.CapabilitySummary] {

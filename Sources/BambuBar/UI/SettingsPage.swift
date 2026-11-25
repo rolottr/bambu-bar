@@ -196,9 +196,11 @@ private struct UpdatesGroup: View {
                 help: "Checks once a day and verifies the update signature before installing.",
                 isOn: $updates.checksAutomatically
             )
-            .disabled(!updates.supportsAutomaticUpdates)
-            SettingsToggle("Download and install updates automatically", isOn: $updates.downloadsAutomatically)
-                .disabled(!updates.checksAutomatically)
+            SettingsToggle(
+                "Download and install updates automatically",
+                disabled: !updates.supportsAutomaticUpdates || !updates.checksAutomatically,
+                isOn: $updates.downloadsAutomatically
+            )
             Divider()
             HStack(spacing: 10) {
                 Image(systemName: symbol).foregroundStyle(tint).font(.system(size: 13, weight: .semibold))
@@ -208,9 +210,15 @@ private struct UpdatesGroup: View {
                 }
                 Spacer()
                 if updates.available != nil {
-                    Button("Update…") { updates.showUpdate() }
-                        .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
-                        .fixedSize()
+                    if updates.supportsAutomaticUpdates {
+                        Button("Update…") { updates.showUpdate() }
+                            .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
+                            .fixedSize()
+                    } else {
+                        Button("Download…") { NSWorkspace.shared.open(Website.download) }
+                            .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
+                            .fixedSize()
+                    }
                 } else if updates.state == .checking {
                     ProgressView().controlSize(.small)
                 } else {
@@ -251,7 +259,11 @@ private struct UpdatesGroup: View {
 
     private var detail: String {
         if case .failed(let message) = updates.state { return message }
-        if case .available = updates.state { return String(localized: "Current: \(updates.currentVersion)") }
+        if case .available = updates.state {
+            return updates.supportsAutomaticUpdates
+                ? String(localized: "Current: \(updates.currentVersion)")
+                : String(localized: "Download from bambubar.app")
+        }
         guard let last = updates.lastChecked else { return String(localized: "Not checked yet") }
         return String(localized: "Version \(updates.currentVersion) · checked \(last.formatted(.relative(presentation: .named)))")
     }

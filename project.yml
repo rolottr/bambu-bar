@@ -141,6 +141,7 @@ targets:
         buildPhase: resources
       - path: Sources/BambuBar/Printer/FilamentCatalog.swift
       - path: Sources/BambuBar/Services/AppLanguage.swift
+      - path: Sources/BambuBar/Services/LaunchContext.swift
       - path: Sources/BambuBar/Services/LoginItem.swift
       - path: Sources/BambuBar/Services/RelaunchTicketStore.swift
       - path: Sources/BambuBar/Services/SingleInstance.swift
