@@ -410,10 +410,10 @@ final class ShellAndStateTests: XCTestCase {
         XCTAssertEqual(persisted.notifyPaused, false)
     }
 
-    // MARK: - UpdateChecker Unlicensed Notice & Download Gate (B-1)
+    // MARK: - UpdateChecker Hero Supporter Gate & License Loss
 
     @MainActor
-    func testUnlicensedUpdateCheckRecordsAvailableVersionWhileBlockingDownload() throws {
+    func testUnlicensedUpdateCheckerBlocksChecksAutoToggleAndStaysIdle() throws {
         let item = try XCTUnwrap(SUAppcastItem(dictionary: [
             "enclosure": [
                 "url": "https://bambubar.app/api/updates/download?version=3.1.1",
@@ -423,10 +423,30 @@ final class ShellAndStateTests: XCTestCase {
             ],
         ]))
 
-        // 1. Manual probing check (.updateInformation) while unlicensed:
-        //    must record `available` AND throw to block download, and `didFinishUpdateCycleFor`
-        //    must preserve `.available` instead of clobbering it to `.failed` or `.idle`.
+        // 1. Unlicensed copy cannot start Sparkle, cannot enable automatic checks/downloads,
+        //    and ignores check()/showUpdate().
         let unlicensed = UpdateChecker(downloadHeadersProvider: { nil })
+        XCTAssertFalse(unlicensed.supportsAutomaticUpdates)
+        XCTAssertFalse(unlicensed.checksAutomatically)
+        XCTAssertFalse(unlicensed.downloadsAutomatically)
+        XCTAssertFalse(unlicensed.canCheckForUpdates)
+
+        unlicensed.checksAutomatically = true
+        unlicensed.downloadsAutomatically = true
+        XCTAssertFalse(unlicensed.checksAutomatically)
+        XCTAssertFalse(unlicensed.downloadsAutomatically)
+
+        unlicensed.start()
+        XCTAssertFalse(unlicensed.isRunning)
+        XCTAssertFalse(unlicensed.canCheckForUpdates)
+
+        unlicensed.check()
+        unlicensed.showUpdate()
+        XCTAssertEqual(unlicensed.state, .idle)
+        XCTAssertNil(unlicensed.available)
+        XCTAssertNil(unlicensed.offered)
+
+        // 2. Fail-closed delegate: shouldProceedWithUpdate throws and leaves NO stale unlicensed notice.
         unlicensed.beginCheckingForTests()
         var thrownError: Error?
         XCTAssertThrowsError(
@@ -437,35 +457,219 @@ final class ShellAndStateTests: XCTestCase {
         let gateError = try XCTUnwrap(thrownError as NSError?)
         XCTAssertEqual(gateError.domain, UpdateChecker.unlicensedGateErrorDomain)
         XCTAssertEqual(gateError.code, UpdateChecker.unlicensedGateErrorCode)
-        XCTAssertEqual(unlicensed.available, UpdateChecker.Release(version: "3.1.1"))
-        XCTAssertEqual(unlicensed.offered, UpdateChecker.Release(version: "3.1.1"))
-        XCTAssertEqual(unlicensed.state, .available(UpdateChecker.Release(version: "3.1.1")))
+        XCTAssertEqual(unlicensed.state, .idle)
+        XCTAssertNil(unlicensed.available)
+        XCTAssertNil(unlicensed.offered)
+        XCTAssertNil(unlicensed.pendingVersion)
 
+        unlicensed.updater(unlicensed.updater, didFindValidUpdate: item)
+        unlicensed.updaterDidNotFindUpdate(unlicensed.updater)
         unlicensed.updater(unlicensed.updater, didFinishUpdateCycleFor: .updateInformation, error: gateError)
-        XCTAssertEqual(unlicensed.available, UpdateChecker.Release(version: "3.1.1"))
-        XCTAssertEqual(unlicensed.offered, UpdateChecker.Release(version: "3.1.1"))
-        XCTAssertEqual(unlicensed.state, .available(UpdateChecker.Release(version: "3.1.1")))
+        XCTAssertEqual(unlicensed.state, .idle)
+        XCTAssertNil(unlicensed.available)
+        XCTAssertNil(unlicensed.offered)
+    }
 
-        // 2. Scheduled background check (.updatesInBackground) while unlicensed: same invariants.
-        let scheduled = UpdateChecker(downloadHeadersProvider: { nil })
-        XCTAssertThrowsError(
-            try scheduled.updater(scheduled.updater, shouldProceedWithUpdate: item, updateCheck: .updatesInBackground)
-        )
-        scheduled.updater(scheduled.updater, didFinishUpdateCycleFor: .updatesInBackground, error: gateError)
-        XCTAssertEqual(scheduled.available, UpdateChecker.Release(version: "3.1.1"))
-        XCTAssertEqual(scheduled.state, .available(UpdateChecker.Release(version: "3.1.1")))
+    @MainActor
+    func testHeroSupporterUpdateFlowAndLicenseLossClearsStateAndDisablesAutomation() throws {
+        let item = try XCTUnwrap(SUAppcastItem(dictionary: [
+            "enclosure": [
+                "url": "https://bambubar.app/api/updates/download?version=3.1.1",
+                "sparkle:version": "202612310000",
+                "sparkle:shortVersionString": "3.1.1",
+                "length": "1024",
+            ],
+        ]))
 
-        // 3. Supporter-licensed check does not throw in `shouldProceedWithUpdate`.
-        let licensed = UpdateChecker(downloadHeadersProvider: {
-            [
-                UpdateDownload.licenseKeyHeader: "BB-TEST",
-                UpdateDownload.activationHeader: "act-1",
-                UpdateDownload.installationHeader: "inst-1",
-            ]
-        })
+        var active = true
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        let checker = UpdateChecker(downloadHeadersProvider: { active ? headers : nil })
+
+        // Active Hero Supporter can enable automatic checks/downloads and proceed with updates.
+        XCTAssertTrue(checker.supportsAutomaticUpdates)
+        XCTAssertTrue(checker.checksAutomatically)
+        checker.downloadsAutomatically = true
+        XCTAssertTrue(checker.downloadsAutomatically)
         XCTAssertNoThrow(
-            try licensed.updater(licensed.updater, shouldProceedWithUpdate: item, updateCheck: .updates)
+            try checker.updater(checker.updater, shouldProceedWithUpdate: item, updateCheck: .updates)
         )
+
+        checker.updater(checker.updater, didFindValidUpdate: item)
+        XCTAssertEqual(checker.available, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(checker.offered, UpdateChecker.Release(version: "3.1.1"))
+        XCTAssertEqual(checker.state, .available(UpdateChecker.Release(version: "3.1.1")))
+
+        // Download headers attach ONLY to the verified production download endpoint, never to feed URLs.
+        let prodDownloadReq = NSMutableURLRequest(url: URL(string: "https://bambubar.app/api/updates/download?version=3.1.1")!)
+        checker.updater(checker.updater, willDownloadUpdate: item, with: prodDownloadReq)
+        XCTAssertEqual(prodDownloadReq.value(forHTTPHeaderField: UpdateDownload.licenseKeyHeader), "BB-TEST")
+        XCTAssertEqual(prodDownloadReq.value(forHTTPHeaderField: UpdateDownload.activationHeader), "act-1")
+        XCTAssertEqual(prodDownloadReq.value(forHTTPHeaderField: UpdateDownload.installationHeader), "inst-1")
+
+        let appcastReq = NSMutableURLRequest(url: URL(string: "https://bambubar.app/appcast.xml")!)
+        checker.updater(checker.updater, willDownloadUpdate: item, with: appcastReq)
+        XCTAssertNil(appcastReq.value(forHTTPHeaderField: UpdateDownload.licenseKeyHeader))
+
+        // Losing the Hero Supporter license immediately disables automatic checks/downloads and clears offered updates.
+        active = false
+        checker.supporterStatusChanged()
+        XCTAssertFalse(checker.supportsAutomaticUpdates)
+        XCTAssertFalse(checker.checksAutomatically)
+        XCTAssertFalse(checker.downloadsAutomatically)
+        XCTAssertFalse(checker.canCheckForUpdates)
+        XCTAssertNil(checker.available)
+        XCTAssertNil(checker.offered)
+        XCTAssertNil(checker.pendingVersion)
+        XCTAssertEqual(checker.state, .idle)
+
+        // Download headers are never attached after license loss.
+        let postLossReq = NSMutableURLRequest(url: URL(string: "https://bambubar.app/api/updates/download?version=3.1.1")!)
+        checker.updater(checker.updater, willDownloadUpdate: item, with: postLossReq)
+        XCTAssertNil(postLossReq.value(forHTTPHeaderField: UpdateDownload.licenseKeyHeader))
+        XCTAssertThrowsError(
+            try checker.updater(checker.updater, shouldProceedWithUpdate: item, updateCheck: .updates)
+        )
+    }
+
+    @MainActor
+    func testStartLicenseGateIsDecidingGuardAndPreventsDoubleStart() {
+        // Pure precondition table: unlicensed official non-developer run with EdDSA key must return false.
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: false, running: false, official: true, developerRun: false, hasEdKey: true))
+        XCTAssertTrue(UpdateChecker.mayStart(licensed: true, running: false, official: true, developerRun: false, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: true, official: true, developerRun: false, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: false, official: false, developerRun: false, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: false, official: true, developerRun: true, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: false, official: true, developerRun: false, hasEdKey: false))
+
+        // Direct start() test with official=true, developerRun=false, hasEdKey=true so supportsAutomaticUpdates
+        // is the SOLE deciding guard. Removing the license check from start()/mayStart must fail this test.
+        var active = false
+        var startCount = 0
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        let checker = UpdateChecker(
+            downloadHeadersProvider: { active ? headers : nil },
+            isOfficialBuildProvider: { true },
+            isDeveloperRunProvider: { false },
+            hasEdKeyProvider: { true },
+            startUpdater: { _ in startCount += 1 }
+        )
+
+        checker.start()
+        XCTAssertFalse(checker.isRunning)
+        XCTAssertEqual(startCount, 0)
+
+        // Activating the license starts Sparkle exactly once.
+        active = true
+        checker.supporterStatusChanged()
+        XCTAssertTrue(checker.isRunning)
+        XCTAssertEqual(startCount, 1)
+
+        // Calling start() again or deactivating and re-activating never double-starts Sparkle.
+        checker.start()
+        XCTAssertEqual(startCount, 1)
+
+        active = false
+        checker.supporterStatusChanged()
+        XCTAssertTrue(checker.isRunning)
+        XCTAssertFalse(checker.updater.automaticallyChecksForUpdates)
+        XCTAssertFalse(checker.updater.automaticallyDownloadsUpdates)
+
+        active = true
+        checker.supporterStatusChanged()
+        XCTAssertEqual(startCount, 1)
+    }
+
+    @MainActor
+    func testMayPerformUpdateCheckFailsClosedWhenUnlicensed() throws {
+        var active = false
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        let checker = UpdateChecker(downloadHeadersProvider: { active ? headers : nil })
+
+        // Verify Sparkle's ObjC delegate selector is wired up.
+        XCTAssertTrue(checker.responds(to: NSSelectorFromString("updater:mayPerformUpdateCheck:error:")))
+
+        // Unlicensed: every check kind (scheduled background, manual, probing) fails closed.
+        for kind in [SPUUpdateCheck.updatesInBackground, .updates, .updateInformation] {
+            checker.beginCheckingForTests()
+            var thrown: Error?
+            XCTAssertThrowsError(
+                try checker.updater(checker.updater, mayPerform: kind)
+            ) { thrown = $0 }
+            let gateError = try XCTUnwrap(thrown as NSError?)
+            XCTAssertEqual(gateError.domain, UpdateChecker.unlicensedGateErrorDomain)
+            XCTAssertEqual(gateError.code, UpdateChecker.unlicensedGateErrorCode)
+            XCTAssertEqual(checker.state, .idle)
+            XCTAssertNil(checker.pendingVersion)
+        }
+
+        // Licensed: checks are permitted.
+        active = true
+        XCTAssertNoThrow(try checker.updater(checker.updater, mayPerform: .updatesInBackground))
+        XCTAssertNoThrow(try checker.updater(checker.updater, mayPerform: .updates))
+
+        // Losing the license closes the gate again for any scheduled check racing deactivation.
+        active = false
+        XCTAssertThrowsError(try checker.updater(checker.updater, mayPerform: .updatesInBackground))
+    }
+
+    @MainActor
+    func testFeedURLIgnoresUserDefaultsSUFeedURLAndStartClearsIt() {
+        let defaults = UserDefaults.standard
+        let previousSUFeedURL = defaults.object(forKey: "SUFeedURL")
+        let previousOverride = defaults.object(forKey: UpdateChecker.feedOverrideKey)
+        defer {
+            if let previousSUFeedURL {
+                defaults.set(previousSUFeedURL, forKey: "SUFeedURL")
+            } else {
+                defaults.removeObject(forKey: "SUFeedURL")
+            }
+            if let previousOverride {
+                defaults.set(previousOverride, forKey: UpdateChecker.feedOverrideKey)
+            } else {
+                defaults.removeObject(forKey: UpdateChecker.feedOverrideKey)
+            }
+        }
+
+        defaults.removeObject(forKey: UpdateChecker.feedOverrideKey)
+        defaults.set("https://evil.example/appcast.xml", forKey: "SUFeedURL")
+
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        var startCount = 0
+        let checker = UpdateChecker(
+            downloadHeadersProvider: { headers },
+            isOfficialBuildProvider: { true },
+            isDeveloperRunProvider: { false },
+            hasEdKeyProvider: { true },
+            startUpdater: { _ in startCount += 1 }
+        )
+
+        // feedURLString(for:) must NEVER return nil and must NEVER yield the injected UserDefaults SUFeedURL.
+        let resolvedFeed = checker.feedURLString(for: checker.updater)
+        XCTAssertNotNil(resolvedFeed)
+        XCTAssertEqual(resolvedFeed, UpdateChecker.defaultFeedURL)
+        XCTAssertNotEqual(resolvedFeed, "https://evil.example/appcast.xml")
+        XCTAssertEqual(checker.updater.feedURL?.absoluteString, UpdateChecker.defaultFeedURL)
+
+        // Starting the updater clears any persisted SUFeedURL from UserDefaults before Sparkle starts.
+        checker.start()
+        XCTAssertEqual(startCount, 1)
+        XCTAssertNil(defaults.object(forKey: "SUFeedURL"))
     }
 
     func testOnboardingFeatureGatesCardsByCapabilities() {

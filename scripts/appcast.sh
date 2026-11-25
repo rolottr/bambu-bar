@@ -2,9 +2,10 @@
 # Writes build/appcast.xml, the GitHub bridge appcast feed for pre-3.1.0 Mac and Windows copies
 # (releases/latest/download/appcast.xml), and build/Bambu-Bar-$VERSION-windows.release.txt when Windows installers are
 # present so the same EdDSA signatures can be added to https://bambubar.app/appcast.xml (releases.ts).
-# From 3.1.0 onward, both macOS and Windows check https://bambubar.app/appcast.xml anonymously and download via
-# gated https://bambubar.app/api/updates/download; 3.1.0 is the bridge release whose GitHub appcast.xml must keep
-# GitHub release enclosures for macOS, windows-x64, and windows-arm64 so existing 3.0.x copies on both platforms upgrade.
+# From 3.1.0 onward, active Hero Supporters on both macOS and Windows check https://bambubar.app/appcast.xml without
+# license headers and download via gated https://bambubar.app/api/updates/download (unlicensed copies make zero checks);
+# 3.1.0 is the bridge release whose GitHub appcast.xml must keep GitHub release enclosures for macOS, windows-x64, and
+# windows-arm64 so existing 3.0.x copies on both platforms upgrade.
 #   scripts/appcast.sh               the version in build/App.noindex (run after package.sh and gh release create)
 #   VERSION=1.4.0 scripts/appcast.sh
 #   UPLOAD=1 scripts/appcast.sh      also attaches appcast.xml to the GitHub release. The app reads

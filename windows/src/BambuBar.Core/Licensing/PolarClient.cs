@@ -42,6 +42,9 @@ public sealed class LicenseException(LicenseFailure failure, Exception? inner = 
 {
     public LicenseFailure Failure { get; } = failure;
 
+    /// <summary>Polar's explicit verdict on the key or activation (revoked, refunded, invalid, or over limit).</summary>
+    public bool IsRefusal => Failure is LicenseFailure.Rejected or LicenseFailure.ActivationLimit;
+
     public override string Message => Failure switch
     {
         LicenseFailure.Rejected => Loc.T("This license or activation is no longer valid. Check your license in your account, then deactivate this installation before activating again."),

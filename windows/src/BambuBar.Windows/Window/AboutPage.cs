@@ -76,7 +76,7 @@ internal sealed class AboutPage(WindowContext ctx) : Page(ctx)
 
         var privacy = Section(Loc.T("Privacy"), out var privacyBody);
         privacyBody.Children.Add(Paragraph(Loc.T("Printer data stays on your local network. No app analytics. Printer access codes are stored in Windows Credential Manager.")));
-        privacyBody.Children.Add(Paragraph(Loc.T("Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. In-app update checks read the public feed at bambubar.app anonymously once a day; downloading updates requires an active website supporter license. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.")));
+        privacyBody.Children.Add(Paragraph(Loc.T("Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. With an active Hero Supporter license, in-app update checks read the feed at bambubar.app and download signed updates; unlicensed copies do not check for updates. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.")));
 
         var credits = Section(Loc.T("Credits"), out var creditsBody);
         creditsBody.Children.Add(Paragraph(Loc.T("Protocol details and the HMS error texts come from the open-source ha-bambulab project (MIT), with thanks to Bambuddy and bambu-cli for documenting the newer printers. What each model can do (chamber sensor, fans, heated chamber, nozzles, build volume) follows the printer profiles Bambu Lab publishes with Bambu Studio.")));

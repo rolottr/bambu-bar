@@ -16,8 +16,6 @@ internal sealed class UpdateSection : PanelSection
 {
     private readonly Border _root;
     private readonly TextBlock _text = Ui.Text("", Ramp.Body, FontWeights.Medium);
-    private readonly ChromeButton _action;
-    private readonly TextBlock _actionLabel = Ui.Text(Loc.T("Update…"), Ramp.Footnote, FontWeights.Medium);
 
     public UpdateSection(PanelContext ctx) : base(ctx)
     {
@@ -26,14 +24,14 @@ internal sealed class UpdateSection : PanelSection
         var later = new ChromeButton { Padding = new Thickness(8, 3, 8, 4), Content = Ui.Text(Loc.T("Later"), Ramp.Footnote, null, ThemeKeys.TextSecondary) };
         AutomationProperties.SetName(later, Loc.T("Later"));
         later.Click += (_, _) => Offer?.Later();
-        _action = new ChromeButton { Look = ButtonLook.Standard, Padding = new Thickness(10, 3, 10, 4), Margin = new Thickness(4, 0, 0, 0), Content = _actionLabel };
-        AutomationProperties.SetName(_action, Loc.T("Update…"));
-        _action.Click += (_, _) => Offer?.Install();
+        var update = new ChromeButton { Look = ButtonLook.Standard, Padding = new Thickness(10, 3, 10, 4), Margin = new Thickness(4, 0, 0, 0), Content = Ui.Text(Loc.T("Update…"), Ramp.Footnote, FontWeights.Medium) };
+        AutomationProperties.SetName(update, Loc.T("Update…"));
+        update.Click += (_, _) => Offer?.Install();
         var grid = Ui.Columns("Auto", "*", "Auto", "Auto");
         grid.Children.Add(Ui.At(icon, 0));
         grid.Children.Add(Ui.At(_text, 1));
         grid.Children.Add(Ui.At(later, 2));
-        grid.Children.Add(Ui.At(_action, 3));
+        grid.Children.Add(Ui.At(update, 3));
         _root = Ui.Card(grid, Metrics.Tile, new Thickness(10, 7, 8, 7));
     }
 
@@ -41,13 +39,7 @@ internal sealed class UpdateSection : PanelSection
 
     public override FrameworkElement Root => _root;
 
-    protected override void Fill()
-    {
-        _text.Text = Loc.F("Bambu Bar %@ is available", Offer?.Version ?? "");
-        var label = Offer?.CanInstall == false ? Loc.T("Download…") : Loc.T("Update…");
-        _actionLabel.Text = label;
-        AutomationProperties.SetName(_action, label);
-    }
+    protected override void Fill() => _text.Text = Loc.F("Bambu Bar %@ is available", Offer?.Version ?? "");
 }
 
 /// <summary>A short message after a command ("Pausing…", "The printer refused…"), sliding in above the footer and

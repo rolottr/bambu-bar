@@ -29,8 +29,11 @@ public sealed partial class TrayIcon : IDisposable
     public event Action? Quit;
     /// <summary>Opens the window at a page (Widgets, Settings).</summary>
     public event Action<AppPage>? OpenPage;
-    /// <summary>Set while the updater is running.</summary>
+    /// <summary>Set while the updater is wired; enabled only when <see cref="CanCheckForUpdates"/> returns true.</summary>
     public Action? CheckForUpdates { get; set; }
+
+    /// <summary>Whether "Check for Updates…" is enabled (active Hero Supporter license).</summary>
+    public Func<bool>? CanCheckForUpdates { get; set; }
 
     /// <summary>Draw the percentage instead of the printer while printing (Tray page, P3.5).</summary>
     public bool ShowPercent { get; set; }
@@ -144,7 +147,12 @@ public sealed partial class TrayIcon : IDisposable
         if (_store.IsConfigured) items.Add(Item(Loc.T("Refresh"), _store.Refresh));
         items.Add(Item(Loc.T("Widgets"), () => OpenPage?.Invoke(AppPage.Widgets)));
         items.Add(Item(Loc.T("Settings…"), () => OpenPage?.Invoke(AppPage.Settings)));
-        if (CheckForUpdates is not null) items.Add(Item(Loc.T("Check for Updates…"), () => CheckForUpdates?.Invoke()));
+        if (CheckForUpdates is not null)
+        {
+            var check = Item(Loc.T("Check for Updates…"), () => CheckForUpdates?.Invoke());
+            check.Enabled = CanCheckForUpdates?.Invoke() ?? true;
+            items.Add(check);
+        }
         items.Add(new Forms.ToolStripSeparator());
         items.Add(Item(Loc.T("Quit"), () => Quit?.Invoke()));
         MenuRenderer.Dress(items, dark);

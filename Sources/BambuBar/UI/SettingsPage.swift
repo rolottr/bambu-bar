@@ -181,19 +181,24 @@ private struct UpdatesGroup: View {
         SettingsGroup("Updates", symbol: "arrow.down.circle.fill") {
             #if !APP_STORE
             if !updates.supportsAutomaticUpdates {
-                HStack(spacing: 10) {
-                    Text("Supporter license required for automatic updates.")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Automatic update checks and automatic updates are a Hero Supporter benefit.")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Activate License…") { MainWindow.show(.about) }
-                        .controlSize(.small)
-                        .fixedSize()
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 10) {
+                        Button("Activate License…") { MainWindow.show(.about) }
+                            .controlSize(.small)
+                            .fixedSize()
+                        Link("Become a Hero Supporter", destination: PolarConfiguration.supportURL(from: .mainWindow))
+                            .font(.system(size: 12))
+                    }
                 }
             }
             #endif
             SettingsToggle(
                 "Check for updates automatically",
                 help: "Checks once a day and verifies the update signature before installing.",
+                disabled: !updates.supportsAutomaticUpdates,
                 isOn: $updates.checksAutomatically
             )
             SettingsToggle(
@@ -210,15 +215,9 @@ private struct UpdatesGroup: View {
                 }
                 Spacer()
                 if updates.available != nil {
-                    if updates.supportsAutomaticUpdates {
-                        Button("Update…") { updates.showUpdate() }
-                            .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
-                            .fixedSize()
-                    } else {
-                        Button("Download…") { NSWorkspace.shared.open(Website.download) }
-                            .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
-                            .fixedSize()
-                    }
+                    Button("Update…") { updates.showUpdate() }
+                        .buttonStyle(.borderedProminent).tint(Palette.tintDeep)
+                        .fixedSize()
                 } else if updates.state == .checking {
                     ProgressView().controlSize(.small)
                 } else {
@@ -258,11 +257,10 @@ private struct UpdatesGroup: View {
     }
 
     private var detail: String {
+        if !updates.supportsAutomaticUpdates { return String(localized: "Hero Supporter required") }
         if case .failed(let message) = updates.state { return message }
         if case .available = updates.state {
-            return updates.supportsAutomaticUpdates
-                ? String(localized: "Current: \(updates.currentVersion)")
-                : String(localized: "Download from bambubar.app")
+            return String(localized: "Current: \(updates.currentVersion)")
         }
         guard let last = updates.lastChecked else { return String(localized: "Not checked yet") }
         return String(localized: "Version \(updates.currentVersion) · checked \(last.formatted(.relative(presentation: .named)))")

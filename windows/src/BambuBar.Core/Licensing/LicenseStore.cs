@@ -237,13 +237,33 @@ public sealed class LicenseStore : Observable
         IsBusy = true;
         try
         {
-            await _api.DeactivateAsync(saved);
-            // Never keep access after server-side deactivation, even if local deletion fails.
+            var refused = false;
+            try
+            {
+                await _api.DeactivateAsync(saved);
+            }
+            catch (LicenseException e) when (e.IsRefusal)
+            {
+                // Polar says the key or activation is no longer valid (revoked/refunded/removed):
+                // clear the local record so the user isn't trapped unable to activate a new key.
+                refused = true;
+            }
+            // Never keep access after server-side deactivation or refusal, even if local deletion fails.
             Record = saved with { ValidatedAt = null };
             SetAccess(false);
-            SaveRecord(null);
-            Record = null;
-            Message = null;
+            if (refused)
+            {
+                try { SaveRecord(null); }
+                catch (LicenseException) { }
+                Record = null;
+                Message = null;
+            }
+            else
+            {
+                SaveRecord(null);
+                Record = null;
+                Message = null;
+            }
         }
         catch (LicenseException e) { Message = e.Message; }
         finally { IsBusy = false; }

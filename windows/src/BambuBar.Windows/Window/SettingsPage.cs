@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using BambuBar.Core;
 using BambuBar.Core.App;
+using BambuBar.Core.Licensing;
 using BambuBar.Core.Updates;
 using BambuBar.Platform;
 using BambuBar.Theme;
@@ -110,8 +111,8 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
             }
             : null);
 
-        var access = Ctx.Services.License?.HasAccess ?? false;
         var u = Ctx.Services.Updates;
+        var access = u?.SupportsAutomaticUpdates ?? (Ctx.Services.License?.HasAccess ?? false);
         _updates.Show($"{access}|{u?.State}|{u?.LastChecked}|{u?.Release?.DisplayVersion}|{u?.Error}", () => Updates(access));
     }
 
@@ -257,34 +258,36 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
     /// <summary>What the last check found: a newer release, an error, up to date, or when it ran.</summary>
     private string UpdateLine(DateTimeOffset? last, bool access)
     {
+        if (!access) return Loc.T("Hero Supporter required");
         var updates = Ctx.Services.Updates;
         return updates?.State switch
         {
             UpdateState.Checking => Loc.T("Checking…"),
             UpdateState.Downloading => Loc.T("Downloading…"),
             UpdateState.Available or UpdateState.Ready when updates.Available is not null =>
-                access
-                    ? Loc.F("Current: %@", updates.CurrentVersion)
-                    : Loc.T("Download from bambubar.app"),
+                Loc.F("Current: %@", updates.CurrentVersion),
             UpdateState.Failed => updates.Error ?? Loc.T("Couldn’t check for updates"),
             UpdateState.UpToDate => Loc.T("Bambu Bar is up to date"),
             _ => last is { } when ? Loc.F("Version %@ · last checked %@", AppVersion.Marketing, PanelText.Ago(when)) : Loc.T("Not checked yet"),
         };
     }
 
-    /// <summary>Anonymous daily feed checks for every copy, automatic downloads behind the supporter license (the Mac's
-    /// UpdatesGroup), the last check's result, Check Now, and Update… / Download… when a newer release is waiting.</summary>
+    /// <summary>Automatic checks and downloads, gated on an active Hero Supporter license (the Mac's UpdatesGroup),
+    /// the last check's result, Check Now, and Update… when a newer release is waiting.</summary>
     private FrameworkElement Updates(bool access)
     {
         var group = W.Group(Loc.T("Updates"), Icons.Download, out var body);
         if (!access)
         {
-            body.Children.Add(W.Note(Loc.T("Supporter license required for automatic updates."), ThemeKeys.TextSecondary, WRamp.Body));
-            body.Children.Add(W.Button(Loc.T("Activate License…"), () => Ctx.Show(AppPage.About), small: true));
+            body.Children.Add(W.Note(Loc.T("Automatic update checks and automatic updates are a Hero Supporter benefit."), ThemeKeys.TextSecondary, WRamp.Body));
+            var actions = new Stack { Orientation = Orientation.Horizontal, Spacing = 8 };
+            actions.Children.Add(W.Button(Loc.T("Activate License…"), () => Ctx.Show(AppPage.About), small: true));
+            actions.Children.Add(W.Link(Loc.T("Become a Hero Supporter"), () => W.Open(PolarConfiguration.SupportUrl(PolarConfiguration.SupportPlacement.MainWindow))));
+            body.Children.Add(actions);
         }
         var checks = Ctx.Settings.Get(UpdateChecker.Keys.AutomaticChecks, true);
         ToggleSwitch? downloads = null;
-        body.Children.Add(W.Switch(Loc.T("Check for updates automatically"), checks, on =>
+        body.Children.Add(W.Switch(Loc.T("Check for updates automatically"), access && checks, on =>
         {
             if (Ctx.Services.Updates is { } checker) checker.ChecksAutomatically = on;
             else Ctx.Settings.Set(UpdateChecker.Keys.AutomaticChecks, on);
@@ -293,7 +296,8 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
                 downloads.IsEnabled = access && on;
                 downloads.IsChecked = access && on && Ctx.Settings.Get(UpdateChecker.Keys.AutomaticDownloads, false);
             }
-        }, out _));
+        }, out var checksSwitch));
+        checksSwitch.IsEnabled = access;
         body.Children.Add(W.Switch(Loc.T("Download and install updates automatically"), access && checks && Ctx.Settings.Get(UpdateChecker.Keys.AutomaticDownloads, false),
             on =>
             {
@@ -309,7 +313,7 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         status.Children.Add(Ui.At(icon, 0));
         var last = Ctx.Settings.Get<DateTimeOffset?>(UpdateChecker.Keys.LastCheck);
         var updates = Ctx.Services.Updates;
-        var hasAvailable = updates?.Available is not null && updates.State is UpdateState.Available or UpdateState.Ready;
+        var hasAvailable = access && updates?.Available is not null && updates.State is UpdateState.Available or UpdateState.Ready;
         var heading = hasAvailable && updates?.Available is { } available
             ? Loc.F("Version %@ is available", available.DisplayVersion ?? "")
             : Loc.F("Version %@", AppVersion.Marketing);
@@ -326,15 +330,13 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         UIElement action;
         if (hasAvailable)
         {
-            action = access
-                ? W.Button(Loc.T("Update…"), Ctx.Services.InstallUpdate, accent: true, small: true)
-                : W.Button(Loc.T("Download…"), () => W.Open(Website.Download), accent: true, small: true);
+            action = W.Button(Loc.T("Update…"), Ctx.Services.InstallUpdate, accent: true, small: true);
         }
         else
         {
             var check = W.Button(updates?.State == UpdateState.Checking ? Loc.T("Checking…") : Loc.T("Check Now"),
                 () => _ = updates?.CheckAsync(), small: true);
-            check.IsEnabled = updates is { CanCheckForUpdates: true } && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
+            check.IsEnabled = access && updates is { CanCheckForUpdates: true } && updates.State is not (UpdateState.Checking or UpdateState.Downloading);
             action = check;
         }
         status.Children.Add(Ui.At(action, 2));

@@ -126,7 +126,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         LicenseStore.shared.start()
         #endif
-        UpdateChecker.shared.onOpenSettings = { MainWindow.show(.settings) }
         UpdateChecker.shared.start()
         observeAppWindows()
         if let dir = StoreMedia.directory {
