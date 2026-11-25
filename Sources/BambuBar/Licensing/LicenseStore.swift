@@ -326,17 +326,33 @@ final class LicenseStore {
         guard !isBusy, var saved = record else { return }
         isBusy = true
         defer { isBusy = false }
+        var refused = false
         do {
             try await api.deactivate(saved)
-            // Never keep access after server-side deactivation, even if local deletion fails.
-            saved.validatedAt = nil
-            record = saved
-            setAccess(false)
-            try persistence.save(nil)
-            record = nil
-            message = nil
+        } catch let error as LicenseError where error.isRefusal {
+            // Polar says the key or activation is no longer valid (revoked/refunded/removed):
+            // clear the local record so the user isn't trapped unable to activate a new key.
+            refused = true
         } catch {
             message = error.localizedDescription
+            return
+        }
+        // Never keep access after server-side deactivation or refusal, even if local deletion fails.
+        saved.validatedAt = nil
+        record = saved
+        setAccess(false)
+        if refused {
+            try? persistence.save(nil)
+            record = nil
+            message = nil
+        } else {
+            do {
+                try persistence.save(nil)
+                record = nil
+                message = nil
+            } catch {
+                message = error.localizedDescription
+            }
         }
     }
 

@@ -170,9 +170,8 @@ public sealed class UpdateChecker : Observable
     public Task CheckAsync(CancellationToken cancellation = default) => CheckAsync(scheduled: false, cancellation);
 
     /// <summary>Downloads and verifies <see cref="Available"/>. Strictly gated on <see cref="SupportsAutomaticUpdates"/>:
-    /// returns null with zero download requests (keeping <see cref="State"/> at <see cref="UpdateState.Available"/> so
-    /// the Settings manual download button stays visible) when no active supporter license is present, or when the
-    /// download fails (<see cref="Error"/> says why).</summary>
+    /// returns null with zero download requests when unlicensed, or returns null when the download fails
+    /// (<see cref="Error"/> says why).</summary>
     public async Task<VerifiedInstaller?> DownloadAsync(CancellationToken cancellation = default)
     {
         if (!CanCheckForUpdates || Available is not { } release || _operation is not null) return null;

@@ -262,6 +262,32 @@ public class LicenseTests
         Assert.Null(store.Record.ValidatedAt);
     }
 
+    [Fact]
+    public async Task DeactivationRefusalClearsLocalRecordSoUserCanActivateNewKey()
+    {
+        var api = new FakePolar();
+        var storage = new MemoryLicense(Saved());
+        var store = new LicenseStore(api, storage, () => FixedNow);
+        await store.RefreshAsync();
+        Assert.True(store.HasAccess);
+        Assert.NotNull(store.Record);
+
+        // Polar refuses /deactivate (e.g. 403/422 on a revoked or refunded key): local state must clear cleanly.
+        api.DeactivationError = new LicenseException(LicenseFailure.Rejected);
+        await store.DeactivateAsync();
+        Assert.False(store.HasAccess);
+        Assert.Null(store.Record);
+        Assert.Null(storage.Record);
+        Assert.Null(store.Message);
+
+        // User is no longer trapped and can activate a replacement key immediately.
+        api.DeactivationError = null;
+        await store.ActivateAsync("replacement-key");
+        Assert.True(store.HasAccess);
+        Assert.Equal("replacement-key", store.Record?.Key);
+        Assert.Equal("replacement-key", storage.Record?.Key);
+    }
+
     /// <summary>Answers every request with <see cref="Status"/> and <see cref="Response"/>, and keeps what was sent.</summary>
     private sealed class PolarHttpFixture : HttpMessageHandler
     {

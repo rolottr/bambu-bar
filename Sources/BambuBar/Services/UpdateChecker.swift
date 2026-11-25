@@ -15,9 +15,14 @@ import Observation
 /// `https://bambubar.app/appcast.xml` (`SUScheduledCheckInterval` = 86400) with zero `X-BambuBar-*` headers
 /// (`SPUUpdater.httpHeaders` stays unset), and downloads via `https://bambubar.app/api/updates/download`
 /// with `X-BambuBar-*` headers attached inside `updater(_:willDownloadUpdate:with:)` (strictly production-only
-/// in Release builds). `updater(_:shouldProceedWithUpdate:updateCheck:)` remains strictly fail-closed if license
-/// access is missing. Every update must carry the shared Clever Mechanisms EdDSA signature (`SUPublicEDKey`)
-/// and Developer ID signature.
+/// in Release builds). Both `updater(_:mayPerformUpdateCheck:)` and `updater(_:shouldProceedWithUpdate:updateCheck:)`
+/// remain strictly fail-closed if license access is missing. Every update must carry the shared Clever Mechanisms
+/// EdDSA signature (`SUPublicEDKey`) and Developer ID signature.
+///
+/// Accepted Sparkle 2 residuals on mid-session deactivation (Sparkle exposes no public API to abort an already
+/// running session): (a) clicking Install in an already-open Sparkle window sends one unauthenticated download
+/// request that the server rejects with 401/403 (zero `X-BambuBar-*` headers sent); (b) a silent automatic update
+/// already downloaded and verified while licensed may still install on quit.
 ///
 /// The Mac App Store edition compiles with zero Sparkle symbols; the App Store handles updates.
 @MainActor
@@ -105,10 +110,21 @@ final class UpdateChecker: NSObject {
     #else
         nonisolated static let isAvailable = true
         nonisolated static let teamIdentifier = "PCZ6F8Q9DZ"
+        nonisolated static let defaultFeedURL = "https://bambubar.app/appcast.xml"
         nonisolated static let feedOverrideKey = "UpdateFeedURL"
         nonisolated static let unlicensedGateErrorDomain = "dev.rolottr.BambuBar.updates"
         nonisolated static let unlicensedGateErrorCode = 1
         private static let log = Logger(subsystem: "dev.rolottr.BambuBar", category: "updates")
+
+        nonisolated static func mayStart(
+            licensed: Bool,
+            running: Bool,
+            official: Bool,
+            developerRun: Bool,
+            hasEdKey: Bool
+        ) -> Bool {
+            licensed && !running && official && !developerRun && hasEdKey
+        }
 
         /// `-UpdateFeedURL <url>` on the command line or `defaults write dev.rolottr.BambuBar UpdateFeedURL <url>`
         /// points a signed build at a local loopback test appcast (Release builds ignore any non-loopback host).
@@ -134,13 +150,27 @@ final class UpdateChecker: NSObject {
         @ObservationIgnored private var controller: SPUStandardUpdaterController!
         @ObservationIgnored private var observations: Set<AnyCancellable> = []
         @ObservationIgnored private let downloadHeadersProvider: @MainActor () -> [String: String]?
+        @ObservationIgnored private let isOfficialBuildProvider: () -> Bool
+        @ObservationIgnored private let isDeveloperRunProvider: () -> Bool
+        @ObservationIgnored private let hasEdKeyProvider: () -> Bool
+        @ObservationIgnored private let startUpdaterAction: @MainActor (SPUStandardUpdaterController) -> Void
 
-        init(downloadHeadersProvider: (@MainActor () -> [String: String]?)? = nil) {
+        init(
+            downloadHeadersProvider: (@MainActor () -> [String: String]?)? = nil,
+            isOfficialBuildProvider: @escaping () -> Bool = { UpdateChecker.isOfficialBuild },
+            isDeveloperRunProvider: @escaping () -> Bool = { LaunchContext.isDeveloperRun },
+            hasEdKeyProvider: @escaping () -> Bool = { Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil },
+            startUpdater: (@MainActor (SPUStandardUpdaterController) -> Void)? = nil
+        ) {
             self.downloadHeadersProvider = downloadHeadersProvider ?? {
                 let license = LicenseStore.shared
                 guard license.hasAccess, let record = license.record else { return nil }
                 return UpdateDownload.headers(for: record)
             }
+            self.isOfficialBuildProvider = isOfficialBuildProvider
+            self.isDeveloperRunProvider = isDeveloperRunProvider
+            self.hasEdKeyProvider = hasEdKeyProvider
+            self.startUpdaterAction = startUpdater ?? { $0.startUpdater() }
             super.init()
             controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: self)
         }
@@ -152,11 +182,13 @@ final class UpdateChecker: NSObject {
         /// (`--demo`, `--showcase`, `--readme-frames`, etc.). Unlicensed copies never start Sparkle and make
         /// zero update check or download requests.
         func start() {
-            guard supportsAutomaticUpdates,
-                  !isRunning,
-                  Self.isOfficialBuild,
-                  !LaunchContext.isDeveloperRun,
-                  Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil else { return }
+            guard Self.mayStart(
+                licensed: supportsAutomaticUpdates,
+                running: isRunning,
+                official: isOfficialBuildProvider(),
+                developerRun: isDeveloperRunProvider(),
+                hasEdKey: hasEdKeyProvider()
+            ) else { return }
 
             migrateSettings()
             applySettings()
@@ -187,7 +219,8 @@ final class UpdateChecker: NSObject {
                 }
                 .store(in: &observations)
 
-            controller.startUpdater()
+            _ = updater.clearFeedURLFromUserDefaults()
+            startUpdaterAction(controller)
             isRunning = true
             sparkleCanCheckForUpdates = updater.canCheckForUpdates
             syncLastChecked()
@@ -285,8 +318,30 @@ final class UpdateChecker: NSObject {
 
 #if !APP_STORE
     extension UpdateChecker: SPUUpdaterDelegate {
+        private nonisolated static func unlicensedGateError() -> NSError {
+            NSError(
+                domain: unlicensedGateErrorDomain,
+                code: unlicensedGateErrorCode,
+                userInfo: [NSLocalizedDescriptionKey: String(localized: "Activate your license to download updates.")]
+            )
+        }
+
         nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
             Self.feedOverride?.absoluteString
+                ?? (Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String)
+                ?? Self.defaultFeedURL
+        }
+
+        /// Fails closed on every Sparkle update check (including scheduled checks racing a deactivation)
+        /// whenever Hero Supporter download access is absent.
+        nonisolated func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {
+            try MainActor.assumeIsolated {
+                guard downloadHeaders != nil else {
+                    pendingVersion = nil
+                    state = .idle
+                    throw Self.unlicensedGateError()
+                }
+            }
         }
 
         nonisolated func updater(_ updater: SPUUpdater, shouldProceedWithUpdate item: SUAppcastItem,
@@ -295,11 +350,7 @@ final class UpdateChecker: NSObject {
                 guard downloadHeaders != nil else {
                     pendingVersion = nil
                     state = .idle
-                    throw NSError(
-                        domain: Self.unlicensedGateErrorDomain,
-                        code: Self.unlicensedGateErrorCode,
-                        userInfo: [NSLocalizedDescriptionKey: String(localized: "Activate your license to download updates.")]
-                    )
+                    throw Self.unlicensedGateError()
                 }
             }
         }

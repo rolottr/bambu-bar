@@ -535,6 +535,143 @@ final class ShellAndStateTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testStartLicenseGateIsDecidingGuardAndPreventsDoubleStart() {
+        // Pure precondition table: unlicensed official non-developer run with EdDSA key must return false.
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: false, running: false, official: true, developerRun: false, hasEdKey: true))
+        XCTAssertTrue(UpdateChecker.mayStart(licensed: true, running: false, official: true, developerRun: false, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: true, official: true, developerRun: false, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: false, official: false, developerRun: false, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: false, official: true, developerRun: true, hasEdKey: true))
+        XCTAssertFalse(UpdateChecker.mayStart(licensed: true, running: false, official: true, developerRun: false, hasEdKey: false))
+
+        // Direct start() test with official=true, developerRun=false, hasEdKey=true so supportsAutomaticUpdates
+        // is the SOLE deciding guard. Removing the license check from start()/mayStart must fail this test.
+        var active = false
+        var startCount = 0
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        let checker = UpdateChecker(
+            downloadHeadersProvider: { active ? headers : nil },
+            isOfficialBuildProvider: { true },
+            isDeveloperRunProvider: { false },
+            hasEdKeyProvider: { true },
+            startUpdater: { _ in startCount += 1 }
+        )
+
+        checker.start()
+        XCTAssertFalse(checker.isRunning)
+        XCTAssertEqual(startCount, 0)
+
+        // Activating the license starts Sparkle exactly once.
+        active = true
+        checker.supporterStatusChanged()
+        XCTAssertTrue(checker.isRunning)
+        XCTAssertEqual(startCount, 1)
+
+        // Calling start() again or deactivating and re-activating never double-starts Sparkle.
+        checker.start()
+        XCTAssertEqual(startCount, 1)
+
+        active = false
+        checker.supporterStatusChanged()
+        XCTAssertTrue(checker.isRunning)
+        XCTAssertFalse(checker.updater.automaticallyChecksForUpdates)
+        XCTAssertFalse(checker.updater.automaticallyDownloadsUpdates)
+
+        active = true
+        checker.supporterStatusChanged()
+        XCTAssertEqual(startCount, 1)
+    }
+
+    @MainActor
+    func testMayPerformUpdateCheckFailsClosedWhenUnlicensed() throws {
+        var active = false
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        let checker = UpdateChecker(downloadHeadersProvider: { active ? headers : nil })
+
+        // Verify Sparkle's ObjC delegate selector is wired up.
+        XCTAssertTrue(checker.responds(to: NSSelectorFromString("updater:mayPerformUpdateCheck:error:")))
+
+        // Unlicensed: every check kind (scheduled background, manual, probing) fails closed.
+        for kind in [SPUUpdateCheck.updatesInBackground, .updates, .updateInformation] {
+            checker.beginCheckingForTests()
+            var thrown: Error?
+            XCTAssertThrowsError(
+                try checker.updater(checker.updater, mayPerform: kind)
+            ) { thrown = $0 }
+            let gateError = try XCTUnwrap(thrown as NSError?)
+            XCTAssertEqual(gateError.domain, UpdateChecker.unlicensedGateErrorDomain)
+            XCTAssertEqual(gateError.code, UpdateChecker.unlicensedGateErrorCode)
+            XCTAssertEqual(checker.state, .idle)
+            XCTAssertNil(checker.pendingVersion)
+        }
+
+        // Licensed: checks are permitted.
+        active = true
+        XCTAssertNoThrow(try checker.updater(checker.updater, mayPerform: .updatesInBackground))
+        XCTAssertNoThrow(try checker.updater(checker.updater, mayPerform: .updates))
+
+        // Losing the license closes the gate again for any scheduled check racing deactivation.
+        active = false
+        XCTAssertThrowsError(try checker.updater(checker.updater, mayPerform: .updatesInBackground))
+    }
+
+    @MainActor
+    func testFeedURLIgnoresUserDefaultsSUFeedURLAndStartClearsIt() {
+        let defaults = UserDefaults.standard
+        let previousSUFeedURL = defaults.object(forKey: "SUFeedURL")
+        let previousOverride = defaults.object(forKey: UpdateChecker.feedOverrideKey)
+        defer {
+            if let previousSUFeedURL {
+                defaults.set(previousSUFeedURL, forKey: "SUFeedURL")
+            } else {
+                defaults.removeObject(forKey: "SUFeedURL")
+            }
+            if let previousOverride {
+                defaults.set(previousOverride, forKey: UpdateChecker.feedOverrideKey)
+            } else {
+                defaults.removeObject(forKey: UpdateChecker.feedOverrideKey)
+            }
+        }
+
+        defaults.removeObject(forKey: UpdateChecker.feedOverrideKey)
+        defaults.set("https://evil.example/appcast.xml", forKey: "SUFeedURL")
+
+        let headers = [
+            UpdateDownload.licenseKeyHeader: "BB-TEST",
+            UpdateDownload.activationHeader: "act-1",
+            UpdateDownload.installationHeader: "inst-1",
+        ]
+        var startCount = 0
+        let checker = UpdateChecker(
+            downloadHeadersProvider: { headers },
+            isOfficialBuildProvider: { true },
+            isDeveloperRunProvider: { false },
+            hasEdKeyProvider: { true },
+            startUpdater: { _ in startCount += 1 }
+        )
+
+        // feedURLString(for:) must NEVER return nil and must NEVER yield the injected UserDefaults SUFeedURL.
+        let resolvedFeed = checker.feedURLString(for: checker.updater)
+        XCTAssertNotNil(resolvedFeed)
+        XCTAssertEqual(resolvedFeed, UpdateChecker.defaultFeedURL)
+        XCTAssertNotEqual(resolvedFeed, "https://evil.example/appcast.xml")
+        XCTAssertEqual(checker.updater.feedURL?.absoluteString, UpdateChecker.defaultFeedURL)
+
+        // Starting the updater clears any persisted SUFeedURL from UserDefaults before Sparkle starts.
+        checker.start()
+        XCTAssertEqual(startCount, 1)
+        XCTAssertNil(defaults.object(forKey: "SUFeedURL"))
+    }
+
     func testOnboardingFeatureGatesCardsByCapabilities() {
         let singleNoCamera = OnboardingCapabilities(supportsCamera: false, hasMultiplePrinters: false)
         let gated = OnboardingFeature.cards(for: singleNoCamera)

@@ -421,6 +421,29 @@ struct LicenseTests {
         #expect(store.record?.validatedAt == nil)
     }
 
+    @Test func deactivationRefusalClearsLocalRecordSoUserCanActivateNewKey() async {
+        let api = FakePolar(), storage = MemoryLicense(saved())
+        let store = LicenseStore(api: api, persistence: storage, now: { fixedNow })
+        await store.refresh()
+        #expect(store.hasAccess)
+        #expect(store.record != nil)
+
+        // Polar refuses /deactivate (e.g. 403/422 on a revoked or refunded key): local state must clear cleanly.
+        api.deactivationError = LicenseError.rejected
+        await store.deactivate()
+        #expect(!store.hasAccess)
+        #expect(store.record == nil)
+        #expect(storage.record == nil)
+        #expect(store.message == nil)
+
+        // User is no longer trapped and can activate a replacement key immediately.
+        api.deactivationError = nil
+        await store.activate(key: "replacement-key")
+        #expect(store.hasAccess)
+        #expect(store.record?.key == "replacement-key")
+        #expect(storage.record?.key == "replacement-key")
+    }
+
     @Test func polarConfigurationIsValidAndRecordRedactsSecrets() {
         #expect(PolarConfiguration.isConfigured)
         #expect(PolarConfiguration.benefitID.lowercased() != PolarConfiguration.productID.lowercased())

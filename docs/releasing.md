@@ -78,8 +78,8 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
      copy and every existing `3.0.x` Windows copy reads `https://github.com/rolottr/bambu-bar/releases/latest/download/appcast.xml`
      and sends no `X-BambuBar-*` headers, so the `3.1.0` GitHub `appcast.xml` must keep GitHub release asset enclosures
      for both macOS (`Bambu-Bar-3.1.0-macos.zip`) and Windows (`Bambu-Bar-3.1.0-windows-x64.exe`,
-      `Bambu-Bar-3.1.0-windows-arm64.exe`). From `3.1.0` onward, active Hero Supporters on both macOS and Windows check
-      `https://bambubar.app/appcast.xml` without license headers and download via gated `https://bambubar.app/api/updates/download` (unlicensed copies make zero update checks).
+     `Bambu-Bar-3.1.0-windows-arm64.exe`). From `3.1.0` onward, active Hero Supporters on both macOS and Windows check
+     `https://bambubar.app/appcast.xml` without license headers and download via gated `https://bambubar.app/api/updates/download` (unlicensed copies make zero update checks).
    - **Pre-ship 3.0.x bridge verification:** on both macOS and Windows, install a `3.0.x` copy, run **Check for
      Updates…** against the staged GitHub bridge feed/release, and confirm it bridges cleanly to `3.1.0` with the
      supporter license and printer access codes intact (no Keychain ACL prompt, no new Polar activation slot consumed).

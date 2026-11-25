@@ -652,7 +652,7 @@ public sealed class UpdateCheckerTests : IDisposable
             started.TrySetResult();
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(30), token);
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
             }
             catch (OperationCanceledException)
             {
@@ -663,12 +663,12 @@ public sealed class UpdateCheckerTests : IDisposable
         });
 
         var inFlight = checker.CheckAsync(ct);
-        await started.Task;
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         Assert.Equal(UpdateState.Checking, checker.State);
 
         _access = false;
         checker.SupporterStatusChanged();
-        await canceled.Task;
+        await canceled.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         await inFlight;
         Assert.Equal(UpdateState.Idle, checker.State);
         Assert.Null(checker.Available);

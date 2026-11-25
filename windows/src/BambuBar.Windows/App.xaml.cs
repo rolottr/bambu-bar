@@ -129,7 +129,7 @@ public partial class App : Application
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "Updates"),
                 licenseHeaders: () => UpdateDownload.HeadersIfActivated(license));
             _updates.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(ShowUpdateOffer);
-            license.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(() => _updates?.SupporterStatusChanged());
+            license.AccessChanged += _ => Dispatcher.BeginInvoke(() => _updates?.SupporterStatusChanged());
             _updates.Start();
         }
 
