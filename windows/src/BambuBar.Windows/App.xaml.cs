@@ -124,11 +124,10 @@ public partial class App : Application
             // gated installer downloads via https://bambubar.app/api/updates/download require an active supporter
             // license and are Ed25519-verified before running.
             var license = _license;
-            var feed = new UpdateFeed(
-                url: UpdateFeed.FeedOverride(_settings, args),
-                licenseHeaders: () => UpdateDownload.HeadersIfActivated(license));
+            var feed = new UpdateFeed(url: UpdateFeed.FeedOverride(_settings, args));
             _updates = new UpdateChecker(() => license.HasAccess && license.Record is not null, _settings, feed,
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "Updates"));
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bambu Bar", "Updates"),
+                licenseHeaders: () => UpdateDownload.HeadersIfActivated(license));
             _updates.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(ShowUpdateOffer);
             license.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(() => _updates?.SupporterStatusChanged());
             _updates.Start();
@@ -349,9 +348,14 @@ public partial class App : Application
             return;
         }
         var installer = _updates.Installer is { } ready && File.Exists(ready.Path) ? ready : await _updates.DownloadAsync();
-        if (installer is null)
+        if (installer is null || !await _updates.VerifyInstallerAsync(installer))
         {
             ShowWindow(AppPage.Settings);
+            return;
+        }
+        if (!_updates.SupportsAutomaticUpdates)
+        {
+            Shell.Open(Website.Download);
             return;
         }
         try
@@ -369,8 +373,7 @@ public partial class App : Application
 
     private void Quit()
     {
-        var waiting = _updates is { SupportsAutomaticUpdates: true, DownloadsAutomatically: true, State: UpdateState.Ready, Installer: { } ready } && File.Exists(ready.Path)
-            ? _updates.Installer!.Path : null;
+        var waiting = _updates?.VerifyInstallerForQuit();
         Release();
         // "Download and install updates automatically": one downloaded and verified in the background installs as the
         // app quits (Sparkle's install on quit), silently and without starting it again.

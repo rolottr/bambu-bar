@@ -33,7 +33,9 @@ public class UpdateSignatureTests
         var path = Write(Payload());
         try
         {
-            Assert.True(await new UpdateSignature(TestPublicKey).VerifyFileAsync(path, 100_000, PayloadSignature, TestContext.Current.CancellationToken));
+            var signature = new UpdateSignature(TestPublicKey);
+            Assert.True(await signature.VerifyFileAsync(path, 100_000, PayloadSignature, TestContext.Current.CancellationToken));
+            Assert.True(signature.VerifyFile(path, 100_000, PayloadSignature));
         }
         finally { File.Delete(path); }
     }
@@ -61,6 +63,14 @@ public class UpdateSignatureTests
             var flipped = Convert.FromBase64String(PayloadSignature);
             flipped[0] ^= 1;
             Assert.False(await signature.VerifyFileAsync(paths[1], 100_000, Convert.ToBase64String(flipped), ct));
+            // Synchronous VerifyFile mirrors every failure mode.
+            Assert.False(signature.VerifyFile(paths[0], 100_000, PayloadSignature));
+            Assert.False(signature.VerifyFile(paths[1], 99_999, PayloadSignature));
+            Assert.False(signature.VerifyFile(paths[2], 100_001, PayloadSignature));
+            Assert.False(new UpdateSignature().VerifyFile(paths[1], 100_000, PayloadSignature));
+            Assert.False(signature.VerifyFile(paths[1] + ".missing", 100_000, PayloadSignature));
+            Assert.False(signature.VerifyFile(paths[1], 100_000, "not base64!"));
+            Assert.False(signature.VerifyFile(paths[1], 100_000, Convert.ToBase64String(flipped)));
         }
         finally
         {

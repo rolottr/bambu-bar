@@ -37,6 +37,7 @@ public sealed class UpdateChecker : Observable
     }
 
     private readonly Func<bool> _hasAccess;
+    private readonly Func<IReadOnlyDictionary<string, string>?>? _licenseHeaders;
     private readonly AppSettings _settings;
     private readonly UpdateFeed _feed;
     private readonly UpdateSignature _signature;
@@ -61,11 +62,15 @@ public sealed class UpdateChecker : Observable
     /// <param name="signature">The update key; the Mac's.</param>
     /// <param name="now">The clock (tests set it).</param>
     /// <param name="delay">Waits between scheduled checks (tests replace it); <see cref="Task.Delay(TimeSpan, CancellationToken)"/>.</param>
+    /// <param name="licenseHeaders">Optional UI-thread delegate returning <c>X-BambuBar-*</c> headers for gated downloads,
+    /// snapshotted synchronously in <see cref="DownloadAsync"/> before any off-thread I/O.</param>
     public UpdateChecker(Func<bool> hasAccess, AppSettings settings, UpdateFeed feed, string downloadFolder,
         string? currentVersion = null, string? platform = null, Version? osVersion = null, UpdateSignature? signature = null,
-        Func<DateTimeOffset>? now = null, Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<DateTimeOffset>? now = null, Func<TimeSpan, CancellationToken, Task>? delay = null,
+        Func<IReadOnlyDictionary<string, string>?>? licenseHeaders = null)
     {
         _hasAccess = hasAccess;
+        _licenseHeaders = licenseHeaders;
         _settings = settings;
         _feed = feed;
         _downloadFolder = downloadFolder;
@@ -163,25 +168,31 @@ public sealed class UpdateChecker : Observable
     public Task CheckAsync(CancellationToken cancellation = default) => CheckAsync(scheduled: false, cancellation);
 
     /// <summary>Downloads and verifies <see cref="Available"/>. Strictly gated on <see cref="SupportsAutomaticUpdates"/>:
-    /// returns null with zero download requests when no active supporter license is present, or when the download fails
-    /// (<see cref="Error"/> says why).</summary>
+    /// returns null with zero download requests (keeping <see cref="State"/> at <see cref="UpdateState.Available"/> so
+    /// the Settings manual download button stays visible) when no active supporter license is present, or when the
+    /// download fails (<see cref="Error"/> says why).</summary>
     public async Task<VerifiedInstaller?> DownloadAsync(CancellationToken cancellation = default)
     {
         if (!CanCheckForUpdates || Available is not { } release || _operation is not null) return null;
-        if (!SupportsAutomaticUpdates)
-        {
-            Error = new UpdateException(UpdateFailure.LicenseRequired).Message;
-            State = UpdateState.Failed;
-            Derived();
-            return null;
-        }
-        if (Installer is { } ready && ready.Item == release && File.Exists(ready.Path)) return ready;
+        if (!SupportsAutomaticUpdates) return null;
+        // Snapshot license headers synchronously on the UI thread before awaiting off-thread I/O.
+        var headers = _licenseHeaders?.Invoke();
         using var operation = _operation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
-        State = UpdateState.Downloading;
-        Error = null;
         try
         {
-            var installer = await _feed.DownloadAsync(release, _downloadFolder, _signature, operation.Token);
+            if (Installer is { } ready && ready.Item == release)
+            {
+                if (await VerifyFileSafeAsync(ready, operation.Token))
+                {
+                    return operation.IsCancellationRequested || !CanCheckForUpdates || !SupportsAutomaticUpdates || Release != release
+                        ? null
+                        : ready;
+                }
+                InvalidateTamperedInstaller(ready, markFailed: false);
+            }
+            State = UpdateState.Downloading;
+            Error = null;
+            var installer = await _feed.DownloadAsync(release, _downloadFolder, _signature, headers, operation.Token);
             if (operation.IsCancellationRequested || !CanCheckForUpdates || !SupportsAutomaticUpdates || Release != release) return null;
             Installer = installer;
             State = UpdateState.Ready;
@@ -196,6 +207,64 @@ public sealed class UpdateChecker : Observable
             return null;
         }
         finally { _operation = null; }
+    }
+
+    /// <summary>
+    /// Re-verifies a cached or downloaded installer's length and Ed25519 signature immediately before launching it.
+    /// If the file is missing, unreadable, or tampered, deletes it, clears <see cref="Installer"/>, moves
+    /// <see cref="State"/> to <see cref="UpdateState.Failed"/> with an invalid-signature error, and returns false.
+    /// </summary>
+    public async Task<bool> VerifyInstallerAsync(VerifiedInstaller installer, CancellationToken cancellation = default)
+    {
+        if (await VerifyFileSafeAsync(installer, cancellation)) return true;
+        InvalidateTamperedInstaller(installer, markFailed: true);
+        return false;
+    }
+
+    /// <summary>
+    /// Synchronous re-verification for install-on-quit (where async awaits cannot run without risking a UI-thread
+    /// deadlock). Returns the installer path only when supporter automatic updates are active, a downloaded installer is
+    /// ready, and its Ed25519 signature still verifies; otherwise clears any tampered installer and returns null.
+    /// </summary>
+    public string? VerifyInstallerForQuit()
+    {
+        if (!SupportsAutomaticUpdates || !DownloadsAutomatically || State != UpdateState.Ready || Installer is not { } ready)
+        {
+            return null;
+        }
+        if (VerifyFileSafe(ready)) return ready.Path;
+        InvalidateTamperedInstaller(ready, markFailed: false);
+        return null;
+    }
+
+    private async Task<bool> VerifyFileSafeAsync(VerifiedInstaller installer, CancellationToken cancellation)
+    {
+        if (installer.Item is not { Length: { } length and > 0, EdSignature: { } expected }) return false;
+        try { return await _signature.VerifyFileAsync(installer.Path, length, expected, cancellation); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return false; }
+    }
+
+    private bool VerifyFileSafe(VerifiedInstaller installer)
+    {
+        if (installer.Item is not { Length: { } length and > 0, EdSignature: { } expected }) return false;
+        return _signature.VerifyFile(installer.Path, length, expected);
+    }
+
+    private void InvalidateTamperedInstaller(VerifiedInstaller installer, bool markFailed)
+    {
+        try { File.Delete(installer.Path); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        if (Installer == installer) Installer = null;
+        if (markFailed)
+        {
+            Error = new UpdateException(UpdateFailure.InvalidSignature).Message;
+            State = UpdateState.Failed;
+        }
+        else if (State == UpdateState.Ready)
+        {
+            State = Release is not null ? UpdateState.Available : UpdateState.Idle;
+        }
+        Derived();
     }
 
     /// <summary>"Skip This Version": the tray panel stops offering it, and scheduled checks don't download it.</summary>

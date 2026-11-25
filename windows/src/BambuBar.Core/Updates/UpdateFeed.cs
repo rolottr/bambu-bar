@@ -157,20 +157,23 @@ public sealed partial class UpdateFeed
         try
         {
             // Feed discovery is ALWAYS anonymous: zero X-BambuBar-* headers.
-            using var response = await SendWithSafeRedirectsAsync(Url, initialHeaders: null, timeout.Token).ConfigureAwait(false);
-            if (response.StatusCode != HttpStatusCode.OK) throw new UpdateException(UpdateFailure.Unavailable);
-            if (response.Content.Headers.ContentLength > MaximumFeedBytes) throw new UpdateException(UpdateFailure.InvalidFeed);
-            await using var body = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
-            var data = new MemoryStream();
-            var buffer = new byte[16384];
-            int read;
-            while ((read = await body.ReadAsync(buffer, timeout.Token).ConfigureAwait(false)) > 0)
+            var (response, _) = await SendWithSafeRedirectsAsync(Url, initialHeaders: null, timeout.Token).ConfigureAwait(false);
+            using (response)
             {
-                if (data.Length + read > MaximumFeedBytes) throw new UpdateException(UpdateFailure.InvalidFeed);
-                data.Write(buffer, 0, read);
+                if (response.StatusCode != HttpStatusCode.OK) throw new UpdateException(UpdateFailure.Unavailable);
+                if (response.Content.Headers.ContentLength > MaximumFeedBytes) throw new UpdateException(UpdateFailure.InvalidFeed);
+                await using var body = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
+                var data = new MemoryStream();
+                var buffer = new byte[16384];
+                int read;
+                while ((read = await body.ReadAsync(buffer, timeout.Token).ConfigureAwait(false)) > 0)
+                {
+                    if (data.Length + read > MaximumFeedBytes) throw new UpdateException(UpdateFailure.InvalidFeed);
+                    data.Write(buffer, 0, read);
+                }
+                data.Position = 0;
+                return Appcast.Parse(data);
             }
-            data.Position = 0;
-            return Appcast.Parse(data);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { throw; }
         catch (Exception e) when (e is HttpRequestException or OperationCanceledException or IOException)
@@ -184,21 +187,34 @@ public sealed partial class UpdateFeed
     /// signature check out; a verified copy already there is reused. The bytes go to a ".partial" file first, which is
     /// deleted when anything fails, so the installer's own name only ever holds a verified file.
     /// </summary>
+    public Task<VerifiedInstaller> DownloadAsync(AppcastItem item, string folder, UpdateSignature signature,
+        CancellationToken cancellation = default) =>
+        DownloadAsync(item, folder, signature, licenseHeaders: null, cancellation);
+
+    /// <summary>
+    /// Downloads <paramref name="item"/>'s installer into <paramref name="folder"/> using optional pre-snapshotted
+    /// <paramref name="licenseHeaders"/> (captured on the UI thread before off-thread I/O) and returns it once its
+    /// length and signature check out.
+    /// </summary>
     public async Task<VerifiedInstaller> DownloadAsync(AppcastItem item, string folder, UpdateSignature signature,
-        CancellationToken cancellation = default)
+        IReadOnlyDictionary<string, string>? licenseHeaders, CancellationToken cancellation = default)
     {
         if (item is not { Url: { } url, Length: { } length and > 0 and <= MaximumDownloadBytes, EdSignature: { } expected }
             || FileName(url, item) is not { } name)
         {
             throw new UpdateException(UpdateFailure.InvalidFeed);
         }
+        // Snapshot any fallback delegate synchronously on the caller's thread before any ConfigureAwait(false),
+        // preserving LicenseStore's UI-thread-only contract.
+        var isLicensedDownload = IsLicensedDownload(url);
+        var headers = isLicensedDownload ? (licenseHeaders ?? _licenseHeaders?.Invoke()) : null;
         var path = Path.Combine(folder, name);
         var partial = path + ".partial";
         try
         {
             Directory.CreateDirectory(folder);
             if (await signature.VerifyFileAsync(path, length, expected, cancellation).ConfigureAwait(false)) return new(path, item);
-            await FetchFileAsync(url, length, partial, cancellation).ConfigureAwait(false);
+            await FetchFileAsync(url, length, partial, isLicensedDownload, headers, cancellation).ConfigureAwait(false);
             if (!await signature.VerifyFileAsync(partial, length, expected, cancellation).ConfigureAwait(false))
             {
                 throw new UpdateException(UpdateFailure.InvalidSignature);
@@ -218,44 +234,57 @@ public sealed partial class UpdateFeed
         }
     }
 
-    private async Task FetchFileAsync(Uri url, long length, string partial, CancellationToken cancellation)
+    private async Task FetchFileAsync(
+        Uri url,
+        long length,
+        string partial,
+        bool isLicensedDownload,
+        IReadOnlyDictionary<string, string>? headers,
+        CancellationToken cancellation)
     {
         using var stall = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         stall.CancelAfter(StallTimeout);
         try
         {
-            IReadOnlyDictionary<string, string>? headers = null;
-            if (IsLicensedDownload(url))
+            IReadOnlyDictionary<string, string>? requestHeaders = null;
+            if (isLicensedDownload)
             {
-                headers = _licenseHeaders?.Invoke() ?? throw new UpdateException(UpdateFailure.LicenseRequired);
+                requestHeaders = headers ?? throw new UpdateException(UpdateFailure.LicenseRequired);
             }
-            using var response = await SendWithSafeRedirectsAsync(url, headers, stall.Token).ConfigureAwait(false);
-            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            var (response, hopCount) = await SendWithSafeRedirectsAsync(url, requestHeaders, stall.Token).ConfigureAwait(false);
+            using (response)
             {
-                throw new UpdateException(UpdateFailure.LicenseRequired);
+                if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                {
+                    // Only a direct 401/403 from the licensed download endpoint (hop 0) means the license was rejected;
+                    // a 401/403 from a post-redirect CDN/presigned URL or non-licensed host is a transient/server error.
+                    throw new UpdateException(hopCount == 0 && isLicensedDownload
+                        ? UpdateFailure.LicenseRequired
+                        : UpdateFailure.Unavailable);
+                }
+                if (response.StatusCode != HttpStatusCode.OK) throw new UpdateException(UpdateFailure.Unavailable);
+                // A size other than the signed one can't verify: don't fetch it.
+                if (response.Content.Headers.ContentLength is { } announced && announced != length)
+                {
+                    throw new UpdateException(UpdateFailure.InvalidSignature);
+                }
+                await using var body = await response.Content.ReadAsStreamAsync(stall.Token).ConfigureAwait(false);
+                await using var file = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+                var buffer = new byte[81920];
+                long total = 0;
+                while (true)
+                {
+                    int read;
+                    try { read = await body.ReadAsync(buffer, stall.Token).ConfigureAwait(false); }
+                    catch (IOException e) { throw new UpdateException(UpdateFailure.Unavailable, e); }
+                    if (read == 0) break;
+                    stall.CancelAfter(StallTimeout);
+                    total += read;
+                    if (total > length) throw new UpdateException(UpdateFailure.InvalidSignature);
+                    await file.WriteAsync(buffer.AsMemory(0, read), stall.Token).ConfigureAwait(false);
+                }
+                if (total != length) throw new UpdateException(UpdateFailure.InvalidSignature);
             }
-            if (response.StatusCode != HttpStatusCode.OK) throw new UpdateException(UpdateFailure.Unavailable);
-            // A size other than the signed one can't verify: don't fetch it.
-            if (response.Content.Headers.ContentLength is { } announced && announced != length)
-            {
-                throw new UpdateException(UpdateFailure.InvalidSignature);
-            }
-            await using var body = await response.Content.ReadAsStreamAsync(stall.Token).ConfigureAwait(false);
-            await using var file = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-            var buffer = new byte[81920];
-            long total = 0;
-            while (true)
-            {
-                int read;
-                try { read = await body.ReadAsync(buffer, stall.Token).ConfigureAwait(false); }
-                catch (IOException e) { throw new UpdateException(UpdateFailure.Unavailable, e); }
-                if (read == 0) break;
-                stall.CancelAfter(StallTimeout);
-                total += read;
-                if (total > length) throw new UpdateException(UpdateFailure.InvalidSignature);
-                await file.WriteAsync(buffer.AsMemory(0, read), stall.Token).ConfigureAwait(false);
-            }
-            if (total != length) throw new UpdateException(UpdateFailure.InvalidSignature);
         }
         catch (OperationCanceledException e) when (!cancellation.IsCancellationRequested)
         {
@@ -265,12 +294,13 @@ public sealed partial class UpdateFeed
     }
 
     /// <summary>
-    /// Sends a GET request and manually follows up to <see cref="MaximumRedirects"/> redirects.
+    /// Sends a GET request and manually follows up to <see cref="MaximumRedirects"/> redirects, returning the final
+    /// response along with the redirect hop count (0 when the initial request answered directly).
     /// <paramref name="initialHeaders"/> (the <c>X-BambuBar-*</c> license headers) are attached ONLY to hop 0 and are
     /// unconditionally stripped on every redirect hop. Rejects non-HTTP(S) redirect schemes, URL userinfo on redirect
     /// targets, and any HTTPS-to-HTTP downgrade (or non-loopback HTTP redirects).
     /// </summary>
-    private async Task<HttpResponseMessage> SendWithSafeRedirectsAsync(
+    private async Task<(HttpResponseMessage Response, int HopCount)> SendWithSafeRedirectsAsync(
         Uri initialUrl,
         IReadOnlyDictionary<string, string>? initialHeaders,
         CancellationToken cancellation)
@@ -287,7 +317,7 @@ public sealed partial class UpdateFeed
                 }
             }
             var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation).ConfigureAwait(false);
-            if (!IsRedirect(response.StatusCode)) return response;
+            if (!IsRedirect(response.StatusCode)) return (response, hop);
 
             var location = response.Headers.Location;
             response.Dispose();

@@ -98,9 +98,10 @@ public sealed class UpdateCheckerTests : IDisposable
         string current = "2.1.0",
         string platform = UpdatePlatform.WindowsX64,
         Uri? feedUrl = null,
-        bool allowAnyFeedOverrideHost = UpdateDownload.DefaultAllowsAnyFeedOverrideHost) =>
+        bool allowAnyFeedOverrideHost = UpdateDownload.DefaultAllowsAnyFeedOverrideHost,
+        Func<IReadOnlyDictionary<string, string>?>? licenseHeaders = null) =>
         new(() => _access, _settings,
-            new UpdateFeed(_server, feedUrl, () => _access ? UpdateDownload.Headers(TestLicense) : null, allowAnyFeedOverrideHost),
+            new UpdateFeed(_server, feedUrl, licenseHeaders: null, allowAnyFeedOverrideHost),
             _folder, current, platform, new Version(10, 0, 26100),
             new UpdateSignature(UpdateSignatureTests.TestPublicKey), () => _now, (span, token) =>
             {
@@ -108,7 +109,8 @@ public sealed class UpdateCheckerTests : IDisposable
                 token.Register(() => wait.TrySetCanceled(token));
                 lock (_waits) _waits.Add((span, wait, token));
                 return wait.Task;
-            });
+            },
+            licenseHeaders ?? (() => _access ? UpdateDownload.Headers(TestLicense) : null));
 
     private static async Task Until(Func<bool> condition)
     {
@@ -154,10 +156,11 @@ public sealed class UpdateCheckerTests : IDisposable
         AssertNoLicenseHeaders(_server.Requests[0]);
         Assert.False(Directory.Exists(_folder));
 
-        // Direct download attempt while unlicensed is blocked locally with zero download requests.
+        // Direct download attempt while unlicensed is blocked locally with zero download requests,
+        // keeping State at Available so the Settings "Download…" button stays visible.
         Assert.Null(await checker.DownloadAsync(ct));
-        Assert.Equal(UpdateState.Failed, checker.State);
-        Assert.Equal("Activate your license to download updates.", checker.Error);
+        Assert.Equal(UpdateState.Available, checker.State);
+        Assert.Null(checker.Error);
         Assert.Single(_server.Requests);
     }
 
@@ -260,6 +263,109 @@ public sealed class UpdateCheckerTests : IDisposable
         Assert.Equal("Activate your license to download updates.", checker.Error);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task PostRedirectCdnAuthFailureReportsUnavailableNotLicenseRequired(HttpStatusCode status)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var payload = UpdateSignatureTests.Payload();
+        _server.Serve(UpdateFeed.DefaultUrl.ToString(), WebsiteFeed("3.1.1", GatedX64Url, payload));
+        _server.Redirect(GatedX64Url, RedirectArchiveUrl, HttpStatusCode.Found, requireLicense: true);
+        _server.Serve(RedirectArchiveUrl, [], status);
+
+        var checker = Checker(current: "3.1.0");
+        checker.Start();
+        await checker.CheckAsync(ct);
+        Assert.Null(await checker.DownloadAsync(ct));
+        Assert.Equal(UpdateState.Failed, checker.State);
+        Assert.Equal("Couldn’t check for updates. Check your connection and try again.", checker.Error);
+        Assert.Equal(3, _server.Requests.Count);
+        AssertNoLicenseHeaders(_server.Requests[2]);
+    }
+
+    [Fact]
+    public async Task LicenseHeadersAreSnapshottedSynchronouslyOnCallingThread()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var payload = UpdateSignatureTests.Payload();
+        _server.Serve(UpdateFeed.DefaultUrl.ToString(), WebsiteFeed("3.1.1", GatedX64Url, payload));
+        _server.Redirect(GatedX64Url, RedirectArchiveUrl, HttpStatusCode.Found, requireLicense: true);
+        _server.Serve(RedirectArchiveUrl, payload);
+
+        var callerThread = Environment.CurrentManagedThreadId;
+        int? delegateThread = null;
+        var calls = 0;
+        var checker = Checker(current: "3.1.0", licenseHeaders: () =>
+        {
+            calls++;
+            delegateThread = Environment.CurrentManagedThreadId;
+            return UpdateDownload.Headers(TestLicense);
+        });
+        checker.Start();
+        await checker.CheckAsync(ct);
+        Assert.Equal(0, calls);
+
+        // Start DownloadAsync synchronously: the delegate must have already run on the calling (UI) thread
+        // before DownloadAsync returns its task / yields to off-thread I/O.
+        var downloadTask = checker.DownloadAsync(ct);
+        Assert.Equal(1, calls);
+        Assert.Equal(callerThread, delegateThread);
+        var installer = await downloadTask;
+        Assert.NotNull(installer);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task TamperedCachedInstallerFailsReverificationBeforeLaunchAndOnQuit()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var payload = UpdateSignatureTests.Payload();
+        _server.Serve(UpdateFeed.DefaultUrl.ToString(), WebsiteFeed("3.1.1", GatedX64Url, payload));
+        _server.Redirect(GatedX64Url, RedirectArchiveUrl, HttpStatusCode.Found, requireLicense: true);
+        _server.Serve(RedirectArchiveUrl, payload);
+
+        var checker = Checker(current: "3.1.0");
+        checker.DownloadsAutomatically = true;
+        checker.Start();
+        await checker.CheckAsync(ct);
+        var installer = await checker.DownloadAsync(ct);
+        Assert.NotNull(installer);
+        Assert.Equal(UpdateState.Ready, checker.State);
+        Assert.Equal(installer.Path, checker.VerifyInstallerForQuit());
+        Assert.True(await checker.VerifyInstallerAsync(installer, ct));
+
+        // Tamper with the cached installer on disk: install-on-quit must refuse to launch and clear it.
+        var tampered = (byte[])payload.Clone();
+        tampered[4096] ^= 0xFF;
+        File.WriteAllBytes(installer.Path, tampered);
+        Assert.Null(checker.VerifyInstallerForQuit());
+        Assert.Null(checker.Installer);
+        Assert.Equal(UpdateState.Available, checker.State);
+        Assert.False(File.Exists(installer.Path));
+
+        // Re-download a clean copy, then tamper again: immediate InstallUpdate re-verification must fail and clear it.
+        var redownloaded = await checker.DownloadAsync(ct);
+        Assert.NotNull(redownloaded);
+        Assert.Equal(UpdateState.Ready, checker.State);
+        File.WriteAllBytes(redownloaded.Path, tampered);
+        Assert.False(await checker.VerifyInstallerAsync(redownloaded, ct));
+        Assert.Null(checker.Installer);
+        Assert.Equal(UpdateState.Failed, checker.State);
+        Assert.Equal("The downloaded update couldn’t be verified, so it won’t be installed. Please try again later.", checker.Error);
+        Assert.False(File.Exists(redownloaded.Path));
+
+        // Tampering with a cached Ready installer before calling DownloadAsync forces a fresh verified download.
+        var third = await checker.DownloadAsync(ct);
+        Assert.NotNull(third);
+        var requestsBefore = _server.Requests.Count;
+        File.WriteAllBytes(third.Path, tampered);
+        var refreshed = await checker.DownloadAsync(ct);
+        Assert.NotNull(refreshed);
+        Assert.True(_server.Requests.Count > requestsBefore);
+        Assert.Equal(payload, File.ReadAllBytes(refreshed.Path));
+    }
+
     [Fact]
     public async Task ReleasePolicyNeverSendsLicenseHeadersToLoopbackDownloadUrl()
     {
@@ -281,7 +387,7 @@ public sealed class UpdateCheckerTests : IDisposable
 
         Assert.Null(await checker.DownloadAsync(ct));
         Assert.Equal(UpdateState.Failed, checker.State);
-        Assert.Equal("Activate your license to download updates.", checker.Error);
+        Assert.Equal("Couldn’t check for updates. Check your connection and try again.", checker.Error);
         Assert.Equal(2, _server.Requests.Count);
         Assert.Equal(new Uri(localDownload), _server.Requests[1].Url);
         AssertNoLicenseHeaders(_server.Requests[1]);
@@ -513,7 +619,8 @@ public sealed class UpdateCheckerTests : IDisposable
         Assert.False(checker.DownloadsAutomatically);
         Assert.False(_waits[0].Token.IsCancellationRequested);
         Assert.Null(await checker.DownloadAsync(ct));
-        Assert.Equal("Activate your license to download updates.", checker.Error);
+        Assert.Equal(UpdateState.Available, checker.State);
+        Assert.Null(checker.Error);
 
         // Back again: automatic downloads are available again.
         _access = true;

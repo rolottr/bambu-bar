@@ -168,10 +168,11 @@ public sealed class UpdateFeedLoopbackIntegrationTests : IDisposable
             Assert.Equal("3.1.1", checker.Available?.DisplayVersion);
             Assert.Equal("3.1.1", checker.Offered?.DisplayVersion);
 
-            // Attempt download while unlicensed: blocked with zero HTTP download requests.
+            // Attempt download while unlicensed: blocked with zero HTTP download requests,
+            // preserving Available state for Settings' manual Download… action.
             Assert.Null(await checker.DownloadAsync(ct));
-            Assert.Equal(UpdateState.Failed, checker.State);
-            Assert.Equal("Activate your license to download updates.", checker.Error);
+            Assert.Equal(UpdateState.Available, checker.State);
+            Assert.Null(checker.Error);
 
             var apiReq = Assert.Single(api.Requests);
             Assert.Equal("/appcast.xml", apiReq.Target);
@@ -281,7 +282,7 @@ public sealed class UpdateFeedLoopbackIntegrationTests : IDisposable
 
             Assert.Null(await checker.DownloadAsync(ct));
             Assert.Equal(UpdateState.Failed, checker.State);
-            Assert.Equal("Activate your license to download updates.", checker.Error);
+            Assert.Equal("Couldn’t check for updates. Check your connection and try again.", checker.Error);
 
             // Both requests over real TCP arrived with ZERO X-BambuBar-* headers.
             var apiReqs = api.Requests.ToArray();

@@ -51,6 +51,37 @@ public sealed class UpdateSignature
         }
     }
 
+    /// <summary>Synchronous counterpart to <see cref="VerifyAsync"/> (for install-on-quit where async awaits cannot
+    /// run without risking a UI-thread deadlock).</summary>
+    public bool Verify(Stream content, string signature)
+    {
+        if (Decode(signature) is not { } expected) return false;
+        var signer = new Ed25519Signer();
+        signer.Init(false, _key);
+        var buffer = new byte[81920];
+        int read;
+        while ((read = content.Read(buffer, 0, buffer.Length)) > 0) signer.BlockUpdate(buffer, 0, read);
+        return signer.VerifySignature(expected);
+    }
+
+    /// <summary>Synchronous counterpart to <see cref="VerifyFileAsync"/>: true when the file at <paramref name="path"/>
+    /// is exactly <paramref name="length"/> bytes long and carries <paramref name="signature"/>. Missing or unreadable
+    /// files return false.</summary>
+    public bool VerifyFile(string path, long length, string signature)
+    {
+        FileStream file;
+        try { file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920); }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+        using (file)
+        {
+            try { return file.Length == length && Verify(file, signature); }
+            catch (IOException) { return false; }
+        }
+    }
+
     private static byte[]? Decode(string signature)
     {
         try

@@ -262,9 +262,9 @@ internal sealed class SettingsPage(WindowContext ctx) : Page(ctx)
         {
             UpdateState.Checking => Loc.T("Checking…"),
             UpdateState.Downloading => Loc.T("Downloading…"),
-            UpdateState.Available or UpdateState.Ready when updates.Available is { } release =>
+            UpdateState.Available or UpdateState.Ready when updates.Available is not null =>
                 access
-                    ? Loc.F("Bambu Bar %@ is available", release.DisplayVersion ?? "")
+                    ? Loc.F("Current: %@", updates.CurrentVersion)
                     : Loc.T("Download from bambubar.app"),
             UpdateState.Failed => updates.Error ?? Loc.T("Couldn’t check for updates"),
             UpdateState.UpToDate => Loc.T("Bambu Bar is up to date"),

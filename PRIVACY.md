@@ -1,6 +1,6 @@
 # Bambu Bar Privacy Policy
 
-_Last updated: November 17, 2026_
+_Last updated: November 25, 2026_
 
 Bambu Bar is a macOS app that shows the status of Bambu Lab 3D printers on your local network. It is made by an independent developer (NINA LABS, LLC) and is not affiliated with Bambu Lab.
 
@@ -24,7 +24,7 @@ Removing a printer in Printers deletes its access code from the keychain.
 
 - **Your printers:** Bambu Bar connects directly to each printer on your local network (MQTT over TLS, port 8883) and listens for the announcements printers send on the network (UDP port 2021) so it can find them.
 - **Optional supporter licenses:** Our licensing provider receives the license key, activation ID and a random installation ID for activation and periodic checks, plus network information such as IP address. The key and validation date are stored in a non-synchronizing Keychain item on this Mac.
-- **Updates:** direct copies with an active website supporter license check the latest GitHub release metadata and use a signed update feed hosted on GitHub to install newer versions. Automatic checks can be turned off in Settings. No printer data is sent.
+- **Updates:** all direct copies (macOS and Windows) check `https://bambubar.app/appcast.xml` anonymously once a day unless turned off in Settings, sending no license or printer data. With an active website supporter license, downloading an update sends supporter license headers (`X-BambuBar-*`) only to `https://bambubar.app/api/updates/download` (never on the feed check, and stripped on redirects) to verify access before fetching and verifying the signed update. No printer data is sent.
 - **Mac App Store:** purchases and updates are managed by Apple.
 
 The app does not use Bambu Lab's cloud services and does not need your Bambu Lab account.

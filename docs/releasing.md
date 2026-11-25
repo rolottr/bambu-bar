@@ -83,6 +83,9 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
    - **Pre-ship 3.0.x bridge verification:** on both macOS and Windows, install a `3.0.x` copy, run **Check for
      Updates…** against the staged GitHub bridge feed/release, and confirm it bridges cleanly to `3.1.0` with the
      supporter license and printer access codes intact (no Keychain ACL prompt, no new Polar activation slot consumed).
+   - **Pre-`--latest` live website feed gate (required before marking `3.1.0` `--latest`):** confirm
+     `curl -sf https://bambubar.app/appcast.xml` returns HTTP `200` and includes macOS, `windows-x64`, and
+     `windows-arm64` items for `<version>` alongside the GitHub bridge `appcast.xml`.
    - `scripts/check-release.sh v<version> && gh release edit v<version> --latest`.
    - Tag the commit (`v<version>`, annotated) and push the tag.
 3. **App Store:**
