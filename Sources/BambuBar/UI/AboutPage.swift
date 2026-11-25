@@ -27,9 +27,7 @@ struct AboutPage: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Palette.tintDeep)
-                        .help(updates.supportsAutomaticUpdates
-                              ? Text("Shows what’s new in \(release.version) and installs it")
-                              : Text("Download \(release.version) from bambubar.app"))
+                        .help(Text("Shows what’s new in \(release.version) and installs it"))
                         .padding(.top, 6)
                     }
                 }

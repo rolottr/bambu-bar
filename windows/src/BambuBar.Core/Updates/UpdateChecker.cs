@@ -2,19 +2,19 @@ using BambuBar.Core.App;
 
 namespace BambuBar.Core.Updates;
 
-// Ported from the Mac's Sources/BambuBar/Services/UpdateChecker.swift, without Sparkle: on Windows this class reads
-// the shared appcast at https://bambubar.app/appcast.xml anonymously, picks this PC's item, and — when a supporter
-// license is active — downloads and verifies the installer via https://bambubar.app/api/updates/download. Running it
+// Ported from the Mac's Sources/BambuBar/Services/UpdateChecker.swift, without Sparkle: on Windows this class gates
+// all update checks and downloads on an active Hero Supporter license. When licensed, it reads the shared appcast at
+// https://bambubar.app/appcast.xml anonymously (zero license headers), picks this PC's item, and downloads and verifies
+// the installer via https://bambubar.app/api/updates/download. Unlicensed copies make zero update requests. Running it
 // (silently, then relaunching) is the app's part.
 
 public enum UpdateState { Idle, Checking, UpToDate, Available, Downloading, Ready, Failed }
 
 /// <summary>
-/// In-app updates on <c>https://bambubar.app/appcast.xml</c>: a daily anonymous check of the shared appcast (zero
-/// <c>X-BambuBar-*</c> headers), "Skip This Version", "Later" and an optional automatic download. Both licensed and
-/// unlicensed copies learn when a new Windows release ships; automated downloads and installs remain strictly gated
-/// on an active supporter license. Windows compares its own appcast item's version with this app's, never a tag, so
-/// a Mac-only release is simply "up to date" here.
+/// Hero Supporter updates on <c>https://bambubar.app/appcast.xml</c>: a daily check of the shared appcast (zero
+/// <c>X-BambuBar-*</c> headers), "Skip This Version", "Later" and an optional automatic download, all strictly gated
+/// on an active Hero Supporter license. Unlicensed copies make zero update check or download requests. Windows compares
+/// its own appcast item's version with this app's, never a tag, so a Mac-only release is simply "up to date" here.
 /// <para>Single-threaded like the Mac's <c>@MainActor</c> checker: create it and call every member on the UI thread.
 /// Its awaits resume on the caller's context and it starts no threads of its own. Wire the license with
 /// <c>license.AccessChanged += _ =&gt; checker.SupporterStatusChanged()</c>.</para>
@@ -107,15 +107,16 @@ public sealed class UpdateChecker : Observable
 
     public bool IsRunning { get; private set => Set(ref field, value); }
 
-    /// <summary>Whether automated downloads and installs are allowed (requires an active supporter license).</summary>
+    /// <summary>Whether update checks and automated downloads/installs are allowed (requires an active Hero Supporter license).</summary>
     public bool SupportsAutomaticUpdates => _hasAccess();
 
-    /// <summary>Anonymous daily checks of <c>https://bambubar.app/appcast.xml</c> are available on all copies.</summary>
+    /// <summary>Automatic daily checks of <c>https://bambubar.app/appcast.xml</c> require an active Hero Supporter license.</summary>
     public bool ChecksAutomatically
     {
-        get => _checksPreference;
+        get => SupportsAutomaticUpdates && _checksPreference;
         set
         {
+            if (!SupportsAutomaticUpdates) return;
             _checksPreference = value;
             _settings.Set(Keys.AutomaticChecks, value);
             ApplySettings();
@@ -124,31 +125,32 @@ public sealed class UpdateChecker : Observable
         }
     }
 
-    /// <summary>Automatic background downloads and installs require an active supporter license.</summary>
+    /// <summary>Automatic background downloads and installs require an active Hero Supporter license.</summary>
     public bool DownloadsAutomatically
     {
-        get => SupportsAutomaticUpdates && ChecksAutomatically && _downloadsPreference;
+        get => ChecksAutomatically && _downloadsPreference;
         set
         {
+            if (!SupportsAutomaticUpdates) return;
             _downloadsPreference = value;
             _settings.Set(Keys.AutomaticDownloads, value);
             Changed();
         }
     }
 
-    public bool CanCheckForUpdates => IsRunning;
+    public bool CanCheckForUpdates => IsRunning && SupportsAutomaticUpdates;
 
-    /// <summary>The newer release found for this PC (surfaced to both licensed and unlicensed copies).</summary>
-    public AppcastItem? Available => Release;
+    /// <summary>The newer release found for this PC (only while an active Hero Supporter license grants access).</summary>
+    public AppcastItem? Available => SupportsAutomaticUpdates ? Release : null;
 
     /// <summary>The release to offer in the tray panel: not skipped and not put off for later.</summary>
     public AppcastItem? Offered =>
         Available is { } release && !OfferDismissed && release.DisplayVersion != SkippedVersion ? release : null;
 
-    /// <summary>Starts the daily anonymous schedule. Demo, emulator and developer runs leave it off.</summary>
+    /// <summary>Starts the daily Hero Supporter schedule. Demo, emulator, developer and unlicensed runs leave it off.</summary>
     public void Start()
     {
-        if (IsRunning) return;
+        if (!SupportsAutomaticUpdates || IsRunning) return;
         IsRunning = true;
         ApplySettings();
         Derived();
@@ -287,15 +289,20 @@ public sealed class UpdateChecker : Observable
     /// <summary>The license was activated, revalidated, refused or deactivated.</summary>
     public void SupporterStatusChanged()
     {
-        if (IsRunning) ApplySettings();
-        if (!SupportsAutomaticUpdates)
+        if (SupportsAutomaticUpdates)
         {
-            if (State == UpdateState.Downloading) _operation?.Cancel();
+            if (!IsRunning) Start();
+            else ApplySettings();
+        }
+        else
+        {
+            CancelSchedule();
+            _operation?.Cancel();
+            Release = null;
             Installer = null;
-            if (State is UpdateState.Downloading or UpdateState.Ready)
-            {
-                State = Release is not null ? UpdateState.Available : UpdateState.Idle;
-            }
+            Error = null;
+            State = UpdateState.Idle;
+            OfferDismissed = true;
         }
         Changed(null);
     }

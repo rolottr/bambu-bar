@@ -19,7 +19,7 @@ supporter-license rule and the same signing key.
 | Built by | `scripts/build.sh` + `scripts/package.sh` | `scripts/appstore.sh` |
 | Signing | Developer ID, Hardened Runtime, notarized by Apple | Apple Distribution (Xcode automatic signing), sandboxed |
 | Polar supporter license | Included: "Support this project", Manage License…, Hero Supporter badge | Compiled out (checked by `scripts/check-appstore-licensing.sh`) |
-| Updates | Sparkle (macOS) and `BambuBar.Core.Updates` (Windows) via `https://bambubar.app/appcast.xml` (anonymous daily check, no license headers) and `https://bambubar.app/api/updates/download` (requires an active supporter license; without one, people on both platforms are notified of new versions and download the next build from `bambubar.app` or GitHub themselves). Existing 3.0.x Mac and 3.0.x Windows copies bridge to `3.1.0` from GitHub's `releases/latest/download/appcast.xml`. | The Mac App Store |
+| Updates | Sparkle (macOS) and `BambuBar.Core.Updates` (Windows), gated on an active Hero Supporter license: unlicensed copies make zero update checks; active Hero Supporters check `https://bambubar.app/appcast.xml` once a day without license headers and download signed updates via `https://bambubar.app/api/updates/download`. Existing 3.0.x Mac and 3.0.x Windows copies bridge to `3.1.0` from GitHub's `releases/latest/download/appcast.xml`. | The Mac App Store |
 | Settings, access codes | `~/Library/Preferences/dev.rolottr.BambuBar.plist`; data-protection keychain when a Developer ID provisioning profile is embedded, otherwise transparent fallback to login keychain (read-once in-process cache) | `~/Library/Containers/dev.rolottr.BambuBar`, data-protection keychain only (never reads or deletes login-keychain items; the two editions don't share codes) |
 | Bambu Studio's codes | Read directly | Read after the person picks its folder |
 
@@ -78,8 +78,8 @@ itself (Polar checkout, activation, offline grace) is described in the README's 
      copy and every existing `3.0.x` Windows copy reads `https://github.com/rolottr/bambu-bar/releases/latest/download/appcast.xml`
      and sends no `X-BambuBar-*` headers, so the `3.1.0` GitHub `appcast.xml` must keep GitHub release asset enclosures
      for both macOS (`Bambu-Bar-3.1.0-macos.zip`) and Windows (`Bambu-Bar-3.1.0-windows-x64.exe`,
-     `Bambu-Bar-3.1.0-windows-arm64.exe`). From `3.1.0` onward, both macOS and Windows check
-     `https://bambubar.app/appcast.xml` anonymously and download via gated `https://bambubar.app/api/updates/download`.
+      `Bambu-Bar-3.1.0-windows-arm64.exe`). From `3.1.0` onward, active Hero Supporters on both macOS and Windows check
+      `https://bambubar.app/appcast.xml` without license headers and download via gated `https://bambubar.app/api/updates/download` (unlicensed copies make zero update checks).
    - **Pre-ship 3.0.x bridge verification:** on both macOS and Windows, install a `3.0.x` copy, run **Check for
      Updates…** against the staged GitHub bridge feed/release, and confirm it bridges cleanly to `3.1.0` with the
      supporter license and printer access codes intact (no Keychain ACL prompt, no new Polar activation slot consumed).

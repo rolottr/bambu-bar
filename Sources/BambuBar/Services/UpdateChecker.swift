@@ -8,17 +8,16 @@ import Observation
     import os
 #endif
 
-/// In-app updates with Sparkle 2 on `https://bambubar.app/appcast.xml`.
+/// In-app updates with Sparkle 2 on `https://bambubar.app/appcast.xml`, gated on an active Hero Supporter license.
 ///
-/// The daily scheduled check reads the anonymous public feed at `https://bambubar.app/appcast.xml`
-/// (`SUScheduledCheckInterval` = 86400) with zero `X-BambuBar-*` headers (`SPUUpdater.httpHeaders`
-/// stays unset), so both licensed and unlicensed direct copies learn when a new release ships.
-/// Automated Sparkle downloads remain strictly gated on an active supporter license:
-/// `updater(_:shouldProceedWithUpdate:updateCheck:)` records the available release for the UI
-/// notice and throws to block unlicensed downloads, and in Release builds only verified download
-/// requests to `https://bambubar.app/api/updates/download` receive `X-BambuBar-*` headers inside
-/// `updater(_:willDownloadUpdate:with:)`. Every update must carry the shared Clever Mechanisms
-/// EdDSA signature (`SUPublicEDKey`) and Developer ID signature.
+/// Unlicensed direct copies never start Sparkle and make zero update check or download requests.
+/// With an active Hero Supporter license, the daily scheduled check reads the anonymous public feed at
+/// `https://bambubar.app/appcast.xml` (`SUScheduledCheckInterval` = 86400) with zero `X-BambuBar-*` headers
+/// (`SPUUpdater.httpHeaders` stays unset), and downloads via `https://bambubar.app/api/updates/download`
+/// with `X-BambuBar-*` headers attached inside `updater(_:willDownloadUpdate:with:)` (strictly production-only
+/// in Release builds). `updater(_:shouldProceedWithUpdate:updateCheck:)` remains strictly fail-closed if license
+/// access is missing. Every update must carry the shared Clever Mechanisms EdDSA signature (`SUPublicEDKey`)
+/// and Developer ID signature.
 ///
 /// The Mac App Store edition compiles with zero Sparkle symbols; the App Store handles updates.
 @MainActor
@@ -42,7 +41,6 @@ final class UpdateChecker: NSObject {
     private(set) var skippedVersion: String?
     private(set) var isRunning = false
     private(set) var pendingVersion: String?
-    @ObservationIgnored var onOpenSettings: (@MainActor () -> Void)?
 
     // Preserve the user's choices while supporter validation is pending or unavailable.
     private var automaticChecksPreference = true
@@ -53,33 +51,36 @@ final class UpdateChecker: NSObject {
         #if APP_STORE
         false
         #else
-        LicenseStore.shared.hasAccess && LicenseStore.shared.record != nil
+        downloadHeaders != nil
         #endif
     }
 
-    /// Anonymous daily checks of `https://bambubar.app/appcast.xml` are available on all direct copies.
+    /// Automatic daily checks of `https://bambubar.app/appcast.xml` require an active Hero Supporter license.
     var checksAutomatically: Bool {
-        get { Self.isAvailable && automaticChecksPreference }
+        get { Self.isAvailable && supportsAutomaticUpdates && automaticChecksPreference }
         set {
+            guard Self.isAvailable, supportsAutomaticUpdates else { return }
             automaticChecksPreference = newValue
             UserDefaults.standard.set(newValue, forKey: "supporterAutomaticChecks")
-            applySettings()
+            if isRunning { applySettings() }
         }
     }
 
-    /// Automatic background downloads and installs require an active supporter license.
+    /// Automatic background downloads and installs require an active Hero Supporter license.
     var downloadsAutomatically: Bool {
-        get { supportsAutomaticUpdates && checksAutomatically && automaticDownloadsPreference }
+        get { checksAutomatically && automaticDownloadsPreference }
         set {
+            guard Self.isAvailable, supportsAutomaticUpdates else { return }
             automaticDownloadsPreference = newValue
             UserDefaults.standard.set(newValue, forKey: "supporterAutomaticDownloads")
-            applySettings()
+            if isRunning { applySettings() }
         }
     }
 
-    var canCheckForUpdates: Bool { isRunning && sparkleCanCheckForUpdates }
+    var canCheckForUpdates: Bool { isRunning && supportsAutomaticUpdates && sparkleCanCheckForUpdates }
 
     var available: Release? {
+        guard supportsAutomaticUpdates else { return nil }
         if case .available(let release) = state { return release }
         if let pendingVersion { return Release(version: pendingVersion) }
         return nil
@@ -146,10 +147,13 @@ final class UpdateChecker: NSObject {
 
         var updater: SPUUpdater { controller.updater }
 
-        /// Starts Sparkle only in an official `.app` signed by Team ID `PCZ6F8Q9DZ` with `SUPublicEDKey`
-        /// configured, and never during developer runs (`--demo`, `--showcase`, `--readme-frames`, etc.).
+        /// Starts Sparkle only when an active Hero Supporter license is present, inside an official `.app`
+        /// signed by Team ID `PCZ6F8Q9DZ` with `SUPublicEDKey` configured, and never during developer runs
+        /// (`--demo`, `--showcase`, `--readme-frames`, etc.). Unlicensed copies never start Sparkle and make
+        /// zero update check or download requests.
         func start() {
-            guard !isRunning,
+            guard supportsAutomaticUpdates,
+                  !isRunning,
                   Self.isOfficialBuild,
                   !LaunchContext.isDeveloperRun,
                   Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil else { return }
@@ -166,7 +170,7 @@ final class UpdateChecker: NSObject {
             updater.publisher(for: \.automaticallyChecksForUpdates)
                 .sink { [weak self] value in
                     MainActor.assumeIsolated {
-                        guard let self, self.automaticChecksPreference != value else { return }
+                        guard let self, self.supportsAutomaticUpdates, self.automaticChecksPreference != value else { return }
                         self.automaticChecksPreference = value
                         UserDefaults.standard.set(value, forKey: "supporterAutomaticChecks")
                     }
@@ -193,7 +197,7 @@ final class UpdateChecker: NSObject {
         func check() {
             guard canCheckForUpdates else { return }
             state = .checking
-            if updater.sessionInProgress && supportsAutomaticUpdates {
+            if updater.sessionInProgress {
                 NSApp.activate(ignoringOtherApps: true)
                 controller.checkForUpdates(nil)
             } else {
@@ -203,15 +207,6 @@ final class UpdateChecker: NSObject {
 
         func showUpdate() {
             guard canCheckForUpdates else { return }
-            if !supportsAutomaticUpdates {
-                if available != nil {
-                    NSWorkspace.shared.open(Website.download)
-                } else {
-                    check()
-                    onOpenSettings?()
-                }
-                return
-            }
             NSApp.activate(ignoringOtherApps: true)
             if state != .checking && available == nil {
                 state = .checking
@@ -220,11 +215,19 @@ final class UpdateChecker: NSObject {
         }
 
         func supporterStatusChanged() {
-            if !isRunning {
-                start()
-            }
-            if isRunning {
-                applySettings()
+            if supportsAutomaticUpdates {
+                if !isRunning {
+                    start()
+                } else {
+                    applySettings()
+                }
+            } else {
+                if isRunning {
+                    applySettings()
+                }
+                pendingVersion = nil
+                offerDismissed = true
+                state = .idle
             }
         }
 
@@ -290,11 +293,8 @@ final class UpdateChecker: NSObject {
                                  updateCheck: SPUUpdateCheck) throws {
             try MainActor.assumeIsolated {
                 guard downloadHeaders != nil else {
-                    // Sparkle invokes `shouldProceedWithUpdate` before `didFindValidUpdate` in all
-                    // drivers (including probing checks). Record the available release first so the
-                    // unlicensed UI notice ("Download from bambubar.app") appears while the throw
-                    // still strictly aborts any download or Sparkle install prompt.
-                    found(item)
+                    pendingVersion = nil
+                    state = .idle
                     throw NSError(
                         domain: Self.unlicensedGateErrorDomain,
                         code: Self.unlicensedGateErrorCode,
@@ -321,11 +321,15 @@ final class UpdateChecker: NSObject {
         }
 
         nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
-            MainActor.assumeIsolated { found(item) }
+            MainActor.assumeIsolated {
+                guard supportsAutomaticUpdates else { return }
+                found(item)
+            }
         }
 
         nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
             MainActor.assumeIsolated {
+                guard supportsAutomaticUpdates else { return }
                 pendingVersion = nil
                 state = .upToDate
             }
@@ -360,6 +364,11 @@ final class UpdateChecker: NSObject {
                 && sparkleCode != Int(SUError.installationCanceledError.rawValue)
             let message = error?.localizedDescription ?? String(localized: "Couldn’t check for updates. Check your connection and try again.")
             MainActor.assumeIsolated {
+                guard supportsAutomaticUpdates else {
+                    pendingVersion = nil
+                    state = .idle
+                    return
+                }
                 syncLastChecked()
                 if state == .checking {
                     state = failed ? .failed(message) : .upToDate
@@ -379,6 +388,7 @@ final class UpdateChecker: NSObject {
         nonisolated func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem,
                                                                    state: SPUUserUpdateState) {
             MainActor.assumeIsolated {
+                guard supportsAutomaticUpdates else { return }
                 if !handleShowingUpdate {
                     found(update)
                 }

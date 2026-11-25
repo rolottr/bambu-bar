@@ -120,9 +120,9 @@ public partial class App : Application
         _license.Start();
         if (!ephemeral)
         {
-            // Updates (ledger P5.4): anonymous daily check of https://bambubar.app/appcast.xml for this PC's item;
-            // gated installer downloads via https://bambubar.app/api/updates/download require an active supporter
-            // license and are Ed25519-verified before running.
+            // Updates (ledger P5.4): Hero Supporter-only daily check of https://bambubar.app/appcast.xml (zero license
+            // headers) and gated installer downloads via https://bambubar.app/api/updates/download, Ed25519-verified
+            // before running. Unlicensed copies make zero update requests.
             var license = _license;
             var feed = new UpdateFeed(url: UpdateFeed.FeedOverride(_settings, args));
             _updates = new UpdateChecker(() => license.HasAccess && license.Record is not null, _settings, feed,
@@ -136,13 +136,17 @@ public partial class App : Application
         _tray = new TrayIcon(_store) { ShowPercent = _settings.Get(WindowSettings.TrayShowsPercent, false) };
         _tray.OpenWindow += () => ShowWindow();
         _tray.OpenPage += page => ShowWindow(page);
-        // "Check for Updates…": Settings → Updates shows the check and its result.
+        // "Check for Updates…": gated on an active Hero Supporter license; Settings → Updates shows the check and result.
         if (_updates is { } updates)
+        {
+            _tray.CanCheckForUpdates = () => updates.CanCheckForUpdates;
             _tray.CheckForUpdates = () =>
             {
+                if (!updates.CanCheckForUpdates) return;
                 ShowWindow(AppPage.Settings);
-                if (updates.CanCheckForUpdates) _ = updates.CheckAsync();
+                _ = updates.CheckAsync();
             };
+        }
         _tray.OpenPanel += TogglePanel;
         _tray.Quit += Quit;
         _tray.ShowCamera += CameraWindow.Show;
@@ -322,42 +326,28 @@ public partial class App : Application
     {
         if (_panelView is null || _updates is null) return;
         var offered = _updates.Offered;
-        var canInstall = _updates.SupportsAutomaticUpdates;
         var offer = offered is null
             ? null
-            : new UpdateOffer(offered.DisplayVersion ?? "",
-                canInstall ? InstallUpdate : () => Shell.Open(Website.Download),
-                _updates.RemindLater,
-                canInstall);
+            : new UpdateOffer(offered.DisplayVersion ?? "", InstallUpdate, _updates.RemindLater);
         if (offer?.Version == _panelView.UpdateOffer?.Version
-            && offer?.CanInstall == _panelView.UpdateOffer?.CanInstall
             && (offer is null) == (_panelView.UpdateOffer is null)) return;
         _panelView.UpdateOffer = offer;
         _panelView.Refresh();
     }
 
     /// <summary>"Update…": downloads and verifies the release (unless it's already here), runs its installer silently
-    /// and quits; the installer replaces the files and starts Bambu Bar again (/RELAUNCH=1). Without an active
-    /// supporter license, opens the manual download page on bambubar.app. A failure shows in Settings → Updates.</summary>
+    /// and quits; the installer replaces the files and starts Bambu Bar again (/RELAUNCH=1). Strictly gated on an
+    /// active Hero Supporter license. A failure shows in Settings → Updates.</summary>
     private async void InstallUpdate()
     {
-        if (_updates is null) return;
-        if (!_updates.SupportsAutomaticUpdates)
-        {
-            Shell.Open(Website.Download);
-            return;
-        }
+        if (_updates is null || !_updates.SupportsAutomaticUpdates) return;
         var installer = _updates.Installer is { } ready && File.Exists(ready.Path) ? ready : await _updates.DownloadAsync();
         if (installer is null || !await _updates.VerifyInstallerAsync(installer))
         {
             ShowWindow(AppPage.Settings);
             return;
         }
-        if (!_updates.SupportsAutomaticUpdates)
-        {
-            Shell.Open(Website.Download);
-            return;
-        }
+        if (!_updates.SupportsAutomaticUpdates) return;
         try
         {
             Process.Start(new ProcessStartInfo(installer.Path, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1") { UseShellExecute = false })?.Dispose();

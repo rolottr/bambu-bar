@@ -142,7 +142,7 @@ public sealed class UpdateFeedLoopbackIntegrationTests : IDisposable
             """);
 
     [Fact]
-    public async Task LiveLoopbackUnlicensedFlowChecksAnonymouslyAndMakesZeroDownloadRequests()
+    public async Task LiveLoopbackUnlicensedFlowMakesZeroAppcastAndZeroDownloadRequests()
     {
         var ct = TestContext.Current.CancellationToken;
         var payload = UpdateSignatureTests.Payload();
@@ -159,24 +159,26 @@ public sealed class UpdateFeedLoopbackIntegrationTests : IDisposable
             var feedUrl = new Uri($"http://127.0.0.1:{api.Port}/appcast.xml");
             var feed = new UpdateFeed(handler: null, url: feedUrl, licenseHeaders: () => null, allowAnyFeedOverrideHost: false);
             var checker = new UpdateChecker(() => false, new AppSettings(null), feed, _folder, "3.1.0",
-                UpdatePlatform.WindowsX64, new Version(10, 0, 26100), new UpdateSignature(UpdateSignatureTests.TestPublicKey));
+                UpdatePlatform.WindowsX64, new Version(10, 0, 26100), new UpdateSignature(UpdateSignatureTests.TestPublicKey),
+                delay: (_, token) => Task.Delay(TimeSpan.FromMilliseconds(20), token));
 
             checker.Start();
+            checker.ChecksAutomatically = true;
+            checker.DownloadsAutomatically = true;
             await checker.CheckAsync(ct);
-
-            Assert.Equal(UpdateState.Available, checker.State);
-            Assert.Equal("3.1.1", checker.Available?.DisplayVersion);
-            Assert.Equal("3.1.1", checker.Offered?.DisplayVersion);
-
-            // Attempt download while unlicensed: blocked with zero HTTP download requests,
-            // preserving Available state for Settings' manual Download… action.
             Assert.Null(await checker.DownloadAsync(ct));
-            Assert.Equal(UpdateState.Available, checker.State);
-            Assert.Null(checker.Error);
+            await Task.Delay(TimeSpan.FromMilliseconds(150), ct);
 
-            var apiReq = Assert.Single(api.Requests);
-            Assert.Equal("/appcast.xml", apiReq.Target);
-            Assert.DoesNotContain(apiReq.Headers.Keys, k => k.StartsWith("X-BambuBar-", StringComparison.OrdinalIgnoreCase));
+            Assert.False(checker.IsRunning);
+            Assert.False(checker.SupportsAutomaticUpdates);
+            Assert.False(checker.ChecksAutomatically);
+            Assert.False(checker.DownloadsAutomatically);
+            Assert.False(checker.CanCheckForUpdates);
+            Assert.Equal(UpdateState.Idle, checker.State);
+            Assert.Null(checker.Available);
+            Assert.Null(checker.Offered);
+            Assert.Null(checker.Error);
+            Assert.Empty(api.Requests);
             Assert.Empty(cdn.Requests);
         }
     }

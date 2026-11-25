@@ -11097,6 +11097,112 @@
         }
       }
     },
+    "Automatic update checks and automatic updates are a Hero Supporter benefit.": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatická kontrola aktualizací a automatické aktualizace jsou výhodou pro Hero Supporter."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatische Update-Prüfungen und automatische Updates sind ein Vorteil für Hero Supporter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La búsqueda automática de actualizaciones y las actualizaciones automáticas son una ventaja para Hero Supporter."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La recherche automatique de mises à jour et les mises à jour automatiques sont réservées aux Hero Supporter."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Az automatikus frissítéskeresés és az automatikus frissítések a Hero Supporter támogatók előnye."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il controllo automatico degli aggiornamenti e gli aggiornamenti automatici sono un vantaggio per i Hero Supporter."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートの自動確認と自動アップデートは Hero Supporter の特典です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 업데이트 확인 및 자동 업데이트는 Hero Supporter 혜택입니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatische updatecontroles en automatische updates zijn een voordeel voor Hero Supporter."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatyczne sprawdzanie uaktualnień i automatyczne uaktualnienia to korzyść dla Hero Supporter."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A verificação automática de atualizações e as atualizações automáticas são um benefício de Hero Supporter."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматическая проверка обновлений и автоматические обновления доступны для Hero Supporter."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatiska uppdateringskontroller och automatiska uppdateringar är en förmån för Hero Supporter."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otomatik güncelleme denetimleri ve otomatik güncellemeler bir Hero Supporter avantajıdır."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматична перевірка оновлень і автоматичні оновлення є перевагою для Hero Supporter."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动检查更新和自动更新是 Hero Supporter 专属权益。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動檢查更新與自動更新是 Hero Supporter 專屬權益。"
+          }
+        }
+      }
+    },
     "Aux": {
       "localizations": {
         "cs": {
@@ -15255,6 +15361,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bambu Studio 在另一台電腦 上？"
+          }
+        }
+      }
+    },
+    "Become a Hero Supporter": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staňte se Hero Supporter"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazte Hero Supporter"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devenir Hero Supporter"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legyél Hero Supporter"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diventa Hero Supporter"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter になる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter 되기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word Hero Supporter"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zostań Hero Supporter"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tornar-se Hero Supporter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Стать Hero Supporter"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bli Hero Supporter"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter Ol"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Стати Hero Supporter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成为 Hero Supporter"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成為 Hero Supporter"
           }
         }
       }
@@ -27071,112 +27283,6 @@
         }
       }
     },
-    "Download %@ from bambubar.app": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stáhnout %@ z bambubar.app"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ von bambubar.app laden"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descargar %@ desde bambubar.app"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Télécharger %@ sur bambubar.app"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ letöltése a bambubar.app oldalról"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scarica %@ da bambubar.app"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bambubar.appから%@をダウンロード"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bambubar.app에서 %@ 다운로드"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download %@ van bambubar.app"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobierz %@ z bambubar.app"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Baixar %@ em bambubar.app"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Загрузить %@ с bambubar.app"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hämta %@ från bambubar.app"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ sürümünü bambubar.app adresinden indir"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Завантажити %@ із bambubar.app"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从 bambubar.app 下载 %@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從 bambubar.app 下載 %@"
-          }
-        }
-      }
-    },
     "Download and install updates automatically": {
       "localizations": {
         "cs": {
@@ -27279,218 +27385,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動下載並安裝更新項目"
-          }
-        }
-      }
-    },
-    "Download from bambubar.app": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stáhnout z bambubar.app"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Von bambubar.app laden"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descargar desde bambubar.app"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Télécharger sur bambubar.app"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letöltés a bambubar.app oldalról"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scarica da bambubar.app"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bambubar.appからダウンロード"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bambubar.app에서 다운로드"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download van bambubar.app"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobierz z bambubar.app"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Baixar em bambubar.app"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Загрузить с bambubar.app"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hämta från bambubar.app"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bambubar.app adresinden indir"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Завантажити із bambubar.app"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从 bambubar.app 下载"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從 bambubar.app 下載"
-          }
-        }
-      }
-    },
-    "Download…": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stáhnout…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Laden…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descargar…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Télécharger…"
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letöltés…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scarica…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ダウンロード…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다운로드…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobierz…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Baixar…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Загрузить…"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hämta…"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "İndir…"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Завантажити…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下载…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下載…"
           }
         }
       }
@@ -35177,6 +35071,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hero Supporter"
+          }
+        }
+      }
+    },
+    "Hero Supporter required": {
+      "localizations": {
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vyžaduje Hero Supporter"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter erforderlich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requiere Hero Supporter"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter requis"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter szükséges"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter richiesto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter が必要です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter 필요"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter vereist"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagany Hero Supporter"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requer Hero Supporter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Требуется Hero Supporter"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter krävs"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hero Supporter gerekli"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Потрібен Hero Supporter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要 Hero Supporter"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要 Hero Supporter"
           }
         }
       }
@@ -70744,215 +70744,109 @@
         }
       }
     },
-    "Supporter license required for automatic updates.": {
-      "localizations": {
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatické aktualizace vyžadují podporovatelskou licenci."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für automatische Updates ist eine Unterstützerlizenz erforderlich."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere una licencia de colaborador para las actualizaciones automáticas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une licence de soutien est requise pour les mises à jour automatiques."
-          }
-        },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Az automatikus frissítésekhez támogatói licenc szükséges."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per gli aggiornamenti automatici è necessaria una licenza sostenitore."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動アップデートにはサポーターライセンスが必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 업데이트를 사용하려면 서포터 라이선스가 필요합니다."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voor automatische updates is een supporterlicentie vereist."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatyczne aktualizacje wymagają licencji wspierającego."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "É necessária uma licença de apoiador para atualizações automáticas."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для автоматических обновлений требуется лицензия сторонника."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En supporterlicens krävs för automatiska uppdateringar."
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otomatik güncellemeler için destekçi lisansı gereklidir."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для автоматичних оновлень потрібна ліцензія прихильника."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自动更新需要支持者许可证。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動更新需要支持者授權。"
-          }
-        }
-      }
-    },
-    "Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. In-app update checks read the public feed at bambubar.app anonymously once a day; downloading updates requires an active website supporter license. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.": {
+    "Supporter licenses are validated online, with the key and installation ID stored in Credential Manager. With an active Hero Supporter license, in-app update checks read the feed at bambubar.app and download signed updates; unlicensed copies do not check for updates. Update checks send no printer data, and updates must carry the developer's signature. Manage automatic updates in Settings → Updates.": {
       "comment": "Windows: About page, privacy (the Mac's names the Keychain)",
       "localizations": {
         "cs": {
           "stringUnit": {
             "state": "translated",
-            "value": "Podporovatelské licence se ověřují online; klíč a ID instalace se ukládají do Správce přihlašovacích údajů. Kontrola aktualizací v aplikaci jednou denně anonymně načítá veřejný kanál na bambubar.app; stahování aktualizací vyžaduje aktivní podporovatelskou licenci z webu. Kontroly aktualizací neposílají žádná data tiskáren a aktualizace musí nést podpis vývojáře. Automatické aktualizace spravujete v Nastavení → Aktualizace."
+            "value": "Podporovatelské licence se ověřují online; klíč a ID instalace se ukládají do Správce přihlašovacích údajů. S aktivní licencí Hero Supporter kontrola aktualizací v aplikaci načítá kanál na bambubar.app a stahuje podepsané aktualizace; nelicencované kopie aktualizace nekontrolují. Kontroly aktualizací neposílají žádná data tiskáren a aktualizace musí nést podpis vývojáře. Automatické aktualizace spravujete v Nastavení → Aktualizace."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unterstützerlizenzen werden online validiert; Schlüssel und Installations-ID liegen in der Anmeldeinformationsverwaltung. Update-Prüfungen in der App lesen einmal täglich anonym den öffentlichen Feed auf bambubar.app; das Herunterladen von Updates erfordert eine aktive Unterstützerlizenz von der Website. Update-Prüfungen senden keine Druckerdaten, und Updates müssen die Signatur des Entwicklers tragen. Automatische Updates verwalten Sie unter Einstellungen → Updates."
+            "value": "Unterstützerlizenzen werden online validiert; Schlüssel und Installations-ID liegen in der Anmeldeinformationsverwaltung. Mit einer aktiven Hero Supporter-Lizenz lesen Update-Prüfungen in der App den Feed auf bambubar.app und laden signierte Updates herunter; unlizenzierte Kopien prüfen nicht auf Updates. Update-Prüfungen senden keine Druckerdaten, und Updates müssen die Signatur des Entwicklers tragen. Automatische Updates verwalten Sie unter Einstellungen → Updates."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las licencias de apoyo se validan en línea, y la clave y el ID de instalación se guardan en el Administrador de credenciales. La búsqueda de actualizaciones en la app consulta de forma anónima el feed público en bambubar.app una vez al día; descargar actualizaciones requiere una licencia de apoyo activa del sitio web. La búsqueda de actualizaciones no envía datos de las impresoras, y las actualizaciones deben llevar la firma del desarrollador. Gestione las actualizaciones automáticas en Ajustes → Actualizaciones."
+            "value": "Las licencias de apoyo se validan en línea, y la clave y el ID de instalación se guardan en el Administrador de credenciales. Con una licencia activa de Hero Supporter, la búsqueda de actualizaciones en la app consulta el feed en bambubar.app y descarga actualizaciones firmadas; las copias sin licencia no buscan actualizaciones. La búsqueda de actualizaciones no envía datos de las impresoras, y las actualizaciones deben llevar la firma del desarrollador. Gestione las actualizaciones automáticas en Ajustes → Actualizaciones."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les licences de soutien sont validées en ligne, avec la clé et l’identifiant d’installation stockés dans le Gestionnaire d’identification. La recherche de mises à jour dans l’app consulte anonymement le flux public sur bambubar.app une fois par jour ; le téléchargement des mises à jour nécessite une licence de soutien active achetée sur le site. Elle n’envoie aucune donnée des imprimantes, et les mises à jour doivent porter la signature du développeur. Gérez les mises à jour automatiques dans Réglages → Mises à jour."
+            "value": "Les licences de soutien sont validées en ligne, avec la clé et l’identifiant d’installation stockés dans le Gestionnaire d’identification. Avec une licence Hero Supporter active, la recherche de mises à jour dans l’app consulte le flux sur bambubar.app et télécharge les mises à jour signées ; les copies sans licence ne recherchent pas de mises à jour. Elle n’envoie aucune donnée des imprimantes, et les mises à jour doivent porter la signature du développeur. Gérez les mises à jour automatiques dans Réglages → Mises à jour."
           }
         },
         "hu": {
           "stringUnit": {
             "state": "translated",
-            "value": "A támogatói licencek ellenőrzése online történik, a kulcsot és a telepítési azonosítót a Hitelesítőadat-kezelő tárolja. Az alkalmazáson belüli frissítéskeresés naponta egyszer névtelenül lekéri a bambubar.app nyilvános csatornáját; a frissítések letöltéséhez aktív, a weboldalon vásárolt támogatói licenc szükséges. A frissítéskeresés nem küld nyomtatóadatokat, és a frissítéseknek a fejlesztő aláírásával kell rendelkezniük. Az automatikus frissítéseket itt kezelheted: Beállítások → Frissítések."
+            "value": "A támogatói licencek ellenőrzése online történik, a kulcsot és a telepítési azonosítót a Hitelesítőadat-kezelő tárolja. Aktív Hero Supporter licenccel az alkalmazáson belüli frissítéskeresés lekéri a bambubar.app csatornáját és letölti az aláírt frissítéseket; a licenc nélküli példányok nem keresnek frissítéseket. A frissítéskeresés nem küld nyomtatóadatokat, és a frissítéseknek a fejlesztő aláírásával kell rendelkezniük. Az automatikus frissítéseket itt kezelheted: Beállítások → Frissítések."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le licenze di supporto vengono convalidate online e la chiave e l'ID di installazione sono salvati in Gestione credenziali. Il controllo degli aggiornamenti nell'app legge in modo anonimo il feed pubblico su bambubar.app una volta al giorno; scaricare gli aggiornamenti richiede una licenza di supporto attiva acquistata sul sito. Il controllo degli aggiornamenti non invia dati delle stampanti e gli aggiornamenti devono portare la firma dello sviluppatore. Gestisci gli aggiornamenti automatici in Impostazioni → Aggiornamenti."
+            "value": "Le licenze di supporto vengono convalidate online e la chiave e l'ID di installazione sono salvati in Gestione credenziali. Con una licenza Hero Supporter attiva, il controllo degli aggiornamenti nell'app legge il feed su bambubar.app e scarica aggiornamenti firmati; le copie senza licenza non controllano gli aggiornamenti. Il controllo degli aggiornamenti non invia dati delle stampanti e gli aggiornamenti devono portare la firma dello sviluppatore. Gestisci gli aggiornamenti automatici in Impostazioni → Aggiornamenti."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サポーターライセンスはオンラインで検証され、キーとインストールIDは資格情報マネージャーに保存されます。アプリ内のアップデート確認は1日1回、bambubar.appの公開フィードを匿名で読み込みます。アップデートのダウンロードには有効なウェブサイトのサポーターライセンスが必要です。アップデート確認でプリンターのデータが送信されることはなく、アップデートには開発者の署名が必要です。自動アップデートは設定 → アップデートで管理できます。"
+            "value": "サポーターライセンスはオンラインで検証され、キーとインストールIDは資格情報マネージャーに保存されます。有効な Hero Supporter ライセンスがある場合、アプリ内のアップデート確認は bambubar.app のフィードを読み込み、署名済みのアップデートをダウンロードします。ライセンスのないコピーはアップデートを確認しません。アップデート確認でプリンターのデータが送信されることはなく、アップデートには開発者の署名が必要です。自動アップデートは設定 → アップデートで管理できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "후원자 라이선스는 온라인으로 검증되며, 키와 설치 ID는 자격 증명 관리자에 저장됩니다. 앱 내 업데이트 확인은 하루에 한 번 bambubar.app의 공개 피드를 익명으로 읽으며, 업데이트를 다운로드하려면 유효한 웹사이트 후원자 라이선스가 필요합니다. 업데이트 확인 시 프린터 데이터는 전송되지 않으며, 업데이트에는 개발자의 서명이 있어야 합니다. 자동 업데이트는 설정 → 업데이트에서 관리할 수 있습니다."
+            "value": "후원자 라이선스는 온라인으로 검증되며, 키와 설치 ID는 자격 증명 관리자에 저장됩니다. 유효한 Hero Supporter 라이선스가 있으면 앱 내 업데이트 확인이 bambubar.app 피드를 읽고 서명된 업데이트를 다운로드하며, 라이선스가 없는 복사본은 업데이트를 확인하지 않습니다. 업데이트 확인 시 프린터 데이터는 전송되지 않으며, 업데이트에는 개발자의 서명이 있어야 합니다. 자동 업데이트는 설정 → 업데이트에서 관리할 수 있습니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Supporterlicenties worden online gevalideerd; de sleutel en de installatie-ID worden in Referentiebeheer bewaard. Updatecontroles in de app lezen eenmaal per dag anoniem de openbare feed op bambubar.app; voor het downloaden van updates is een actieve supporterlicentie via de website vereist. Bij updatecontroles worden geen printergegevens verstuurd, en updates moeten de handtekening van de ontwikkelaar dragen. Beheer automatische updates in Instellingen → Updates."
+            "value": "Supporterlicenties worden online gevalideerd; de sleutel en de installatie-ID worden in Referentiebeheer bewaard. Met een actieve Hero Supporter-licentie lezen updatecontroles in de app de feed op bambubar.app en downloaden ze ondertekende updates; kopieën zonder licentie controleren niet op updates. Bij updatecontroles worden geen printergegevens verstuurd, en updates moeten de handtekening van de ontwikkelaar dragen. Beheer automatische updates in Instellingen → Updates."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Licencje wspierającego są weryfikowane online, a klucz i identyfikator instalacji są przechowywane w Menedżerze poświadczeń. Sprawdzanie uaktualnień w aplikacji raz dziennie anonimowo odczytuje publiczny kanał w serwisie bambubar.app; pobieranie uaktualnień wymaga aktywnej licencji wspierającego kupionej na stronie. Sprawdzanie uaktualnień nie wysyła żadnych danych drukarek, a uaktualnienia muszą mieć podpis dewelopera. Automatycznymi uaktualnieniami zarządzasz w: Ustawienia → Uaktualnienia."
+            "value": "Licencje wspierającego są weryfikowane online, a klucz i identyfikator instalacji są przechowywane w Menedżerze poświadczeń. Z aktywną licencją Hero Supporter sprawdzanie uaktualnień w aplikacji odczytuje kanał w serwisie bambubar.app i pobiera podpisane uaktualnienia; kopie bez licencji nie sprawdzają uaktualnień. Sprawdzanie uaktualnień nie wysyła żadnych danych drukarek, a uaktualnienia muszą mieć podpis dewelopera. Automatycznymi uaktualnieniami zarządzasz w: Ustawienia → Uaktualnienia."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "As licenças de apoio são validadas on-line, com a chave e o ID de instalação guardados no Gerenciador de Credenciais. A verificação de atualizações no app lê anonimamente o feed público em bambubar.app uma vez por dia; baixar atualizações exige uma licença de apoio ativa comprada no site. A verificação de atualizações não envia dados das impressoras, e as atualizações precisam ter a assinatura do desenvolvedor. Gerencie as atualizações automáticas em Ajustes → Atualizações."
+            "value": "As licenças de apoio são validadas on-line, com a chave e o ID de instalação guardados no Gerenciador de Credenciais. Com uma licença Hero Supporter ativa, a verificação de atualizações no app lê o feed em bambubar.app e baixa atualizações assinadas; cópias sem licença não verificam atualizações. A verificação de atualizações não envia dados das impressoras, e as atualizações precisam ter a assinatura do desenvolvedor. Gerencie as atualizações automáticas em Ajustes → Atualizações."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Лицензии сторонника проверяются онлайн, а ключ и идентификатор установки хранятся в Диспетчере учетных данных. Проверка обновлений в приложении раз в день анонимно читает общедоступную ленту на bambubar.app; для загрузки обновлений требуется активная лицензия сторонника, купленная на сайте. При проверке обновлений данные принтеров не передаются, а обновления должны быть подписаны разработчиком. Управлять автоматическими обновлениями можно в разделе Настройки → Обновления."
+            "value": "Лицензии сторонника проверяются онлайн, а ключ и идентификатор установки хранятся в Диспетчере учетных данных. При наличии активной лицензии Hero Supporter проверка обновлений в приложении читает ленту на bambubar.app и загружает подписанные обновления; нелицензированные копии не проверяют обновления. При проверке обновлений данные принтеров не передаются, а обновления должны быть подписаны разработчиком. Управлять автоматическими обновлениями можно в разделе Настройки → Обновления."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Stödlicenser valideras online, och nyckeln och installations-ID:t lagras i Autentiseringshanteraren. Uppdateringskontroller i appen läser det publika flödet på bambubar.app anonymt en gång om dagen; att hämta uppdateringar kräver en aktiv stödlicens från webbplatsen. Uppdateringskontrollerna skickar inga skrivardata, och uppdateringar måste ha utvecklarens signatur. Hantera automatiska uppdateringar i Inställningar → Uppdateringar."
+            "value": "Stödlicenser valideras online, och nyckeln och installations-ID:t lagras i Autentiseringshanteraren. Med en aktiv Hero Supporter-licens läser uppdateringskontroller i appen flödet på bambubar.app och hämtar signerade uppdateringar; olicensierade kopior söker inte efter uppdateringar. Uppdateringskontrollerna skickar inga skrivardata, och uppdateringar måste ha utvecklarens signatur. Hantera automatiska uppdateringar i Inställningar → Uppdateringar."
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Destekçi lisansları çevrimiçi doğrulanır; anahtar ve kurulum kimliği Kimlik Bilgileri Yöneticisi'nde saklanır. Uygulama içi güncelleme denetimleri günde bir kez bambubar.app genel akışını anonim olarak okur; güncellemeleri indirmek için web sitesinden alınmış etkin bir destekçi lisansı gerekir. Güncelleme denetimleri hiçbir yazıcı verisi göndermez ve güncellemelerin geliştiricinin imzasını taşıması gerekir. Otomatik güncellemeleri Ayarlar → Güncellemeler bölümünden yönet."
+            "value": "Destekçi lisansları çevrimiçi doğrulanır; anahtar ve kurulum kimliği Kimlik Bilgileri Yöneticisi'nde saklanır. Etkin bir Hero Supporter lisansıyla uygulama içi güncelleme denetimleri bambubar.app akışını okur ve imzalı güncellemeleri indirir; lisanssız kopyalar güncellemeleri denetlemez. Güncelleme denetimleri hiçbir yazıcı verisi göndermez ve güncellemelerin geliştiricinin imzasını taşıması gerekir. Otomatik güncellemeleri Ayarlar → Güncellemeler bölümünden yönet."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ліцензії прихильника перевіряються онлайн, а ключ та ідентифікатор інсталяції зберігаються у Диспетчері облікових даних. Перевірка оновлень у програмі раз на день анонімно читає публічну стрічку на bambubar.app; для завантаження оновлень потрібна активна ліцензія прихильника, придбана на сайті. Під час перевірки оновлень дані принтерів не надсилаються, а оновлення мають бути підписані розробником. Керувати автоматичними оновленнями можна в розділі Параметри → Оновлення."
+            "value": "Ліцензії прихильника перевіряються онлайн, а ключ та ідентифікатор інсталяції зберігаються у Диспетчері облікових даних. За наявності активної ліцензії Hero Supporter перевірка оновлень у програмі читає стрічку на bambubar.app і завантажує підписані оновлення; неліцензовані копії не перевіряють оновлення. Під час перевірки оновлень дані принтерів не надсилаються, а оновлення мають бути підписані розробником. Керувати автоматичними оновленнями можна в розділі Параметри → Оновлення."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "支持者许可证会在线验证，密钥和安装 ID 保存在凭据管理器中。App 内更新检查每天匿名读取一次 bambubar.app 上的公开源；下载更新需要有效的网站支持者许可证。更新检查不会发送任何打印机数据，且更新必须带有开发者的签名。可在“设置 → 更新”中管理自动更新。"
+            "value": "支持者许可证会在线验证，密钥和安装 ID 保存在凭据管理器中。持有有效 Hero Supporter 许可证时，App 内更新检查会读取 bambubar.app 上的更新源并下载已签名的更新；未授权副本不会检查更新。更新检查不会发送任何打印机数据，且更新必须带有开发者的签名。可在“设置 → 更新”中管理自动更新。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "支持者授權會在線上驗證，金鑰和安裝 ID 儲存在認證管理員中。App 內的更新檢查每天會匿名讀取一次 bambubar.app 上的公開來源；下載更新項目需要有效的網站支持者授權。更新檢查不會傳送任何印表機資料，且更新項目必須帶有開發者的簽名。可在「設定」→「更新項目」中管理自動更新。"
+            "value": "支持者授權會在線上驗證，金鑰和安裝 ID 儲存在認證管理員中。持有有效 Hero Supporter 授權時，App 內的更新檢查會讀取 bambubar.app 的來源並下載已簽署的更新項目；未授權副本不會檢查更新。更新檢查不會傳送任何印表機資料，且更新項目必須帶有開發者的簽名。可在「設定」→「更新項目」中管理自動更新。"
           }
         }
       }

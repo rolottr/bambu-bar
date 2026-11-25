@@ -785,13 +785,8 @@ struct UpdateRow: View {
             Spacer(minLength: 0)
             Button("Later") { UpdateChecker.shared.dismissOffer() }
                 .buttonStyle(.borderless).controlSize(.small).foregroundStyle(.secondary)
-            if UpdateChecker.shared.supportsAutomaticUpdates {
-                Button("Update…") { UpdateChecker.shared.showUpdate() }
-                    .controlSize(.small)
-            } else {
-                Button("Download…") { NSWorkspace.shared.open(Website.download) }
-                    .controlSize(.small)
-            }
+            Button("Update…") { UpdateChecker.shared.showUpdate() }
+                .controlSize(.small)
         }
         .panel(radius: 12, padding: 10)
     }

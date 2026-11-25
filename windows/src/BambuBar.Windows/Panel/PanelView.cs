@@ -17,7 +17,7 @@ namespace BambuBar.TrayPanel;
 public enum PanelDestination { Overview, Settings, Printers, AddPrinter, Setup, License }
 
 /// <summary>A newer release to offer above the footer (the Mac's UpdateRow).</summary>
-public sealed record UpdateOffer(string Version, Action Install, Action Later, bool CanInstall = true);
+public sealed record UpdateOffer(string Version, Action Install, Action Later);
 
 /// <summary>What the sections share: the store, the settings, the theme, and the way out to the app.</summary>
 internal sealed class PanelContext

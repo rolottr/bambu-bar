@@ -6,8 +6,8 @@ using BambuBar.Core.Updates;
 
 namespace BambuBar.Core.Tests.Updates;
 
-// The Mac's UpdateChecker behaviour without Sparkle: anonymous daily check on https://bambubar.app/appcast.xml,
-// unlicensed available-version notice with strictly blocked downloads, gated https://bambubar.app/api/updates/download
+// The Mac's UpdateChecker behaviour without Sparkle: Hero Supporter-only daily check on https://bambubar.app/appcast.xml
+// (zero license headers on feed check), zero requests when unlicensed, gated https://bambubar.app/api/updates/download
 // with X-BambuBar-* headers stripped on 302 redirects, skip, later, and automatic download.
 
 public sealed class UpdateCheckerTests : IDisposable
@@ -37,24 +37,28 @@ public sealed class UpdateCheckerTests : IDisposable
 
     private sealed class FakeServer : HttpMessageHandler
     {
-        private readonly Dictionary<string, Func<HttpRequestMessage, HttpResponseMessage>> _routes = [];
+        private readonly Dictionary<string, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>> _routes = [];
         public readonly List<RecordedRequest> Requests = [];
 
         public void Serve(string url, byte[] body, HttpStatusCode status = HttpStatusCode.OK) =>
-            _routes[url] = _ => new HttpResponseMessage(status) { Content = new ByteArrayContent(body) };
+            _routes[url] = (_, _) => Task.FromResult(new HttpResponseMessage(status) { Content = new ByteArrayContent(body) });
 
-        public void Serve(string url, Func<HttpRequestMessage, HttpResponseMessage> handler) => _routes[url] = handler;
+        public void Serve(string url, Func<HttpRequestMessage, HttpResponseMessage> handler) =>
+            _routes[url] = (req, _) => Task.FromResult(handler(req));
+
+        public void ServeAsync(string url, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler) =>
+            _routes[url] = handler;
 
         public void Redirect(string url, string location, HttpStatusCode status = HttpStatusCode.Found, bool requireLicense = false) =>
-            _routes[url] = request =>
+            _routes[url] = (request, _) =>
             {
                 if (requireLicense && !request.Headers.Contains(UpdateDownload.LicenseKeyHeader))
                 {
-                    return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
                 }
                 var response = new HttpResponseMessage(status);
                 response.Headers.Location = new Uri(location, UriKind.RelativeOrAbsolute);
-                return response;
+                return Task.FromResult(response);
             };
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -62,10 +66,9 @@ public sealed class UpdateCheckerTests : IDisposable
             var headers = request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
             Requests.Add(new(request.RequestUri!, headers));
             var url = request.RequestUri!.ToString();
-            var response = _routes.TryGetValue(url, out var handler)
-                ? handler(request)
-                : new HttpResponseMessage(HttpStatusCode.NotFound);
-            return Task.FromResult(response);
+            return _routes.TryGetValue(url, out var handler)
+                ? handler(request, cancellationToken)
+                : Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }
 
@@ -126,7 +129,7 @@ public sealed class UpdateCheckerTests : IDisposable
         Assert.Equal(new Uri("https://bambubar.app/appcast.xml"), UpdateFeed.DefaultUrl);
 
     [Fact]
-    public async Task UnlicensedCopyChecksAnonymouslySurfacesNoticeAndBlocksDownloads()
+    public async Task UnlicensedCopyMakesZeroUpdateRequestsAndBlocksAutomaticChecks()
     {
         var ct = TestContext.Current.CancellationToken;
         _access = false;
@@ -135,33 +138,36 @@ public sealed class UpdateCheckerTests : IDisposable
         _server.Serve(RedirectArchiveUrl, UpdateSignatureTests.Payload());
 
         var checker = Checker(current: "3.1.0");
-        checker.DownloadsAutomatically = true; // Saved preference, but gated off while unlicensed.
-        Assert.True(_settings.Get(UpdateChecker.Keys.AutomaticDownloads, false));
+        checker.ChecksAutomatically = true;
+        checker.DownloadsAutomatically = true;
+        Assert.False(checker.ChecksAutomatically);
         Assert.False(checker.DownloadsAutomatically);
-
-        checker.Start();
-        Assert.True(checker.IsRunning);
-        Assert.True(checker.CanCheckForUpdates);
-        Assert.True(checker.ChecksAutomatically);
         Assert.False(checker.SupportsAutomaticUpdates);
-        Assert.Single(_waits);
 
-        // Scheduled check runs anonymously, surfaces available version notice, and does NOT download.
-        _waits[0].Wait.SetResult();
-        await Until(() => checker.State == UpdateState.Available);
-        Assert.Equal("3.1.1", checker.Available?.DisplayVersion);
-        Assert.Equal("3.1.1", checker.Offered?.DisplayVersion);
-        Assert.Single(_server.Requests);
-        Assert.Equal(UpdateFeed.DefaultUrl, _server.Requests[0].Url);
-        AssertNoLicenseHeaders(_server.Requests[0]);
+        // Start() must NOT start the background timer or make any request while unlicensed.
+        checker.Start();
+        Assert.False(checker.IsRunning);
+        Assert.False(checker.CanCheckForUpdates);
+        Assert.Empty(_waits);
+
+        // Manual CheckAsync and DownloadAsync make ZERO HTTP requests while unlicensed.
+        await checker.CheckAsync(ct);
+        Assert.Null(await checker.DownloadAsync(ct));
+        Assert.Equal(UpdateState.Idle, checker.State);
+        Assert.Null(checker.Available);
+        Assert.Null(checker.Offered);
+        Assert.Null(checker.Error);
+        Assert.Empty(_server.Requests);
         Assert.False(Directory.Exists(_folder));
 
-        // Direct download attempt while unlicensed is blocked locally with zero download requests,
-        // keeping State at Available so the Settings "Download…" button stays visible.
-        Assert.Null(await checker.DownloadAsync(ct));
-        Assert.Equal(UpdateState.Available, checker.State);
-        Assert.Null(checker.Error);
-        Assert.Single(_server.Requests);
+        // Activating a Hero Supporter license starts the daily schedule and enables checks.
+        _access = true;
+        checker.SupporterStatusChanged();
+        Assert.True(checker.IsRunning);
+        Assert.True(checker.SupportsAutomaticUpdates);
+        Assert.True(checker.CanCheckForUpdates);
+        Assert.True(checker.ChecksAutomatically);
+        Assert.Single(_waits);
     }
 
     [Fact]
@@ -597,7 +603,7 @@ public sealed class UpdateCheckerTests : IDisposable
     }
 
     [Fact]
-    public async Task LosingTheLicenseDisablesDownloadsWhileKeepingAnonymousChecks()
+    public async Task LosingTheLicenseStopsScheduleCancelsInFlightWorkAndClearsOfferedUpdate()
     {
         var ct = TestContext.Current.CancellationToken;
         _server.Serve(LegacyX64Url, UpdateSignatureTests.Payload());
@@ -607,26 +613,67 @@ public sealed class UpdateCheckerTests : IDisposable
         await checker.CheckAsync(ct);
         Assert.NotNull(await checker.DownloadAsync(ct));
         Assert.Equal(UpdateState.Ready, checker.State);
+        Assert.Single(_waits);
 
+        // Losing the license immediately cancels the timer, clears offered/cached state, and blocks further checks.
+        var requestsBeforeLoss = _server.Requests.Count;
         _access = false;
         checker.SupporterStatusChanged();
-        Assert.Equal(UpdateState.Available, checker.State);
+        Assert.Equal(UpdateState.Idle, checker.State);
+        Assert.Null(checker.Release);
         Assert.Null(checker.Installer);
-        Assert.NotNull(checker.Available);
-        Assert.NotNull(checker.Offered);
-        Assert.True(checker.CanCheckForUpdates);
-        Assert.False(checker.SupportsAutomaticUpdates);
-        Assert.False(checker.DownloadsAutomatically);
-        Assert.False(_waits[0].Token.IsCancellationRequested);
-        Assert.Null(await checker.DownloadAsync(ct));
-        Assert.Equal(UpdateState.Available, checker.State);
+        Assert.Null(checker.Available);
+        Assert.Null(checker.Offered);
         Assert.Null(checker.Error);
+        Assert.False(checker.CanCheckForUpdates);
+        Assert.False(checker.SupportsAutomaticUpdates);
+        Assert.False(checker.ChecksAutomatically);
+        Assert.False(checker.DownloadsAutomatically);
+        Assert.True(_waits[0].Token.IsCancellationRequested);
 
-        // Back again: automatic downloads are available again.
+        await checker.CheckAsync(ct);
+        Assert.Null(await checker.DownloadAsync(ct));
+        Assert.Equal(requestsBeforeLoss, _server.Requests.Count);
+
+        // Re-activating resumes the schedule and restores automatic update settings.
         _access = true;
         checker.SupporterStatusChanged();
         Assert.True(checker.SupportsAutomaticUpdates);
+        Assert.True(checker.ChecksAutomatically);
         Assert.True(checker.DownloadsAutomatically);
+        Assert.True(checker.CanCheckForUpdates);
+        Assert.Equal(2, _waits.Count);
+
+        // Losing the license mid-flight cancels an active HTTP check immediately.
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var canceled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _server.ServeAsync(UpdateFeed.DefaultUrl.ToString(), async (_, token) =>
+        {
+            started.TrySetResult();
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), token);
+            }
+            catch (OperationCanceledException)
+            {
+                canceled.TrySetResult();
+                throw;
+            }
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var inFlight = checker.CheckAsync(ct);
+        await started.Task;
+        Assert.Equal(UpdateState.Checking, checker.State);
+
+        _access = false;
+        checker.SupporterStatusChanged();
+        await canceled.Task;
+        await inFlight;
+        Assert.Equal(UpdateState.Idle, checker.State);
+        Assert.Null(checker.Available);
+        Assert.Null(checker.Offered);
+        Assert.True(_waits[1].Token.IsCancellationRequested);
     }
 
     [Fact]
