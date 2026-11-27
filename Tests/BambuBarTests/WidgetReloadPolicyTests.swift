@@ -14,8 +14,11 @@ final class WidgetReloadPolicyTests: XCTestCase {
         var lastHeard: Date?
         var failedSinceOnline = false
         var lastKey = ""
-        var lastReload = Date.distantPast
-        var unanswered = 0
+        var requests = WidgetReloadPolicy.Requests()
+        /// When a widget last built a timeline (the receipts).
+        var newestBuild: Date?
+        /// Whether a widget answers each request at once. When false, macOS drops them until `widgetBuilt`.
+        var widgetsAnswer = true
         /// Seconds from `start` at which a reload was asked for.
         var reloads: [TimeInterval] = []
         /// The link the widgets were last asked to show.
@@ -43,13 +46,17 @@ final class WidgetReloadPolicyTests: XCTestCase {
                                                failedSinceOnline: failedSinceOnline, now: now)
             }
             let key = "\(link)"
-            let force = connection == .online || connection == .unauthorized || connection == .idle
+            let force = WidgetReloadPolicy.forcesReload(connection)
+            // As writeSnapshot: while requests go unanswered, it reads the receipts before judging a change.
+            if requests.unanswered > 0 { requests.receiptsRead(newestBuild: newestBuild) }
             let reload = WidgetReloadPolicy.shouldReload(
-                keyChanged: key != lastKey, force: force, opened: false, sinceLastReload: now.timeIntervalSince(lastReload),
-                unanswered: unanswered, correctionAllowed: false, correctionDue: { false })
+                keyChanged: key != lastKey, force: force, opened: false,
+                sinceLastReload: now.timeIntervalSince(requests.last),
+                unanswered: requests.unanswered, correctionAllowed: false, correctionDue: { false })
             guard reload else { return }
             lastKey = key
-            lastReload = now
+            requests.asked(at: now, newestBuild: newestBuild)
+            if widgetsAnswer { newestBuild = now }
             reloads.append(t)
             shown = link
         }
@@ -58,6 +65,11 @@ final class WidgetReloadPolicyTests: XCTestCase {
         mutating func heard(at t: TimeInterval) {
             hasStatus = true
             lastHeard = start.addingTimeInterval(t)
+        }
+
+        /// A widget builds a timeline at `t`: macOS answered the request before it.
+        mutating func widgetBuilt(at t: TimeInterval) {
+            newestBuild = start.addingTimeInterval(t)
         }
 
         /// Connects and reports at `t`.
@@ -203,6 +215,99 @@ final class WidgetReloadPolicyTests: XCTestCase {
         // Online is forced, so it doesn't wait two minutes behind "Connecting…".
         XCTAssertEqual(printer.reloads, [0, 2])
         XCTAssertEqual(printer.shown, .online)
+    }
+
+    func testACertificateFailureReachesTheWidgetRightAfterAReload() {
+        // Not retried, so nothing later would correct the widget: it goes through inside the two-minute spacing.
+        var printer = Printer()
+        printer.comesOnline(at: 0)
+        printer.heard(at: 30)
+        printer.phase(Connection(PrinterConnection.Phase.certificate("The serial doesn't match.")), at: 31)
+        XCTAssertEqual(printer.reloads.last, 31)
+        XCTAssertEqual(printer.shown, .offline)
+    }
+
+    func testPhasesThatNothingCorrectsForceAReload() {
+        // The widget's link and the reload both come from WidgetReloadPolicy.Connection(phase), so they can't disagree.
+        let expected: [(PrinterConnection.Phase, Connection, Bool)] = [
+            (.idle, .idle, true),
+            (.connecting, .connecting, false),
+            (.online, .online, true),
+            (.offline("No route."), .offline, false),
+            (.unauthorized, .unauthorized, true),
+            (.certificate("The serial doesn't match."), .idle, true),
+            (.localNetworkDenied, .offline, false),
+        ]
+        for (phase, connection, forces) in expected {
+            XCTAssertEqual(Connection(phase), connection, "\(phase)")
+            XCTAssertEqual(WidgetReloadPolicy.forcesReload(Connection(phase)), forces, "\(phase)")
+        }
+    }
+
+    // MARK: - Answered requests
+
+    /// Five minutes online with no widget answering (macOS dropping requests), two of them judged.
+    private func printerWithTwoUnansweredRequests() -> Printer {
+        var printer = Printer()
+        printer.widgetsAnswer = false
+        printer.comesOnline(at: 0)          // 0 and 1: too close to judge
+        printer.phase(.idle, at: 100)       // stopped: judges the request at 1
+        printer.comesOnline(at: 200)        // judges the one at 100
+        XCTAssertEqual(printer.requests.unanswered, 2)
+        return printer
+    }
+
+    func testAnAnsweredRequestEndsTheBackOffBeforeTheNextChange() {
+        var printer = printerWithTwoUnansweredRequests()
+        // macOS answers the request at 201; the app reads the receipt without asking for anything.
+        printer.widgetBuilt(at: 210)
+        printer.heard(at: 400)
+        let before = printer.reloads.count
+        // Silent for longer than `recentlyHeard`: an unforced change, two minutes after the last request. It used to
+        // wait out 40 minutes of back-off behind requests that had been answered.
+        printer.phase(.offline, at: 530)
+        XCTAssertEqual(printer.requests.unanswered, 0)
+        XCTAssertEqual(printer.reloads.count, before + 1)
+        XCTAssertEqual(printer.reloads.last, 530)
+        XCTAssertEqual(printer.shown, .offline)
+    }
+
+    func testTheBackOffHoldsWhileRequestsGoUnanswered() {
+        var printer = printerWithTwoUnansweredRequests()
+        printer.heard(at: 400)
+        let before = printer.reloads.count
+        printer.phase(.offline, at: 530)
+        XCTAssertEqual(printer.reloads.count, before)
+        XCTAssertEqual(printer.requests.unanswered, 2)
+        // Past the spacing for two unanswered requests (40 minutes), the change goes through.
+        printer.phase(.connecting, at: 201 + WidgetReloadPolicy.retrySpacing(unanswered: 2) + 1)
+        XCTAssertEqual(printer.reloads.count, before + 1)
+        XCTAssertEqual(printer.shown, .offline)
+    }
+
+    func testRequests() {
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        var requests = WidgetReloadPolicy.Requests()
+        requests.receiptsRead(newestBuild: t0) // nothing asked yet
+        XCTAssertEqual(requests.answered, .distantPast)
+        XCTAssertFalse(requests.asked(at: t0, newestBuild: nil))
+        // Seconds later (a connect forces two): not judged.
+        XCTAssertFalse(requests.asked(at: t0 + 5, newestBuild: nil))
+        XCTAssertEqual(requests.unanswered, 0)
+        // A build from before the request doesn't answer it.
+        XCTAssertTrue(requests.asked(at: t0 + 300, newestBuild: t0 + 1))
+        XCTAssertTrue(requests.asked(at: t0 + 600, newestBuild: t0 + 1))
+        XCTAssertEqual(requests.unanswered, 2)
+        requests.receiptsRead(newestBuild: t0 + 299)
+        XCTAssertEqual(requests.unanswered, 2)
+        // A build since the last request answers it, read before any reload.
+        requests.receiptsRead(newestBuild: t0 + 601)
+        XCTAssertEqual(requests.unanswered, 0)
+        XCTAssertEqual(requests.answered, t0 + 600)
+        XCTAssertFalse(requests.asked(at: t0 + 900, newestBuild: t0 + 601))
+        XCTAssertEqual(requests.answered, t0 + 600)
+        XCTAssertTrue(requests.asked(at: t0 + 1200, newestBuild: t0 + 601))
+        XCTAssertEqual(requests.unanswered, 1)
     }
 
     // MARK: - Gate

@@ -160,6 +160,10 @@ targets:
       - path: Sources/BambuBar/Printer/Discovery.swift
       - path: Sources/BambuBar/Printer/PrinterConfig.swift
       - path: Sources/BambuBar/App/WidgetReloadPolicy.swift
+      - path: Sources/BambuBar/App/WidgetReloadPolicy+Phase.swift
+      - path: Sources/BambuBar/Printer/PrinterConnection.swift
+      - path: Sources/BambuBar/Printer/MQTTClient.swift
+      - path: Sources/BambuBar/Printer/BambuTrust.swift
     dependencies:
       - package: Sparkle
     settings:

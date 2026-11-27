@@ -151,6 +151,12 @@ export default class BambuBarExtension extends Extension {
         this._issueMessage = label('', 'bambu-issue-message');
         this._issueMessage.clutter_text.line_wrap = true;
         issueBody.add_child(this._issueMessage);
+        // The code stays on one line; with a long code or translation the links wrap under it, so
+        // Ignore and the dismiss button stay inside the fixed-width menu.
+        const issueLine = new St.Widget({
+            style_class: 'bambu-issue-line', x_expand: true,
+            layout_manager: new Clutter.FlowLayout({orientation: Clutter.Orientation.HORIZONTAL, column_spacing: 8, row_spacing: 2}),
+        });
         const issueLinks = box(false, 'bambu-issue-links');
         this._issueCode = this._textButton('', () => St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, this._state.printer?.issueId ?? ''));
         this._issueCode.style_class = 'bambu-code';
@@ -168,10 +174,21 @@ export default class BambuBarExtension extends Extension {
         });
         this._ignore.style_class = 'bambu-link';
         this._ignore.x_expand = false;
-        issueLinks.add_child(this._issueCode);
+        issueLine.add_child(this._issueCode);
         issueLinks.add_child(this._wiki);
         issueLinks.add_child(this._ignore);
-        issueBody.add_child(issueLinks);
+        issueLine.add_child(issueLinks);
+        issueBody.add_child(issueLine);
+        // GNOME Shell has no tooltips: what Ignore does shows under the links while it is hovered or focused.
+        this._ignoreHint = label('', 'bambu-muted bambu-small bambu-ignore-hint');
+        this._ignoreHint.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this._ignoreHint.clutter_text.line_wrap = true;
+        this._ignoreHint.visible = false;
+        const showHint = () => { this._ignoreHint.visible = this._ignore.visible && (this._ignore.hover || this._ignore.has_key_focus()); };
+        this._ignore.connect('notify::hover', showHint);
+        this._ignore.connect('key-focus-in', showHint);
+        this._ignore.connect('key-focus-out', () => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => { showHint(); return GLib.SOURCE_REMOVE; }));
+        issueBody.add_child(this._ignoreHint);
         this._issue.add_child(issueBody);
         this._dismiss = this._iconButton('window-close-symbolic', 'Dismiss', 'dismiss-issue');
         this._dismiss.style_class = 'bambu-dismiss';
@@ -358,6 +375,7 @@ export default class BambuBarExtension extends Extension {
         this._wiki.visible = Boolean(p.issueWiki);
         this._ignore.label = this._t('Ignore');
         this._ignore.accessible_name = this._t('Ignore');
+        this._ignoreHint.text = this._ignore.accessible_description = this._t('Never show this code for this printer. You can show it again at the bottom of the Printer page.');
         this._ignore.visible = Boolean(p.issueId);
         this._issue.visible = Boolean(p.issue);
         if (p.art && this._artPath !== p.art) {

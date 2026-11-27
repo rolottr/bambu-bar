@@ -125,7 +125,8 @@ ColumnLayout {
                 Field {
                     visible: !!issueCode.text
                     kit: root.kit
-                    field: ({kind:"link", key:"ignore-issue", label:root.t("Ignore")})
+                    field: ({kind:"link", key:"ignore-issue", label:root.t("Ignore"),
+                             tooltip:root.t("Never show this code for this printer. You can show it again at the bottom of the Printer page.")})
                     // The quick view hands its actions to the app over D-Bus, the code it showed in the action.
                     controller: ({activate: () => root.overview ? root.controller.send("ignore-issue", issueCode.text)
                                                                 : root.controller.activate({key:"ignore-issue:" + issueCode.text})})

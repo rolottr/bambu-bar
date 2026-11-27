@@ -152,19 +152,14 @@ final class PrinterStore {
     private let defaults = UserDefaults.standard
     private let discovery = PrinterDiscovery()
     private let notifier = Notifier()
-    private var lastWidgetReload = Date.distantPast
+    /// The reload requests, and whether the widgets answered them.
+    private var widgetReloads = WidgetReloadPolicy.Requests()
     /// The status each printer had when the widgets were last asked to reload: what they show, for printers without
     /// a recent receipt from the extension.
     private var lastWidgetStatus: [String: PrinterStatus] = [:]
     /// What the widgets last built their timelines from, read from the extension's receipts at most every 30 s.
     private var widgetReceipts: [String: WidgetReceipt] = [:]
     private var widgetReceiptsRead = Date.distantPast
-    /// Reload requests in a row that no widget answered by building a timeline: macOS dropped them, or no widget is
-    /// on the desktop. Retries back off with it.
-    private var unansweredWidgetReloads = 0
-    /// The last request a widget answered. A printer whose receipt predates it has no widget that rebuilt with the
-    /// others: removed, or never placed.
-    private var answeredWidgetReload = Date.distantPast
     /// Reload requests over the last day, to cap the optional ones.
     private var widgetRequests: [Date] = []
     private static let widgetLog = Logger(subsystem: "dev.rolottr.BambuBar", category: "widget")
@@ -327,8 +322,8 @@ final class PrinterStore {
         session.onPhase = { [weak self] session, phase in
             self?.recordPhase(session, phase: phase)
             // Reconnect attempts don't move the widget's link (WidgetReloadPolicy.link), so they cost no reloads; a
-            // printer coming online, rejecting the code or being removed reloads at once.
-            self?.writeSnapshot(force: phase == .online || phase == .unauthorized || phase == .idle)
+            // printer coming online, rejecting the code or its certificate, or being removed reloads at once.
+            self?.writeSnapshot(force: WidgetReloadPolicy.forcesReload(.init(phase)))
         }
         session.onStatus = { [weak self] session, old, new, canceled in
             self?.recordStatusTransition(session, from: old, to: new)
@@ -964,18 +959,9 @@ final class PrinterStore {
     // MARK: - Widget
 
     func snapshot(of session: PrinterSession) -> SharedSnapshot {
-        let connection: WidgetReloadPolicy.Connection
-        switch session.phase {
-        case .online: connection = .online
-        case .connecting: connection = .connecting
-        case .unauthorized: connection = .unauthorized
-        // A certificate that doesn't check out isn't retried, so no later phase would correct a recent "online".
-        case .idle, .certificate: connection = .idle
-        case .offline, .localNetworkDenied: connection = .offline
-        }
         // A printer that can't be reached retries every few seconds; its widget link stays put through the
         // attempts, so they don't each change the reload key (WidgetReloadPolicy).
-        let link = WidgetReloadPolicy.link(connection, hasStatus: session.status != nil, lastHeard: session.lastHeard,
+        let link = WidgetReloadPolicy.link(.init(session.phase), hasStatus: session.status != nil, lastHeard: session.lastHeard,
                                            failedSinceOnline: session.failedSinceOnline, now: Date())
         return SharedSnapshot(serial: session.id, printerName: session.config.name, model: session.config.modelName,
                               link: link, status: session.status,
@@ -1008,15 +994,18 @@ final class PrinterStore {
             let stage = s?.state == .printing ? -8 : s?.stageID ?? -9
             return "\(snap.serial)|\(snap.link)|\(snap.printerName)|\(s?.state.rawValue ?? "-")|\(stage)|\(s?.jobName ?? "")|\(s?.issues.count ?? 0)|\(s?.ams.flatMap(\.spools).map(\.color).joined() ?? "")"
         }.joined(separator: "#") + "|\(fleet.menuBarSerial ?? "")"
-        let elapsed = now.timeIntervalSince(lastWidgetReload)
+        let elapsed = now.timeIntervalSince(widgetReloads.last)
         widgetRequests.removeAll { now.timeIntervalSince($0) > 86400 }
         // Corrections and keep-alives stop at a daily cap, leaving the allowance to what changes on the printer.
         let mayCorrect = widgetRequests.count < Self.widgetDailyCorrections
+        // While requests go unanswered, changes wait out the back-off; a widget that has answered since ends it
+        // before this change is judged (the receipts are read at most every 30 s).
+        if widgetReloads.unanswered > 0 { _ = readWidgetReceipts(now: now) }
         // Opened: someone opened the panel or the window, likely to compare. Reloads asked for while the app is in
         // front don't count against the allowance; still, skip them when the widgets already show this.
         let reload = WidgetReloadPolicy.shouldReload(
             keyChanged: key != lastWidgetKey, force: force, opened: opened, sinceLastReload: elapsed,
-            unanswered: unansweredWidgetReloads, correctionAllowed: mayCorrect,
+            unanswered: widgetReloads.unanswered, correctionAllowed: mayCorrect,
             correctionDue: {
                 opened ? widgetsBehind(fleet, now: now, progress: 0.02, minutes: 3)
                     : widgetsBehind(fleet, now: now, progress: 0.03, minutes: 5) || widgetsAging(fleet, now: now)
@@ -1028,20 +1017,14 @@ final class PrinterStore {
             lastSavedKey = key
         }
         guard reload else { return }
-        // Was the previous request answered? A receipt built since says so. One only seconds old (a connect forces
-        // two) may still be on its way, so it isn't judged.
+        // Was the previous request answered? A receipt built since says so (WidgetReloadPolicy.Requests).
+        let previous = widgetReloads.last
         let receipts = readWidgetReceipts(now: now, fresh: true)
-        if lastWidgetReload != .distantPast, elapsed > 60 {
-            if receipts.values.contains(where: { $0.builtAt >= lastWidgetReload }) {
-                unansweredWidgetReloads = 0
-            } else {
-                unansweredWidgetReloads += 1
-                let asked = lastWidgetReload.formatted(date: .omitted, time: .standard)
-                Self.widgetLog.info("No widget answered the reload asked for at \(asked, privacy: .public) (\(self.unansweredWidgetReloads) in a row)")
-            }
+        if widgetReloads.asked(at: now, newestBuild: receipts.values.map(\.builtAt).max()) {
+            let asked = previous.formatted(date: .omitted, time: .standard)
+            Self.widgetLog.info("No widget answered the reload asked for at \(asked, privacy: .public) (\(self.widgetReloads.unanswered) in a row)")
         }
         lastWidgetKey = key
-        lastWidgetReload = now
         widgetRequests.append(now)
         lastWidgetStatus = Dictionary(fleet.printers.compactMap { snap in snap.status.map { (snap.serial, $0) } },
                                       uniquingKeysWith: { first, _ in first })
@@ -1065,9 +1048,7 @@ final class PrinterStore {
         if fresh || now.timeIntervalSince(widgetReceiptsRead) > 30 {
             widgetReceipts = WidgetReceipts.load().filter { now.timeIntervalSince($0.value.builtAt) < Self.widgetReceiptLifetime }
             widgetReceiptsRead = now
-            if lastWidgetReload != .distantPast, widgetReceipts.values.contains(where: { $0.builtAt >= lastWidgetReload }) {
-                answeredWidgetReload = lastWidgetReload
-            }
+            widgetReloads.receiptsRead(newestBuild: widgetReceipts.values.map(\.builtAt).max())
         }
         return widgetReceipts
     }
@@ -1084,11 +1065,11 @@ final class PrinterStore {
         let receipts = readWidgetReceipts(now: now)
         // No receipts yet (an extension from before 2.2.4, or none built since): go by what the app last asked for.
         guard !receipts.isEmpty else {
-            return ShownOnWidget(link: nil, status: lastWidgetStatus[serial], savedAt: lastWidgetReload)
+            return ShownOnWidget(link: nil, status: lastWidgetStatus[serial], savedAt: widgetReloads.last)
         }
         // Every reload rebuilds every widget; a printer whose receipt didn't follow the others' has no widget, and
         // chasing it would spend the other widgets' allowance.
-        guard let receipt = receipts[serial], receipt.builtAt >= answeredWidgetReload else { return nil }
+        guard let receipt = receipts[serial], receipt.builtAt >= widgetReloads.answered else { return nil }
         return ShownOnWidget(link: receipt.link, status: receipt.status, savedAt: receipt.savedAt)
     }
 
