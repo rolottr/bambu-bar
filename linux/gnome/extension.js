@@ -161,8 +161,16 @@ export default class BambuBarExtension extends Extension {
         });
         this._wiki.style_class = 'bambu-link';
         this._wiki.x_expand = false;
+        this._ignore = this._textButton('Ignore', () => {
+            const id = this._state.printer?.issueId;
+            if (id)
+                this._invoke(`ignore-issue:${id}`);
+        });
+        this._ignore.style_class = 'bambu-link';
+        this._ignore.x_expand = false;
         issueLinks.add_child(this._issueCode);
         issueLinks.add_child(this._wiki);
+        issueLinks.add_child(this._ignore);
         issueBody.add_child(issueLinks);
         this._issue.add_child(issueBody);
         this._dismiss = this._iconButton('window-close-symbolic', 'Dismiss', 'dismiss-issue');
@@ -348,6 +356,9 @@ export default class BambuBarExtension extends Extension {
         this._issueCode.label = p.issueId ?? '';
         this._issueCode.accessible_name = this._t('Copy code');
         this._wiki.visible = Boolean(p.issueWiki);
+        this._ignore.label = this._t('Ignore');
+        this._ignore.accessible_name = this._t('Ignore');
+        this._ignore.visible = Boolean(p.issueId);
         this._issue.visible = Boolean(p.issue);
         if (p.art && this._artPath !== p.art) {
             this._artPath = p.art;

@@ -39,6 +39,9 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     SWIFT_EMIT_LOC_STRINGS: YES
+    # An unlabeled trailing closure that Swift 5 matches backward lands on the last closure parameter: on
+    # IssueBanner it made the menu bar panel's dismiss action its Ignore link (3.1.0). Make that an error.
+    OTHER_SWIFT_FLAGS: "$(inherited) -Werror TrailingClosureMatching"
   configs:
     AppStore:
       CODE_SIGN_STYLE: Automatic

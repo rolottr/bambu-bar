@@ -150,6 +150,9 @@ internal sealed partial class Shell : IDisposable
             case "support-menu": OpenSupport(PolarConfiguration.SupportPlacement.AppMenu); break;
             case "license": Navigate("About"); Present(); break;
             case "dismiss-issue" when session?.Status?.MostSevereIssue is { } issue: session.Dismiss(issue); break;
+            // Carries the code the panel showed, so a report that changed meanwhile can't ignore a different one.
+            case var ignore when ignore.StartsWith("ignore-issue:", StringComparison.Ordinal) && session?.Status?.MostSevereIssue is { } shown && shown.Id == ignore[13..]:
+                _store.Ignore(shown, session.Id); Rebuild(); break;
             case "settings": Navigate("Settings"); Present(); break;
             case "filament": Navigate("Filament"); Present(); break;
             case "fleet": Navigate("All Printers"); Present(); break;

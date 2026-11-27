@@ -55,9 +55,10 @@ class NativeLayout(unittest.TestCase):
                     objectName: "quickView"
                     kit: nativeKit
                     controller: QtObject {
-                        function t(key) { return key }
+                        function t(key) { return labels[key] || key }
                         function activate(field) { lastAction = field.key }
                         property string lastAction: ""
+                        property var labels: ({})
                     }
                     snapshot: ({})
                     visible: false
@@ -352,6 +353,34 @@ class NativeLayout(unittest.TestCase):
             self.assertAlmostEqual(speed.width(), stop.width(), delta=1)
             self.assertAlmostEqual(left(speed) + speed.width(), width - inset, delta=1)
             self.assertAlmostEqual(top(resume) + resume.height()/2, top(speed) + speed.height()/2, delta=1)
+
+    def test_quick_view_issue_offers_ignore_with_the_shown_code(self):
+        panel = self.window.findChild(QObject, "quickView")
+        code = "HMS_0700_2300_0002_0001"
+        panel.setProperty("snapshot", dict(printer=dict(
+            job="Drone Frame", paused=True, issue="AMS A Slot 4 filament has run out. Please insert a new filament.",
+            issueId=code, issueWiki="https://wiki.bambulab.com/en/x")))
+        panel.setVisible(True)
+        controller = panel.property("controller")
+        inset = panel.property("contentInset")
+        # The longest translation of Ignore (Russian) at the narrowest quick view.
+        for label, width in (("Ignore", 388), ("Ignore", 420), ("Игнорировать", 388)):
+            controller.setProperty("labels", {"Ignore": label})
+            self.window.setWidth(width)
+            QTest.qWait(40)
+            items = list(visual_items(panel))
+            # A link (Kirigami's LinkButton), clicked with the mouse event.
+            ignore = next(i for i in items if i.isVisible() and i.property("text") == label
+                          and i.metaObject().indexOfSignal(b"clicked(QVariant)") >= 0)
+            right = ignore.mapToItem(panel, QPointF()).x() + ignore.width()
+            self.assertLessEqual(right, width - inset + 1, label)
+            dismiss = next(i for i in items if i.isVisible() and i.property("field") is not None
+                           and hasattr(i.property("field"), "toVariant")
+                           and (i.property("field").toVariant() or {}).get("key") == "dismiss-issue")
+            self.assertLessEqual(dismiss.mapToItem(panel, QPointF()).x() + dismiss.width(), width - inset + 1)
+            controller.setProperty("lastAction", "")
+            ignore.clicked.emit(None)
+            self.assertEqual(controller.property("lastAction"), "ignore-issue:" + code)
 
 
 if __name__ == "__main__":

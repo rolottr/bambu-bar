@@ -123,10 +123,12 @@ ColumnLayout {
                     controller: ({activate:() => Qt.openUrlExternally(root.printer.issueWiki)})
                 }
                 Field {
-                    visible: root.overview && !!issueCode.text
+                    visible: !!issueCode.text
                     kit: root.kit
                     field: ({kind:"link", key:"ignore-issue", label:root.t("Ignore")})
-                    controller: ({activate: () => root.controller.send("ignore-issue", issueCode.text)})
+                    // The quick view hands its actions to the app over D-Bus, the code it showed in the action.
+                    controller: ({activate: () => root.overview ? root.controller.send("ignore-issue", issueCode.text)
+                                                                : root.controller.activate({key:"ignore-issue:" + issueCode.text})})
                 }
                 Field {
                     kit: root.kit; controller: root.controller
