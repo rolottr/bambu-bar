@@ -29,6 +29,7 @@
 .bambu-issue-message { font-size: 11px; font-weight: 600; }
 .bambu-info { color: #4aa3ff; padding-top: 2px; }
 .bambu-issue-links { spacing: 8px; }
+.bambu-ignore-tip { width: 260px; text-align: left; }
 .bambu-code { font-family: monospace; font-size: 9px; color: inherit; }
 .bambu-dismiss { color: inherit; padding: 0; }
 .bambu-temperatures { spacing: 8px; }

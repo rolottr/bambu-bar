@@ -42,6 +42,16 @@ enum WidgetReloadPolicy {
         }
     }
 
+    /// Whether a connection reaching this phase must reach the widget at once, past the spacing: the settled
+    /// phases no later one corrects (online, a rejected access code, stopped or given up). Reconnect attempts don't
+    /// move the widget's link, so they cost no reloads.
+    static func forcesReload(_ connection: Connection) -> Bool {
+        switch connection {
+        case .online, .unauthorized, .idle: return true
+        case .connecting, .offline: return false
+        }
+    }
+
     /// The least time between two reloads that aren't forced.
     static let minimumSpacing: TimeInterval = 120
 
@@ -70,5 +80,41 @@ enum WidgetReloadPolicy {
         let changeSpacing = unanswered > 0 ? retry : minimumSpacing
         if keyChanged && (force || elapsed > changeSpacing) { return true }
         return correctionAllowed && elapsed > retry && correctionDue()
+    }
+
+    /// The app's reload requests and whether a widget answered them. The extension's receipts say when a widget
+    /// last built a timeline; a build after a request answers it.
+    struct Requests {
+        /// When the app last asked for a reload.
+        private(set) var last = Date.distantPast
+        /// Requests in a row that no widget answered by building a timeline: macOS dropped them, or no widget is on
+        /// the desktop. Changes and corrections back off with it.
+        private(set) var unanswered = 0
+        /// The last request a widget answered. A printer whose receipt predates it has no widget that rebuilt with
+        /// the others: removed, or never placed.
+        private(set) var answered = Date.distantPast
+
+        /// The receipts were read; `newestBuild` is when a widget last built a timeline. A build since the last
+        /// request answers it and ends the back-off there and then, so the next change doesn't wait it out.
+        mutating func receiptsRead(newestBuild: Date?) {
+            guard last != .distantPast, let newestBuild, newestBuild >= last else { return }
+            answered = last
+            unanswered = 0
+        }
+
+        /// A reload is asked for at `now`, with the receipts just read. The previous request is judged first,
+        /// unless it is only seconds old (a connect forces two) and its answer may still be on its way. Returns
+        /// whether the previous request went unanswered.
+        @discardableResult
+        mutating func asked(at now: Date, newestBuild: Date?) -> Bool {
+            receiptsRead(newestBuild: newestBuild)
+            var dropped = false
+            if last != .distantPast, now.timeIntervalSince(last) > 60, answered < last {
+                unanswered += 1
+                dropped = true
+            }
+            last = now
+            return dropped
+        }
     }
 }

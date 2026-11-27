@@ -363,9 +363,12 @@ class NativeLayout(unittest.TestCase):
         panel.setVisible(True)
         controller = panel.property("controller")
         inset = panel.property("contentInset")
+        hint = "Never show this code for this printer. You can show it again at the bottom of the Printer page."
+        russian = "Больше не показывать этот код для этого принтера. Вернуть его можно внизу страницы «Принтер»."
         # The longest translation of Ignore (Russian) at the narrowest quick view.
         for label, width in (("Ignore", 388), ("Ignore", 420), ("Игнорировать", 388)):
-            controller.setProperty("labels", {"Ignore": label})
+            explanation = russian if label != "Ignore" else hint
+            controller.setProperty("labels", {"Ignore": label, hint: explanation})
             self.window.setWidth(width)
             QTest.qWait(40)
             items = list(visual_items(panel))
@@ -378,6 +381,14 @@ class NativeLayout(unittest.TestCase):
                            and hasattr(i.property("field"), "toVariant")
                            and (i.property("field").toVariant() or {}).get("key") == "dismiss-issue")
             self.assertLessEqual(dismiss.mapToItem(panel, QPointF()).x() + dismiss.width(), width - inset + 1)
+            # What Ignore does, as on the Mac and Windows: the tooltip shows the translated explanation on hover.
+            self.assertEqual(ignore.property("field").toVariant().get("tooltip"), explanation)
+            QTest.mouseMove(self.window, ignore.mapToItem(self.window.contentItem(), QPointF(ignore.width() / 2, ignore.height() / 2)).toPoint())
+            QTest.qWait(1200)
+            shown = [i for i in visual_items(self.window.contentItem())
+                     if i.isVisible() and i.property("text") == explanation]
+            self.assertTrue(shown, "no tooltip with the explanation")
+            QTest.mouseMove(self.window, QPointF(2, 2).toPoint())
             controller.setProperty("lastAction", "")
             ignore.clicked.emit(None)
             self.assertEqual(controller.property("lastAction"), "ignore-issue:" + code)

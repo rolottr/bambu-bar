@@ -52,8 +52,13 @@ export default class BambuBarExtension extends Extension {
         this._indicator.menu.connect('open-state-changed', (_menu, open) => {
             if (this._proxy?.g_name_owner)
                 this._proxy.SetOpenRemote(open, () => {});
-            if (open)
+            if (open) {
+                // The pointer may have left Ignore while the menu was closed, with no crossing event to say so.
+                this._ignore.sync_hover();
                 this._paint();
+            } else {
+                this._syncIgnoreTip();
+            }
         });
         this._proxy = new DesktopProxy(Gio.DBus.session, BUS, PATH, (proxy, error) => {
             if (!this._alive || error)
@@ -151,6 +156,12 @@ export default class BambuBarExtension extends Extension {
         this._issueMessage = label('', 'bambu-issue-message');
         this._issueMessage.clutter_text.line_wrap = true;
         issueBody.add_child(this._issueMessage);
+        // The code stays on one line; with a long code or translation the links wrap under it, so
+        // Ignore and the dismiss button stay inside the fixed-width menu.
+        const issueLine = new St.Widget({
+            style_class: 'bambu-issue-line', x_expand: true,
+            layout_manager: new Clutter.FlowLayout({orientation: Clutter.Orientation.HORIZONTAL, column_spacing: 8, row_spacing: 2}),
+        });
         const issueLinks = box(false, 'bambu-issue-links');
         this._issueCode = this._textButton('', () => St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, this._state.printer?.issueId ?? ''));
         this._issueCode.style_class = 'bambu-code';
@@ -168,10 +179,20 @@ export default class BambuBarExtension extends Extension {
         });
         this._ignore.style_class = 'bambu-link';
         this._ignore.x_expand = false;
-        issueLinks.add_child(this._issueCode);
+        issueLine.add_child(this._issueCode);
         issueLinks.add_child(this._wiki);
         issueLinks.add_child(this._ignore);
-        issueBody.add_child(issueLinks);
+        issueLine.add_child(issueLinks);
+        issueBody.add_child(issueLine);
+        // GNOME Shell has no tooltips: what Ignore does floats next to it while it is hovered or focused, like the
+        // dash's labels. Floating, it doesn't move Ignore (with a bottom panel the menu grows upwards).
+        this._ignoreTip = new St.Label({style_class: 'dash-label bambu-ignore-tip', visible: false});
+        this._ignoreTip.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this._ignoreTip.clutter_text.line_wrap = true;
+        Main.uiGroup.add_child(this._ignoreTip);
+        this._ignore.connect('notify::hover', () => this._syncIgnoreTip());
+        this._ignore.connect('key-focus-in', () => this._syncIgnoreTip(true));
+        this._ignore.connect('key-focus-out', () => this._syncIgnoreTip(false));
         this._issue.add_child(issueBody);
         this._dismiss = this._iconButton('window-close-symbolic', 'Dismiss', 'dismiss-issue');
         this._dismiss.style_class = 'bambu-dismiss';
@@ -248,6 +269,33 @@ export default class BambuBarExtension extends Extension {
         return button;
     }
     _t(key) { return this._state.labels?.[key] ?? key; }
+    /** Shows Ignore's explanation below it (above it near the bottom of the screen) while it is hovered or focused. */
+    _syncIgnoreTip(focused) {
+        const tip = this._ignoreTip;
+        if (!this._alive || !tip)
+            return;
+        const ignore = this._ignore;
+        focused ??= ignore.has_key_focus();
+        if (!this._indicator?.menu.isOpen || !ignore.visible || !ignore.is_mapped() || !(ignore.hover || focused)) {
+            tip.hide();
+            return;
+        }
+        const [x, y] = ignore.get_transformed_position();
+        const [, height] = ignore.get_transformed_size();
+        const [, , tipWidth, tipHeight] = tip.get_preferred_size();
+        const monitor = Main.layoutManager.findMonitorForActor(ignore) ?? Main.layoutManager.primaryMonitor;
+        if (!monitor) {
+            tip.hide();
+            return;
+        }
+        const gap = 6;
+        const below = y + height + gap;
+        const top = below + tipHeight <= monitor.y + monitor.height ? below : Math.max(monitor.y, y - gap - tipHeight);
+        const left = Math.max(monitor.x, Math.min(x, monitor.x + monitor.width - tipWidth));
+        tip.set_position(Math.round(left), Math.round(top));
+        Main.uiGroup.set_child_above_sibling(tip, null);
+        tip.show();
+    }
     _invoke(action, close = false) {
         if (close)
             this._indicator.menu.close();
@@ -339,8 +387,11 @@ export default class BambuBarExtension extends Extension {
         }
         this._picker.visible = printers.length > 1;
         this._speed.visible = Boolean(p?.showControls);
-        if (!p)
+        if (!p) {
+            // The body is hidden; the explanation floats outside it.
+            this._syncIgnoreTip();
             return;
+        }
 
         this._connectionDot.style = `background-color: ${p.online ? '#32d074' : '#e35b58'};`;
         this._status.text = `● ${p.state}`;
@@ -358,8 +409,10 @@ export default class BambuBarExtension extends Extension {
         this._wiki.visible = Boolean(p.issueWiki);
         this._ignore.label = this._t('Ignore');
         this._ignore.accessible_name = this._t('Ignore');
+        this._ignoreTip.text = this._ignore.accessible_description = this._t('Never show this code for this printer. You can show it again at the bottom of the Printer page.');
         this._ignore.visible = Boolean(p.issueId);
         this._issue.visible = Boolean(p.issue);
+        this._syncIgnoreTip();
         if (p.art && this._artPath !== p.art) {
             this._artPath = p.art;
             this._art.gicon = new Gio.FileIcon({file: Gio.File.new_for_path(p.art)});
@@ -485,6 +538,8 @@ export default class BambuBarExtension extends Extension {
         if (this._busOwner)
             Gio.bus_unown_name(this._busOwner);
         this._busOwner = 0;
+        this._ignoreTip?.destroy();
+        this._ignoreTip = null;
         this._indicator?.destroy();
         this._indicator = null;
     }

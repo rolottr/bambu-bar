@@ -143,9 +143,11 @@ internal sealed partial class Shell
         codeRow.Append(Button("edit-copy-symbolic", Loc.T("Copy code"), () => { if (session.Status?.MostSevereIssue is { } issue) Gdk.Display.GetDefault()?.GetClipboard().SetText(issue.Id); }));
         var links = Row(6);
         links.Append(Button("help-browser-symbolic", "Wiki", () => { if (session.Status?.MostSevereIssue?.WikiUrl is { } url) Open(url.ToString()); }, true));
-        links.Append(Button("view-conceal-symbolic", Loc.T("Ignore"), () => {
+        var ignore = Button("view-conceal-symbolic", Loc.T("Ignore"), () => {
             if (session.Status?.MostSevereIssue is { } issue) { _store.Ignore(issue, session.Id); Rebuild(); }
-        }, true));
+        }, true);
+        ignore.SetTooltipText(Loc.T("Never show this code for this printer. You can show it again at the bottom of the Printer page."));
+        links.Append(ignore);
         // The code stays on one line; in the narrow quick view, with a long code or translation, the links wrap under it.
         var line = Gtk.FlowBox.New(); line.SetSelectionMode(Gtk.SelectionMode.None); line.SetHomogeneous(false);
         line.SetMinChildrenPerLine(1); line.SetMaxChildrenPerLine(2); line.SetColumnSpacing(6); line.SetRowSpacing(2);
