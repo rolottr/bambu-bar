@@ -130,8 +130,8 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
   # Unit tests (scripts/test.sh): camera protocol parsing, video depacketizing, slicer import, discovery, saved
-  # printers and every model's report through the parser. They compile the few files they cover instead of loading
-  # the app, so nothing launches or connects.
+  # printers, widget reloads and every model's report through the parser. They compile the few files they cover
+  # instead of loading the app, so nothing launches or connects.
   BambuBarTests:
     type: bundle.unit-test
     platform: macOS
@@ -159,6 +159,7 @@ targets:
       - path: Sources/BambuBar/Printer/SlicerImport.swift
       - path: Sources/BambuBar/Printer/Discovery.swift
       - path: Sources/BambuBar/Printer/PrinterConfig.swift
+      - path: Sources/BambuBar/App/WidgetReloadPolicy.swift
     dependencies:
       - package: Sparkle
     settings:
