@@ -52,8 +52,13 @@ export default class BambuBarExtension extends Extension {
         this._indicator.menu.connect('open-state-changed', (_menu, open) => {
             if (this._proxy?.g_name_owner)
                 this._proxy.SetOpenRemote(open, () => {});
-            if (open)
+            if (open) {
+                // The pointer may have left Ignore while the menu was closed, with no crossing event to say so.
+                this._ignore.sync_hover();
                 this._paint();
+            } else {
+                this._syncIgnoreTip();
+            }
         });
         this._proxy = new DesktopProxy(Gio.DBus.session, BUS, PATH, (proxy, error) => {
             if (!this._alive || error)
@@ -179,16 +184,15 @@ export default class BambuBarExtension extends Extension {
         issueLinks.add_child(this._ignore);
         issueLine.add_child(issueLinks);
         issueBody.add_child(issueLine);
-        // GNOME Shell has no tooltips: what Ignore does shows under the links while it is hovered or focused.
-        this._ignoreHint = label('', 'bambu-muted bambu-small bambu-ignore-hint');
-        this._ignoreHint.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
-        this._ignoreHint.clutter_text.line_wrap = true;
-        this._ignoreHint.visible = false;
-        const showHint = () => { this._ignoreHint.visible = this._ignore.visible && (this._ignore.hover || this._ignore.has_key_focus()); };
-        this._ignore.connect('notify::hover', showHint);
-        this._ignore.connect('key-focus-in', showHint);
-        this._ignore.connect('key-focus-out', () => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => { showHint(); return GLib.SOURCE_REMOVE; }));
-        issueBody.add_child(this._ignoreHint);
+        // GNOME Shell has no tooltips: what Ignore does floats next to it while it is hovered or focused, like the
+        // dash's labels. Floating, it doesn't move Ignore (with a bottom panel the menu grows upwards).
+        this._ignoreTip = new St.Label({style_class: 'dash-label bambu-ignore-tip', visible: false});
+        this._ignoreTip.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
+        this._ignoreTip.clutter_text.line_wrap = true;
+        Main.uiGroup.add_child(this._ignoreTip);
+        this._ignore.connect('notify::hover', () => this._syncIgnoreTip());
+        this._ignore.connect('key-focus-in', () => this._syncIgnoreTip(true));
+        this._ignore.connect('key-focus-out', () => this._syncIgnoreTip(false));
         this._issue.add_child(issueBody);
         this._dismiss = this._iconButton('window-close-symbolic', 'Dismiss', 'dismiss-issue');
         this._dismiss.style_class = 'bambu-dismiss';
@@ -265,6 +269,28 @@ export default class BambuBarExtension extends Extension {
         return button;
     }
     _t(key) { return this._state.labels?.[key] ?? key; }
+    /** Shows Ignore's explanation below it (above it near the bottom of the screen) while it is hovered or focused. */
+    _syncIgnoreTip(focused = this._ignore?.has_key_focus()) {
+        const tip = this._ignoreTip;
+        if (!this._alive || !tip)
+            return;
+        const ignore = this._ignore;
+        if (!this._indicator?.menu.isOpen || !ignore.visible || !ignore.is_mapped() || !(ignore.hover || focused)) {
+            tip.hide();
+            return;
+        }
+        const [x, y] = ignore.get_transformed_position();
+        const [, height] = ignore.get_transformed_size();
+        const [, , tipWidth, tipHeight] = tip.get_preferred_size();
+        const monitor = Main.layoutManager.findMonitorForActor(ignore) ?? Main.layoutManager.primaryMonitor;
+        const gap = 6;
+        const below = y + height + gap;
+        const top = below + tipHeight <= monitor.y + monitor.height ? below : y - gap - tipHeight;
+        const left = Math.max(monitor.x, Math.min(x, monitor.x + monitor.width - tipWidth));
+        tip.set_position(Math.round(left), Math.round(top));
+        Main.uiGroup.set_child_above_sibling(tip, null);
+        tip.show();
+    }
     _invoke(action, close = false) {
         if (close)
             this._indicator.menu.close();
@@ -375,9 +401,10 @@ export default class BambuBarExtension extends Extension {
         this._wiki.visible = Boolean(p.issueWiki);
         this._ignore.label = this._t('Ignore');
         this._ignore.accessible_name = this._t('Ignore');
-        this._ignoreHint.text = this._ignore.accessible_description = this._t('Never show this code for this printer. You can show it again at the bottom of the Printer page.');
+        this._ignoreTip.text = this._ignore.accessible_description = this._t('Never show this code for this printer. You can show it again at the bottom of the Printer page.');
         this._ignore.visible = Boolean(p.issueId);
         this._issue.visible = Boolean(p.issue);
+        this._syncIgnoreTip();
         if (p.art && this._artPath !== p.art) {
             this._artPath = p.art;
             this._art.gicon = new Gio.FileIcon({file: Gio.File.new_for_path(p.art)});
@@ -503,6 +530,8 @@ export default class BambuBarExtension extends Extension {
         if (this._busOwner)
             Gio.bus_unown_name(this._busOwner);
         this._busOwner = 0;
+        this._ignoreTip?.destroy();
+        this._ignoreTip = null;
         this._indicator?.destroy();
         this._indicator = null;
     }
