@@ -270,11 +270,12 @@ export default class BambuBarExtension extends Extension {
     }
     _t(key) { return this._state.labels?.[key] ?? key; }
     /** Shows Ignore's explanation below it (above it near the bottom of the screen) while it is hovered or focused. */
-    _syncIgnoreTip(focused = this._ignore?.has_key_focus()) {
+    _syncIgnoreTip(focused) {
         const tip = this._ignoreTip;
         if (!this._alive || !tip)
             return;
         const ignore = this._ignore;
+        focused ??= ignore.has_key_focus();
         if (!this._indicator?.menu.isOpen || !ignore.visible || !ignore.is_mapped() || !(ignore.hover || focused)) {
             tip.hide();
             return;
@@ -283,9 +284,13 @@ export default class BambuBarExtension extends Extension {
         const [, height] = ignore.get_transformed_size();
         const [, , tipWidth, tipHeight] = tip.get_preferred_size();
         const monitor = Main.layoutManager.findMonitorForActor(ignore) ?? Main.layoutManager.primaryMonitor;
+        if (!monitor) {
+            tip.hide();
+            return;
+        }
         const gap = 6;
         const below = y + height + gap;
-        const top = below + tipHeight <= monitor.y + monitor.height ? below : y - gap - tipHeight;
+        const top = below + tipHeight <= monitor.y + monitor.height ? below : Math.max(monitor.y, y - gap - tipHeight);
         const left = Math.max(monitor.x, Math.min(x, monitor.x + monitor.width - tipWidth));
         tip.set_position(Math.round(left), Math.round(top));
         Main.uiGroup.set_child_above_sibling(tip, null);
@@ -382,8 +387,11 @@ export default class BambuBarExtension extends Extension {
         }
         this._picker.visible = printers.length > 1;
         this._speed.visible = Boolean(p?.showControls);
-        if (!p)
+        if (!p) {
+            // The body is hidden; the explanation floats outside it.
+            this._syncIgnoreTip();
             return;
+        }
 
         this._connectionDot.style = `background-color: ${p.online ? '#32d074' : '#e35b58'};`;
         this._status.text = `● ${p.state}`;
