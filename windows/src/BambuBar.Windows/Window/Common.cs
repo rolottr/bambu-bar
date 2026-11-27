@@ -11,12 +11,12 @@ using BambuBar.TrayPanel;
 namespace BambuBar.AppWindow;
 
 /// <summary>The window's pages, in the sidebar's order (the Mac's AppSection).</summary>
-public enum AppPage { Fleet, Printer, Filament, Tray, Notifications, Widgets, Settings, About }
+public enum AppPage { Fleet, Printer, Filament, Tray, Notifications, Widgets, Settings, Activity, About }
 
 public static class AppPages
 {
     public static readonly AppPage[] Order =
-        [AppPage.Fleet, AppPage.Printer, AppPage.Filament, AppPage.Tray, AppPage.Notifications, AppPage.Widgets, AppPage.Settings, AppPage.About];
+        [AppPage.Fleet, AppPage.Printer, AppPage.Filament, AppPage.Tray, AppPage.Notifications, AppPage.Widgets, AppPage.Settings, AppPage.Activity, AppPage.About];
 
     public static string Title(this AppPage page) => page switch
     {
@@ -27,6 +27,7 @@ public static class AppPages
         AppPage.Notifications => Loc.T("Notifications"),
         AppPage.Widgets => Loc.T("Widgets"),
         AppPage.Settings => Loc.T("Settings"),
+        AppPage.Activity => Loc.T("Activity"),
         _ => Loc.T("About"),
     };
 
@@ -41,7 +42,8 @@ public static class AppPages
         AppPage.Settings => '4',
         AppPage.About => '5',
         AppPage.Tray => '7',
-        _ => '8',
+        AppPage.Notifications => '8',
+        _ => '9',
     };
 
     /// <summary>Segoe Fluent Icons for the Mac's SF Symbols.</summary>
@@ -55,6 +57,7 @@ public static class AppPages
         AppPage.Notifications => Color.FromRgb(0xFF, 0x4F, 0x5E),
         AppPage.Widgets => Color.FromRgb(0xA2, 0x5C, 0xFF),
         AppPage.Settings => Color.FromRgb(0x7D, 0x87, 0x96),
+        AppPage.Activity => Color.FromRgb(0xE8, 0x4C, 0xA5),
         _ => Color.FromRgb(0x2E, 0xA3, 0xF2),
     };
 
@@ -67,6 +70,7 @@ public static class AppPages
         AppPage.Notifications => "",  // Ringer (bell.badge)
         AppPage.Widgets => "",        // Tiles (widget.medium)
         AppPage.Settings => "",       // Setting (gearshape)
+        AppPage.Activity => "",       // Diagnostic (waveform.path.ecg)
         _ => "",                      // Info (info.circle)
     };
 }

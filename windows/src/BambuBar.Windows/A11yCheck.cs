@@ -38,7 +38,8 @@ namespace BambuBar;
 /// set: arrows move between them), a Tab stop screen readers can't see or that has no name, one with no focus
 /// rectangle, and Tab losing the focus or leaving the window;</item>
 /// <item>Enter or Space not opening a menu button's menu, Esc not closing a menu (and giving the focus back), the
-/// stop confirmation or the panel.</item>
+/// stop confirmation or the panel;</item>
+/// <item>"Show more" on the Activity page losing the keyboard focus or scrolling the page away.</item>
 /// </list>
 /// The rules read WPF's automation peers, which are what UI Automation serves; each window is then also read through
 /// the UI Automation client (<see cref="AutomationElement"/>, from another thread, as Narrator would), and an unnamed
@@ -268,6 +269,7 @@ public static class A11yCheck
                     window.Show(page);
                     await Settle();
                     await SceneAsync($"window-{page.ToString().ToLowerInvariant()}", window, window.View);
+                    if (page == AppPage.Activity) await ActivityMoreAsync(store, window);
                 }
                 window.AddPrinter(null);
                 await Settle();
@@ -290,6 +292,45 @@ public static class A11yCheck
                 try { Directory.Delete(temp, recursive: true); }
                 catch (IOException) { /* Left in %TEMP%. */ }
             }
+        }
+
+        /// <summary>
+        /// "Show more" on the Activity page: the link goes with the rows it replaces, so Enter on it must leave the
+        /// keyboard on the page (the next link, or the filters once everything is shown) and the page where it was, not
+        /// scrolled down past the rows that just appeared. More than two pages of events are logged while the page is
+        /// on show, which it has to follow.
+        /// </summary>
+        private async Task ActivityMoreAsync(PrinterStore store, MainWindow window)
+        {
+            const string scene = "window-activity-more";
+            if (store.Current is not { } printer) return;
+            ChromeButton? More() => Find<ChromeButton>(window.View, b => AutomationProperties.GetName(b) == Loc.T("Show more") && b.IsVisible);
+            bool Focused() => Keyboard.FocusedElement is UIElement { IsVisible: true } focused && InScope(window.View, focused);
+            for (var i = 0; i < 405; i++)
+                store.Activity.Record(ActivityLog.Category.Action, printer.Config.Name, i % 2 == 0 ? "Chamber light on" : "Chamber light off", ActivityLog.Outcome.Sent);
+            await Settle();
+            if (More() is not { } first)
+            {
+                Problem(scene, "no \"Show more\" after 405 events were logged with the page on show");
+                return;
+            }
+            await SceneAsync(scene, window, window.View);
+            Keyboard.Focus(first);
+            await Settle();
+            var scroller = Find<ScrollViewer>(window.View, s => s.IsAncestorOf(first));
+            var offset = scroller?.VerticalOffset ?? 0;
+            await PressAsync(Key.Enter, window);
+            await Settle();
+            var second = More();
+            if (second is null || ReferenceEquals(second, first)) Problem(scene, "Enter on \"Show more\" didn't show the second page with a link to the third");
+            else if (!ReferenceEquals(Keyboard.FocusedElement, second)) Problem(scene, $"after \"Show more\" the keyboard focus isn't on the next one (it's on {Describe(Keyboard.FocusedElement)})");
+            if (scroller is not null && Math.Abs(scroller.VerticalOffset - offset) > 60)
+                Problem(scene, $"\"Show more\" scrolled the page from {offset:0} to {scroller.VerticalOffset:0}, past the rows it added");
+            if (second is null) return;
+            await PressAsync(Key.Enter, window);
+            await Settle();
+            if (More() is not null) Problem(scene, "\"Show more\" is still there with every event shown");
+            if (!Focused()) Problem(scene, $"the last \"Show more\" lost the keyboard focus (it's on {Describe(Keyboard.FocusedElement)})");
         }
 
         // MARK: A scene

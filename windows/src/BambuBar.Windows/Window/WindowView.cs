@@ -86,6 +86,7 @@ public sealed class WindowView : Border, IDisposable
         Variant = variant;
         Build();
         store.PropertyChanged += OnChanged;
+        store.Activity.Changed += OnActivityChanged;
         ((INotifyCollectionChanged)store.Sessions).CollectionChanged += OnSessionsChanged;
         if (services.License is { } license) license.PropertyChanged += OnChanged;
         if (services.Updates is { } updates) updates.PropertyChanged += OnChanged;
@@ -347,6 +348,7 @@ public sealed class WindowView : Border, IDisposable
             AppPage.Notifications => ("notifications", () => new NotificationsPage(_ctx)),
             AppPage.Widgets => ("widgets", () => new WidgetsPage(_ctx)),
             AppPage.Settings => ("settings", () => new SettingsPage(_ctx)),
+            AppPage.Activity => ("activity", () => new ActivityPage(_ctx)),
             _ => ("about", () => new AboutPage(_ctx)),
         };
     }
@@ -485,6 +487,12 @@ public sealed class WindowView : Border, IDisposable
         Dispatcher.BeginInvoke(DispatcherPriority.DataBind, () => { if (_pending) Refresh(); });
     }
 
+    /// <summary>The activity log got an entry or was cleared: only its page shows it, so only that page redraws.</summary>
+    private void OnActivityChanged()
+    {
+        if (_page is ActivityPage) OnChanged(_store.Activity, new PropertyChangedEventArgs(null));
+    }
+
     private void OnSessionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         Watch();
@@ -508,7 +516,7 @@ public sealed class WindowView : Border, IDisposable
 
     // MARK: Keyboard
 
-    /// <summary>The Mac's menu shortcuts with Ctrl: pages (Ctrl+0…8), Settings (Ctrl+,), Refresh (Ctrl+R), the chamber
+    /// <summary>The Mac's menu shortcuts with Ctrl: pages (Ctrl+0…9), Settings (Ctrl+,), Refresh (Ctrl+R), the chamber
     /// light (Ctrl+L), the camera (Ctrl+K), and Ctrl+W to close.</summary>
     public bool HandleShortcut(Key key, ModifierKeys modifiers)
     {
@@ -555,6 +563,7 @@ public sealed class WindowView : Border, IDisposable
     public void Dispose()
     {
         _store.PropertyChanged -= OnChanged;
+        _store.Activity.Changed -= OnActivityChanged;
         ((INotifyCollectionChanged)_store.Sessions).CollectionChanged -= OnSessionsChanged;
         if (_services.License is { } license) license.PropertyChanged -= OnChanged;
         if (_services.Updates is { } updates) updates.PropertyChanged -= OnChanged;

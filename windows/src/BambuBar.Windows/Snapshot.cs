@@ -110,9 +110,10 @@ public static class Snapshot
 
     /// <summary>A page of the window to render: its file name, the demo's command line, and the page. <c>Slicer</c>
     /// imports a Bambu Studio settings file with three printers first (setup's rows and Add All); <c>Candidate</c> opens
-    /// setup on one of them; <c>Widgets</c> gives the page a widget host in a temporary folder with two placed widgets.</summary>
+    /// setup on one of them; <c>Widgets</c> gives the page a widget host in a temporary folder with two placed widgets;
+    /// <c>Activity</c> logs what a demo doesn't on its own (commands and the camera, with each outcome's badge).</summary>
     private sealed record WindowScene(string Name, string[] Args, AppPage Page, bool AddPrinter = false, bool Slicer = false,
-        string? Candidate = null, bool Widgets = false);
+        string? Candidate = null, bool Widgets = false, bool Activity = false);
 
     /// <summary>The printers in the settings file the setup scenes import (a P2S, an X1C and an A1).</summary>
     private static readonly (string Serial, string Host, string Code)[] SlicerPrinters =
@@ -134,6 +135,8 @@ public static class Snapshot
         new("setup-picked", ["--demo", "unconfigured"], AppPage.Printer, Slicer: true, Candidate: SlicerPrinters[0].Serial),
         new("add-printer", ["--demo", "printing", "--fleet"], AppPage.Printer, AddPrinter: true),
         new("widgets-single", ["--demo", "paused"], AppPage.Widgets, Widgets: true),
+        // One printer: the events (below the fold with the fleet's capabilities), without the printer's name on each.
+        new("activity-single", ["--demo", "paused"], AppPage.Activity, Activity: true),
     ];
 
     /// <summary>Every page of the main window, light and dark, as the window shows it at 1100 × 720.</summary>
@@ -217,6 +220,14 @@ public static class Snapshot
             File.WriteAllText(conf, "{\"access_code\": {" + string.Join(", ", SlicerPrinters.Select(p => $"\"{p.Serial}\": \"{p.Code}\"")) +
                 "}, \"ip_address\": {" + string.Join(", ", SlicerPrinters.Select(p => $"\"{p.Serial}\": \"{p.Host}\"")) + "}}");
             store.ImportSlicerSettings(conf);
+        }
+        if (scene.Activity && store.Current is { } logged)
+        {
+            var name = logged.Config.Name;
+            store.Activity.Record(ActivityLog.Category.Camera, name, "Stream live · H.264 · 1920×1080", ActivityLog.Outcome.Applied);
+            store.Activity.Record(ActivityLog.Category.Action, name, "Chamber light on", ActivityLog.Outcome.Sent);
+            store.Activity.Record(ActivityLog.Category.Action, name, "Resume print", ActivityLog.Outcome.Applied);
+            store.Activity.Record(ActivityLog.Category.Action, name, "Speed → Sport: mqtt message verify failed", ActivityLog.Outcome.Failed);
         }
         if (scene.Widgets)
         {
