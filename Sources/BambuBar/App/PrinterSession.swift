@@ -27,6 +27,9 @@ final class PrinterSession: Identifiable {
     var hasBaseline = false
     /// When the printer last sent anything, to the second ("Updated 3s ago").
     private(set) var lastHeard: Date?
+    /// Whether an attempt failed since the printer was last online, or since the connection started: the
+    /// attempts that follow are retries, and the widgets show the printer offline through them.
+    @ObservationIgnored private(set) var failedSinceOnline = false
 
     var onPhase: ((PrinterSession, PrinterConnection.Phase) -> Void)?
     var onStatus: ((PrinterSession, PrinterStatus?, PrinterStatus, Bool) -> Void)?
@@ -68,6 +71,7 @@ final class PrinterSession: Identifiable {
         fallbackCodes = alternatives.filter { $0 != accessCode }
         status = nil
         hasBaseline = false
+        failedSinceOnline = false
         activeCode = accessCode
         connection.start(config, accessCode: accessCode, insecure: insecure)
     }
@@ -98,6 +102,7 @@ final class PrinterSession: Identifiable {
     func restart() {
         guard demo == nil, let code = Keychain.accessCode(for: config.serial) else { return }
         activeCode = code
+        failedSinceOnline = false
         connection.start(config, accessCode: code, insecure: insecure)
         camera.restart()
     }
@@ -199,6 +204,11 @@ final class PrinterSession: Identifiable {
             return
         }
         if phase == .online { fallbackCodes = [] }
+        switch phase {
+        case .online: failedSinceOnline = false
+        case .offline, .certificate, .localNetworkDenied: failedSinceOnline = true
+        case .idle, .connecting, .unauthorized: break
+        }
         self.phase = phase
         onPhase?(self, phase)
         camera.update()

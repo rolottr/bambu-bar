@@ -326,7 +326,8 @@ final class PrinterStore {
         let session = PrinterSession(config: config)
         session.onPhase = { [weak self] session, phase in
             self?.recordPhase(session, phase: phase)
-            // Reconnect attempts flip between offline and connecting; only settled states earn a widget reload.
+            // Reconnect attempts don't move the widget's link (WidgetReloadPolicy.link), so they cost no reloads; a
+            // printer coming online, rejecting the code or being removed reloads at once.
             self?.writeSnapshot(force: phase == .online || phase == .unauthorized || phase == .idle)
         }
         session.onStatus = { [weak self] session, old, new, canceled in
@@ -963,13 +964,19 @@ final class PrinterStore {
     // MARK: - Widget
 
     func snapshot(of session: PrinterSession) -> SharedSnapshot {
-        let link: SharedSnapshot.Link
+        let connection: WidgetReloadPolicy.Connection
         switch session.phase {
-        case .online: link = .online
-        case .connecting: link = session.status == nil ? .connecting : .online
-        case .unauthorized: link = .unauthorized
-        case .idle, .offline, .certificate, .localNetworkDenied: link = .offline
+        case .online: connection = .online
+        case .connecting: connection = .connecting
+        case .unauthorized: connection = .unauthorized
+        // A certificate that doesn't check out isn't retried, so no later phase would correct a recent "online".
+        case .idle, .certificate: connection = .idle
+        case .offline, .localNetworkDenied: connection = .offline
         }
+        // A printer that can't be reached retries every few seconds; its widget link stays put through the
+        // attempts, so they don't each change the reload key (WidgetReloadPolicy).
+        let link = WidgetReloadPolicy.link(connection, hasStatus: session.status != nil, lastHeard: session.lastHeard,
+                                           failedSinceOnline: session.failedSinceOnline, now: Date())
         return SharedSnapshot(serial: session.id, printerName: session.config.name, model: session.config.modelName,
                               link: link, status: session.status,
                               lastJob: history.first { $0.printerSerial == session.id && $0.outcome != .running },
@@ -1005,18 +1012,15 @@ final class PrinterStore {
         widgetRequests.removeAll { now.timeIntervalSince($0) > 86400 }
         // Corrections and keep-alives stop at a daily cap, leaving the allowance to what changes on the printer.
         let mayCorrect = widgetRequests.count < Self.widgetDailyCorrections
-        let reload: Bool
-        if opened {
-            // Someone opened the panel or the window, likely to compare. Reloads asked for while the app is in
-            // front don't count against the allowance; still, skip them when the widgets already show this.
-            reload = elapsed > 120 && (key != lastWidgetKey || (mayCorrect && widgetsBehind(fleet, now: now, progress: 0.02, minutes: 3)))
-        } else {
-            // Ten minutes between retries, doubling while macOS drops them, up to an hour.
-            let spacing = min(3600, 600 * pow(2, Double(min(unansweredWidgetReloads, 3))))
-            reload = (key != lastWidgetKey && (force || elapsed > 120))
-                || (mayCorrect && elapsed > spacing
-                    && (widgetsBehind(fleet, now: now, progress: 0.03, minutes: 5) || widgetsAging(fleet, now: now)))
-        }
+        // Opened: someone opened the panel or the window, likely to compare. Reloads asked for while the app is in
+        // front don't count against the allowance; still, skip them when the widgets already show this.
+        let reload = WidgetReloadPolicy.shouldReload(
+            keyChanged: key != lastWidgetKey, force: force, opened: opened, sinceLastReload: elapsed,
+            unanswered: unansweredWidgetReloads, correctionAllowed: mayCorrect,
+            correctionDue: {
+                opened ? widgetsBehind(fleet, now: now, progress: 0.02, minutes: 3)
+                    : widgetsBehind(fleet, now: now, progress: 0.03, minutes: 5) || widgetsAging(fleet, now: now)
+            })
         // Reports arrive every second; the file only needs to be fresh when the widget next reads it.
         if reload || force || key != lastSavedKey || now.timeIntervalSince(lastSnapshotWrite) > 20 {
             SharedStore.save(fleet)
