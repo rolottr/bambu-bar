@@ -55,7 +55,8 @@ struct MenuPanel: View {
             } else if let status = store.status, store.isOnline {
                 JobHero(status: status, compact: true)
                 if let issue = status.mostSevereIssue, issue.severity <= .common {
-                    IssueBanner(issue: issue) { store.current?.dismiss(issue) }
+                    IssueBanner(issue: issue, onDismiss: { store.current?.dismiss(issue) },
+                                onIgnore: { if let serial = store.config?.serial { store.ignore(issue, for: serial) } })
                 }
                 // Only with the camera on, in Settings and for this printer (never for the demo printers).
                 if let session = store.current, session.showsCamera {
@@ -719,33 +720,13 @@ struct IssueBanner: View {
                 Text(issue.message)
                     .font(.system(size: 11.5, weight: .medium))
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
-                    HStack(spacing: 4) {
-                        Text(issue.id).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                        Button(action: copyCode) {
-                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                                .font(.system(size: 9.5, weight: .semibold))
-                                .foregroundStyle(copied ? Palette.tint : .secondary)
-                                .contentTransition(.symbolEffect(.replace))
-                                .frame(width: 14, height: 14)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .help(copied ? Text("Copied") : Text("Copy code"))
-                        .accessibilityLabel(copied ? Text("Copied") : Text("Copy code"))
-                    }
-                    if let url = issue.wikiURL {
-                        // Resolved on click, so it lands on the code's page rather than the HMS index where it can.
-                        Button("Wiki") { HMSWiki.open(url) }
-                            .buttonStyle(.link)
-                            .font(.system(size: 10.5, weight: .semibold))
-                    }
-                    if let onIgnore {
-                        Button(String(localized: "Ignore", comment: "Never show this issue's code for this printer"), action: onIgnore)
-                            .buttonStyle(.link)
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .help("Never show this code for this printer. You can show it again at the bottom of the Printer page.")
+                // The code stays on one line; in the narrow panel, with a long code or a long translation of
+                // Ignore, the links move under it.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) { code; links }
+                    VStack(alignment: .leading, spacing: 3) {
+                        code
+                        HStack(spacing: 8) { links }
                     }
                 }
             }
@@ -760,6 +741,43 @@ struct IssueBanner: View {
             }
         }
         .panel(radius: 14, padding: 11, tint: color)
+    }
+
+    private var code: some View {
+        HStack(spacing: 4) {
+            Text(issue.id).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
+                .textSelection(.enabled)
+            Button(action: copyCode) {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(copied ? Palette.tint : .secondary)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 14, height: 14)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(copied ? Text("Copied") : Text("Copy code"))
+            .accessibilityLabel(copied ? Text("Copied") : Text("Copy code"))
+        }
+    }
+
+    @ViewBuilder private var links: some View {
+        if let url = issue.wikiURL {
+            // Resolved on click, so it lands on the code's page rather than the HMS index where it can.
+            Button("Wiki") { HMSWiki.open(url) }
+                .buttonStyle(.link)
+                .font(.system(size: 10.5, weight: .semibold))
+                .fixedSize()
+        }
+        if let onIgnore {
+            Button(String(localized: "Ignore", comment: "Never show this issue's code for this printer"), action: onIgnore)
+                .buttonStyle(.link)
+                .font(.system(size: 10.5, weight: .semibold))
+                .fixedSize()
+                .help("Never show this code for this printer. You can show it again at the bottom of the Printer page.")
+        }
     }
 
     /// The code as shown, for a search or a support ticket; the icon turns into a tick for a moment.

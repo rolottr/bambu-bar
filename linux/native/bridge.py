@@ -68,7 +68,7 @@ def send(message):
         if action == 'open':
             desktop_call('SetOpen', GLib.Variant('(b)', (message.get('value') is True,)))
         elif action in ('select', 'show', 'settings', 'filament', 'fleet', 'widgets', 'license', 'support-panel', 'support-menu', 'refresh', 'camera', 'light',
-                        'pause', 'resume', 'stop', 'stop-confirmed', 'quit', 'dismiss-issue') or (isinstance(action, str) and action.startswith('speed:')):
+                        'pause', 'resume', 'stop', 'stop-confirmed', 'quit', 'dismiss-issue') or (isinstance(action, str) and action.startswith(('speed:', 'ignore-issue:'))):
             desktop_call('Invoke', GLib.Variant('(ss)', (action, str(message.get('printer', '')))))
     elif connection:
         if message.get('action') == 'export-activity':

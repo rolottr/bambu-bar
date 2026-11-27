@@ -141,11 +141,15 @@ internal sealed partial class Shell
         var message = Live(() => session.Status?.MostSevereIssue?.Message ?? "", updates, "heading", "caption"); message.SetWrap(true); text.Append(message);
         var codeRow = Row(6); codeRow.Append(Live(() => session.Status?.MostSevereIssue?.Id ?? "", updates, "monospace", "muted", "caption"));
         codeRow.Append(Button("edit-copy-symbolic", Loc.T("Copy code"), () => { if (session.Status?.MostSevereIssue is { } issue) Gdk.Display.GetDefault()?.GetClipboard().SetText(issue.Id); }));
-        codeRow.Append(Button("help-browser-symbolic", "Wiki", () => { if (session.Status?.MostSevereIssue?.WikiUrl is { } url) Open(url.ToString()); }, true)); text.Append(codeRow);
-        if (updates is null)
-            codeRow.Append(Button("view-conceal-symbolic", Loc.T("Ignore"), () => {
-                if (session.Status?.MostSevereIssue is { } issue) { _store.Ignore(issue, session.Id); Rebuild(); }
-            }, true));
+        var links = Row(6);
+        links.Append(Button("help-browser-symbolic", "Wiki", () => { if (session.Status?.MostSevereIssue?.WikiUrl is { } url) Open(url.ToString()); }, true));
+        links.Append(Button("view-conceal-symbolic", Loc.T("Ignore"), () => {
+            if (session.Status?.MostSevereIssue is { } issue) { _store.Ignore(issue, session.Id); Rebuild(); }
+        }, true));
+        // The code stays on one line; in the narrow quick view, with a long code or translation, the links wrap under it.
+        var line = Gtk.FlowBox.New(); line.SetSelectionMode(Gtk.SelectionMode.None); line.SetHomogeneous(false);
+        line.SetMinChildrenPerLine(1); line.SetMaxChildrenPerLine(2); line.SetColumnSpacing(6); line.SetRowSpacing(2);
+        line.Append(codeRow); line.Append(links); text.Append(line);
         row.Append(text); var dismiss = Button("window-close-symbolic", Loc.T("Dismiss until the printer clears it"), () => { if (session.Status?.MostSevereIssue is { } issue) session.Dismiss(issue); }); dismiss.SetValign(Gtk.Align.Start); row.Append(dismiss); card.Append(row);
         (updates ?? _updates).Add(() => card.SetVisible(session.Status?.MostSevereIssue is not null)); return card;
     }

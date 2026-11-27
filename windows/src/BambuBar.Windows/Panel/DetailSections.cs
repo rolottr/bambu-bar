@@ -35,8 +35,9 @@ internal static class Shell
 
 /// <summary>
 /// The printer's most serious issue (the Mac's IssueBanner): the message, its code with a copy button that ticks for
-/// 1.5 s, a link to the code's page on Bambu Lab's wiki (resolved by Core's HmsWiki when clicked), and a dismiss button
-/// that hides it until the printer clears it.
+/// 1.5 s, a link to the code's page on Bambu Lab's wiki (resolved by Core's HmsWiki when clicked), Ignore (never show
+/// the code for this printer again, listed on the window's Printer page settings), and a dismiss button that hides it
+/// until the printer clears it.
 /// </summary>
 internal sealed class IssueSection : PanelSection, IDisposable
 {
@@ -48,6 +49,7 @@ internal sealed class IssueSection : PanelSection, IDisposable
     private readonly TextBox _code;
     private readonly ChromeButton _copy;
     private readonly ChromeButton _wiki;
+    private readonly ChromeButton _ignore;
     private readonly DispatcherTimer _copiedTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
     private PrinterIssue? _issue;
 
@@ -77,7 +79,20 @@ internal sealed class IssueSection : PanelSection, IDisposable
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException) { }
             Shell.Open(page ?? url);
         };
-        var codeRow = new StackPanel { Orientation = Orientation.Horizontal, Children = { _code, _copy, _wiki } };
+        _ignore = new ChromeButton { Padding = new Thickness(5, 1, 5, 2), Margin = new Thickness(2, 0, 0, 0) };
+        _ignore.Content = Ui.Text(Loc.T("Ignore"), Ramp.Caption, FontWeights.SemiBold, ThemeKeys.TextLink);
+        AutomationProperties.SetName(_ignore, Loc.T("Ignore"));
+        Ui.Tip(_ignore, Loc.T("Never show this code for this printer. You can show it again at the bottom of the Printer page."));
+        _ignore.Click += (_, _) => { if (_issue is { } issue && Store.Current is { } session) Store.Ignore(issue, session.Id); };
+        // The code stays on one line; in the narrow panel, with a long code or translation, the links wrap under it.
+        var codeRow = new WrapPanel
+        {
+            Children =
+            {
+                new StackPanel { Orientation = Orientation.Horizontal, Children = { _code, _copy } },
+                new StackPanel { Orientation = Orientation.Horizontal, Children = { _wiki, _ignore } },
+            },
+        };
         var text = new Stack { Spacing = 3, Children = { _message, codeRow } };
 
         var dismiss = new ChromeButton { Width = 24, Height = 24, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(6, -3, -3, 0) };
@@ -90,7 +105,7 @@ internal sealed class IssueSection : PanelSection, IDisposable
         grid.Children.Add(Ui.At(_icon, 0));
         grid.Children.Add(Ui.At(text, 1));
         grid.Children.Add(Ui.At(dismiss, 2));
-        // Read as the message, with its copy, wiki and dismiss buttons inside (the window's IssueBanner too).
+        // Read as the message, with its copy, wiki, ignore and dismiss buttons inside (the window's IssueBanner too).
         _group = Ui.Group(grid, "");
         _root = Ui.Card(_group, Metrics.Tile, new Thickness(11));
         ShowCopied(false);
